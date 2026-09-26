@@ -264,3 +264,21 @@ Before release candidate:
 ## Current evidence status
 
 All DSP topology and thresholds in the early design are hypotheses until prototype measurements are recorded.
+
+
+## Aliasing characterization for Colderator
+
+Current v0.1.0 core:
+- ICE / METAL are resonant linear structures;
+- FROST is deterministic signal-dependent texture;
+- SHIVER is shallow modulation;
+- no dedicated waveshaper / clipper / nonlinear saturation stage is currently present.
+
+Therefore do not invent a generic "alias score" yet. Characterize foldback only where a deliberately nonlinear or resampling stage is introduced.
+
+Future measurement when nonlinear digital-cold behavior is added:
+- high-frequency sine sweeps at 44.1 / 48 / 96 kHz;
+- harmonic and intermodulation spectra;
+- folded components below Nyquist;
+- compare clean / normal / extreme COLD ranges;
+- permit intentionally audible foldback only when it contributes to the designed digital-cold character and remains bounded.
