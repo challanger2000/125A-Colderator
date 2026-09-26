@@ -144,6 +144,15 @@ void Processor::resetDsp()
     spaceLowState_.fill(0.f);
     frostHeld_.fill(0.f);
     frostHoldCounter_.fill(0);
+    textureRng_[0] = 0x1CE5A11u;
+    textureRng_[1] = 0x57EE1A2u;
+    iceShardEnv_.fill(0.f);
+    metalParticleEnv_.fill(0.f);
+    frostCrackleEnv_.fill(0.f);
+    windNoiseState_.fill(0.f);
+    windGust_.fill(0.f);
+    windGustTarget_.fill(0.f);
+    windGustCounter_.fill(0);
     for (int ch = 0; ch < kChannels; ++ch)
     {
         spaceBuffer_[ch].assign(static_cast<size_t>(sampleRate_ * 0.18) + 8u, 0.f);
@@ -405,6 +414,79 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
             const float iceInput = highDetail * (0.55f + 0.95f * transientExcitation);
             const float metalInput = x * (0.35f + 1.15f * transientExcitation);
 
+            // Shared deterministic material-texture source. It only creates audible
+            // output when input energy exists; silence remains silence.
+            unsigned int tr = textureRng_[ch];
+            tr ^= tr << 13;
+            tr ^= tr >> 17;
+            tr ^= tr << 5;
+            textureRng_[ch] = tr;
+            const float textureWhite =
+                (static_cast<float>(tr & 0x00FFFFFFu) / 8388607.5f) - 1.f;
+            const float sourceActivity =
+                clamp01(4.0f * slowEnv_[ch] + 1.8f * transientNorm);
+            const float sourceScale =
+                std::min(1.f, 2.4f * slowEnv_[ch] + 0.7f * std::fabs(highDetail));
+
+            // ICE particles: transient-biased crystal shards.
+            const float iceEventProb =
+                effectiveIce * sourceActivity * (0.00035f + 0.0025f * transientExcitation);
+            const float iceRandom01 =
+                static_cast<float>((tr >> 8) & 0x0000FFFFu) / 65535.f;
+            if (iceRandom01 < iceEventProb)
+                iceShardEnv_[ch] = 1.f;
+            const float iceShardDecay =
+                std::exp(-1.f / static_cast<float>(sampleRate_ * 0.0065));
+            iceShardEnv_[ch] = zapDenormal(iceShardEnv_[ch] * iceShardDecay);
+            const float iceShard =
+                textureWhite * iceShardEnv_[ch] * sourceScale;
+
+            // METAL particles: rarer, longer mechanical impacts.
+            const float metalEventProb =
+                effectiveMetal * sourceActivity * (0.00010f + 0.00075f * transientExcitation);
+            const float metalRandom01 =
+                static_cast<float>((tr >> 1) & 0x0000FFFFu) / 65535.f;
+            if (metalRandom01 < metalEventProb)
+                metalParticleEnv_[ch] = 1.f;
+            const float metalParticleDecay =
+                std::exp(-1.f / static_cast<float>(sampleRate_ * 0.026));
+            metalParticleEnv_[ch] = zapDenormal(metalParticleEnv_[ch] * metalParticleDecay);
+            const float metalParticle =
+                textureWhite * metalParticleEnv_[ch] * sourceScale;
+
+            // FROST crackles: many tiny irregular surface events.
+            const float frostEventProb =
+                effectiveFrost * sourceActivity * 0.0035f;
+            const float frostRandom01 =
+                static_cast<float>((tr >> 16) & 0x0000FFFFu) / 65535.f;
+            if (frostRandom01 < frostEventProb)
+                frostCrackleEnv_[ch] = 1.f;
+            const float frostCrackleDecay =
+                std::exp(-1.f / static_cast<float>(sampleRate_ * 0.0018));
+            frostCrackleEnv_[ch] = zapDenormal(frostCrackleEnv_[ch] * frostCrackleDecay);
+            const float frostCrackle =
+                textureWhite * frostCrackleEnv_[ch] * sourceScale;
+
+            // SHIVER wind: a slowly changing gust envelope over filtered noise.
+            if (windGustCounter_[ch] <= 0)
+            {
+                windGustTarget_[ch] =
+                    0.15f + 0.85f * std::fabs(textureWhite);
+                windGustCounter_[ch] = std::max(
+                    1, static_cast<int>(sampleRate_ *
+                    (0.055 + 0.110 * (1.f - effectiveShiver))));
+            }
+            else
+            {
+                --windGustCounter_[ch];
+            }
+            windGust_[ch] +=
+                (windGustTarget_[ch] - windGust_[ch]) * 0.00085f;
+            windNoiseState_[ch] = zapDenormal(
+                0.965f * windNoiseState_[ch] + 0.035f * textureWhite);
+            const float windTexture =
+                windNoiseState_[ch] * windGust_[ch] * sourceScale;
+
             float iceSignal = 0.f;
             for (auto& mode : iceModes_[ch])
                 iceSignal += mode.process(iceInput);
@@ -440,17 +522,20 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                 iceDelay[static_cast<size_t>(w)] = std::isfinite(write) ? write : 0.f;
                 iceDelayWrite_[ch] = (w + 1 >= size) ? 0 : (w + 1);
             }
-            const float iceTexture = 0.12f * x + 1.25f * glass +
-                                     iceSignal * (1.30f + 0.70f * iceExtreme);
+            const float iceTexture = 0.10f * x + 1.18f * glass +
+                                     iceSignal * (1.22f + 0.66f * iceExtreme) +
+                                     iceShard * (0.36f + 0.58f * effectiveIce);
             const float iceWet = materialWet(effectiveIce);
             y = y * (1.f - iceWet) + iceTexture * iceWet;
 
             // METAL = steel / pipes / machinery.
             // Inharmonic resonances and sidebands increasingly replace the source.
             const float metalSideband = highDetail * metalCarrier;
-            const float metalTexture = 0.10f * x +
-                                       metalSignal * (1.45f + 0.95f * metalExtreme) +
-                                       metalSideband * (0.72f + 0.48f * metalExtreme);
+            const float metalTexture = 0.08f * x +
+                                       metalSignal * (1.38f + 0.92f * metalExtreme) +
+                                       metalSideband * (0.66f + 0.46f * metalExtreme) +
+                                       metalParticle * metalCarrier *
+                                           (0.48f + 0.62f * effectiveMetal);
             const float metalWet = materialWet(effectiveMetal);
             y = y * (1.f - metalWet) + metalTexture * metalWet;
 
@@ -481,11 +566,13 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                 --frostHoldCounter_[ch];
             }
             const float microFreeze = frostHeld_[ch] - highDetail;
-            const float frostTexture = 0.18f * x +
-                                       frostHeld_[ch] * 0.92f +
-                                       microFreeze * (0.72f + 0.38f * frostExtreme) +
+            const float frostTexture = 0.15f * x +
+                                       frostHeld_[ch] * 0.82f +
+                                       microFreeze * (0.64f + 0.34f * frostExtreme) +
                                        frostNoise * frostCarrier *
-                                           (0.42f + 0.48f * frostExtreme);
+                                           (0.34f + 0.42f * frostExtreme) +
+                                       frostCrackle *
+                                           (0.52f + 0.58f * effectiveFrost);
             const float frostWet = materialWet(effectiveFrost);
             y = y * (1.f - frostWet) + frostTexture * frostWet;
 
@@ -534,10 +621,12 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                 const float shifted = shiverDelay[static_cast<size_t>(i0)] * (1.f - frac) +
                                       shiverDelay[static_cast<size_t>(i1)] * frac;
 
-                const float shiverTexture = (0.18f - 0.10f * shiverExtreme) * x +
-                                            (0.82f + 0.18f * shiverExtreme) * shifted +
+                const float shiverTexture = (0.16f - 0.08f * shiverExtreme) * x +
+                                            (0.78f + 0.16f * shiverExtreme) * shifted +
                                             highDetail * shiverJitter_[ch] *
-                                                (0.22f + 0.38f * shiverExtreme);
+                                                (0.20f + 0.34f * shiverExtreme) +
+                                            windTexture *
+                                                (0.18f + 0.34f * effectiveShiver);
                 const float shiverWet = materialWet(effectiveShiver);
                 y = y * (1.f - shiverWet) + shiverTexture * shiverWet;
                 shiverDelayWrite_[ch] = (w + 1 >= size) ? 0 : (w + 1);
