@@ -787,20 +787,25 @@ tresult PLUGIN_API Processor::setState(IBStream* state)
         return kResultFalse;
 
     IBStreamer stream(state, kLittleEndian);
-    float values[kComponentStateValueCount] {};
-    int32 bypass = 0;
+    ComponentStatePayload payload {};
 
-    if (!readComponentStatePayload(stream, values, bypass))
+    if (!readComponentStatePayload(stream, payload))
         return kResultFalse;
 
-    cold_ = clamp01(values[0]);
-    ice_ = clamp01(values[1]);
-    metal_ = clamp01(values[2]);
-    frost_ = clamp01(values[3]);
-    shiver_ = clamp01(values[4]);
-    space_ = clamp01(values[5]);
-    output_ = clamp01(values[6]);
-    bypass_ = bypass != 0;
+    cold_ = clamp01(payload.values[0]);
+    ice_ = clamp01(payload.values[1]);
+    metal_ = clamp01(payload.values[2]);
+    frost_ = clamp01(payload.values[3]);
+    shiver_ = clamp01(payload.values[4]);
+    space_ = clamp01(payload.values[5]);
+    output_ = clamp01(payload.values[6]);
+    bypass_ = payload.bypass != 0;
+
+    iceMaterial_ = std::max(0, std::min(kMaterialCount - 1, static_cast<int>(payload.materials[0])));
+    metalMaterial_ = std::max(0, std::min(kMaterialCount - 1, static_cast<int>(payload.materials[1])));
+    frostMaterial_ = std::max(0, std::min(kMaterialCount - 1, static_cast<int>(payload.materials[2])));
+    shiverMaterial_ = std::max(0, std::min(kMaterialCount - 1, static_cast<int>(payload.materials[3])));
+    spaceMaterial_ = std::max(0, std::min(kMaterialCount - 1, static_cast<int>(payload.materials[4])));
 
     return kResultOk;
 }
@@ -811,11 +816,22 @@ tresult PLUGIN_API Processor::getState(IBStream* state)
         return kResultFalse;
 
     IBStreamer stream(state, kLittleEndian);
-    const float values[kComponentStateValueCount] = {
-        cold_, ice_, metal_, frost_, shiver_, space_, output_
-    };
+    ComponentStatePayload payload {};
+    payload.values[0] = cold_;
+    payload.values[1] = ice_;
+    payload.values[2] = metal_;
+    payload.values[3] = frost_;
+    payload.values[4] = shiver_;
+    payload.values[5] = space_;
+    payload.values[6] = output_;
+    payload.bypass = bypass_ ? 1 : 0;
+    payload.materials[0] = iceMaterial_;
+    payload.materials[1] = metalMaterial_;
+    payload.materials[2] = frostMaterial_;
+    payload.materials[3] = shiverMaterial_;
+    payload.materials[4] = spaceMaterial_;
 
-    return writeComponentStatePayload(stream, values, bypass_ ? 1 : 0)
+    return writeComponentStatePayload(stream, payload)
         ? kResultOk
         : kResultFalse;
 }
