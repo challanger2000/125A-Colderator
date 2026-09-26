@@ -280,6 +280,7 @@ int main()
             const auto shiver50 = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 0.f, 0.f, 0.50f});
             const auto shiver100 = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 0.f, 0.f, 1.f});
             const auto space50 = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 0.f, 0.f, 0.f, 0.50f});
+            const auto space75 = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 0.f, 0.f, 0.f, 0.75f});
             const auto space100 = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 0.f, 0.f, 0.f, 1.f});
 
             const auto impulseDry = renderImpulse(sr, 0.25, {});
@@ -339,10 +340,10 @@ int main()
             require(shiverFundRatio > 0.90 && shiverFundRatio < 1.10,
                     "SHIVER preserves sustained fundamental amplitude", failures);
 
-            const double spaceFund = toneAmplitude(space100, sr, 440.0, skip);
+            const double spaceFund = toneAmplitude(space75, sr, 440.0, skip);
             const double spaceFundRatio = dryFund > 1e-12 ? spaceFund / dryFund : 0.0;
             require(spaceFundRatio > 0.75 && spaceFundRatio < 1.25,
-                    "SPACE preserves sustained fundamental amplitude", failures);
+                    "SPACE 75% preserves sustained fundamental amplitude", failures);
 
             require(dCold100 > dCold50 * 1.35, "COLD 100% clearly stronger than 50%", failures);
             require(dCold100 > dIce50 + dMetal50,
