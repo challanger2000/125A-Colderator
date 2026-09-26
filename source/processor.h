@@ -77,6 +77,17 @@ private:
     std::array<float, kChannels> frostHeld_ {};
     std::array<int, kChannels> frostHoldCounter_ {};
 
+    // Generative material-texture state. All generators are deterministic,
+    // signal-gated and allocation-free on the audio thread.
+    std::array<unsigned int, kChannels> textureRng_ {{0x1CE5A11u, 0x57EE1A2u}};
+    std::array<float, kChannels> iceShardEnv_ {};
+    std::array<float, kChannels> metalParticleEnv_ {};
+    std::array<float, kChannels> frostCrackleEnv_ {};
+    std::array<float, kChannels> windNoiseState_ {};
+    std::array<float, kChannels> windGust_ {};
+    std::array<float, kChannels> windGustTarget_ {};
+    std::array<int, kChannels> windGustCounter_ {};
+
     float shiverPhaseA_ = 0.f;
     float shiverPhaseB_ = 0.f;
     float metalPhaseA_ = 0.f;
