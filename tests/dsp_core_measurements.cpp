@@ -353,6 +353,20 @@ int main()
 
     try
     {
+        {
+            Processor p;
+            require(p.initialize(nullptr) == kResultOk, "processor initializes for bus-layout test", failures);
+            SpeakerArrangement monoIn = SpeakerArr::kMono;
+            SpeakerArrangement monoOut = SpeakerArr::kMono;
+            SpeakerArrangement stereoIn = SpeakerArr::kStereo;
+            SpeakerArrangement stereoOut = SpeakerArr::kStereo;
+            require(p.setBusArrangements(&monoIn, 1, &monoOut, 1) == kResultOk,
+                    "matched mono bus layout is accepted", failures);
+            require(p.setBusArrangements(&stereoIn, 1, &stereoOut, 1) == kResultOk,
+                    "matched stereo bus layout is accepted", failures);
+            p.terminate();
+        }
+
         for (double sr : {44100.0, 48000.0, 96000.0})
         {
             const size_t skip = static_cast<size_t>(sr * 0.15);
