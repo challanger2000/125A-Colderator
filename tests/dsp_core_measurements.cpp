@@ -1419,6 +1419,7 @@ int main()
             const auto ice50 = renderSine(sr, 0.8, 440.0, {0.f, 0.50f, 0.f});
             const auto ice100 = renderSine(sr, 0.8, 440.0, {0.f, 1.f, 0.f});
             const auto metal50 = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 0.50f});
+            const auto metal75 = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 0.75f});
             const auto metal100 = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 1.f});
             const auto frost50 = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 0.f, 0.50f, 0.f});
             const auto frost100 = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 0.f, 1.f, 0.f});
@@ -1474,6 +1475,9 @@ int main()
             const auto denormStress = renderImpulse(sr, 4.0, {1.f, 1.f, 1.f, 1.f, 1.f, 1.f}, 64);
             require(finiteBuffer(denormStress), "denormal stress remains finite", failures);
             require(maxAbs(denormStress) < 20.0, "denormal stress remains bounded", failures);
+            require(maxAbs(cold100) < 8.0 && maxAbs(metal100) < 8.0 &&
+                    maxAbs(frost100) < 8.0,
+                    "Frozen Core extreme settings remain bounded", failures);
 
             const int bypassBlockSize = 64;
             const int totalBlocks = 700;
@@ -1506,6 +1510,7 @@ int main()
             const double dIce50 = meanAbsDiff(dry, ice50, skip);
             const double dIce100 = meanAbsDiff(dry, ice100, skip);
             const double dMetal50 = meanAbsDiff(dry, metal50, skip);
+            const double dMetal75 = meanAbsDiff(dry, metal75, skip);
             const double dMetal100 = meanAbsDiff(dry, metal100, skip);
             const double dFrost50 = meanAbsDiff(dry, frost50, skip);
             const double dFrost100 = meanAbsDiff(dry, frost100, skip);
@@ -1521,8 +1526,19 @@ int main()
             require(dCold100 > dCold90 * 1.01, "COLD 100% remains a meaningful maximum", failures);
             require(dCold50 > 8e-4, "COLD 50% is clearly audible, not merely measurable", failures);
             require(dIce50 > 2e-4, "ICE 50% is clearly audible, not merely measurable", failures);
+            require(meanAbsDiff(ice50, dry, skip) > 2e-4,
+                    "ICE micro-comb produces a sustained glass effect, not only transient coloration", failures);
             require(dMetal50 > 3e-4, "METAL 50% is clearly audible, not merely measurable", failures);
+            require(dMetal75 > dMetal50 * 1.10,
+                    "METAL 75% advances clearly beyond the normal-range setting", failures);
+
+            const double metalSbA = toneAmplitude(metal75, sr, 693.0, skip);
+            const double metalSbB = toneAmplitude(metal75, sr, 1573.0, skip);
+            require(metalSbA + metalSbB > 5e-4,
+                    "METAL 75% creates deliberate inharmonic FM/ringmod sidebands", failures);
             require(dFrost50 > 8e-5, "FROST 50% is clearly audible, not merely measurable", failures);
+            require(dFrost100 > dFrost50 * 1.35,
+                    "FROST micro-freeze becomes substantially stronger toward the extreme range", failures);
             require(dShiver50 > 8e-5, "SHIVER 50% is clearly audible, not merely measurable", failures);
             require(dSpace50 > 1e-5, "SPACE 50% is measurably active", failures);
 
