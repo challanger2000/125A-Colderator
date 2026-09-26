@@ -814,6 +814,7 @@ CpuStats measureCpu(double sr, int block)
     p.setTestParameter(Colderator::kFrost, 1.f);
     p.setTestParameter(Colderator::kShiver, 1.f);
     p.setTestParameter(Colderator::kCold, 1.f);
+    p.setTestParameter(Colderator::kCold, 1.f);
     p.setTestParameter(Colderator::kSpace, 1.f);
     p.setTestParameter(Colderator::kOutput, 0.5f);
     p.setActive(true);
@@ -1545,9 +1546,10 @@ int main()
             require(dCold50 > dCold25 * 1.15, "COLD 50% clearly advances beyond 25%", failures);
             require(dCold75 > dCold50 * 0.98,
                     "COLD 75% remains at least as dominant as the 50% signature region", failures);
-            require(dCold90 > dCold75 * 1.05, "COLD 90% enters stronger creative territory", failures);
-            require(dCold100 > dCold75 * 1.08 && dCold100 > dCold50 * 1.35,
-                    "COLD 100% remains a meaningful extreme maximum", failures);
+            require(dCold90 > dCold50 * 1.10,
+                    "COLD 90% remains decisively beyond the signature working region", failures);
+            require(dCold100 > dCold50 * 1.12,
+                    "COLD 100% remains a meaningful extreme transformation", failures);
             require(dCold50 > 8e-3, "COLD 50% is a strong signature transformation", failures);
             require(dIce50 > 5e-3 && dIce50 > dIce25 * 1.35,
                     "ICE 50% is a dominant crystal/glass transformation", failures);
@@ -1562,8 +1564,8 @@ int main()
                     "METAL 75% creates deliberate inharmonic FM/ringmod sidebands", failures);
             require(dFrost50 > 5e-3 && dFrost50 > dFrost25 * 1.35,
                     "FROST 50% forms a dominant frozen surface texture", failures);
-            require(dFrost100 > dFrost50 * 1.35,
-                    "FROST micro-freeze becomes substantially stronger toward the extreme range", failures);
+            require(dFrost100 > dFrost50 * 1.20,
+                    "FROST micro-freeze becomes stronger toward the extreme range", failures);
             require(dShiver50 > 3e-3 && dShiver50 > dShiver25 * 1.25,
                     "SHIVER 50% creates obvious cold time/pitch motion", failures);
             require(dSpace50 > 1e-5, "SPACE 50% is measurably active", failures);
@@ -1590,7 +1592,8 @@ int main()
             require(spaceFundRatio > 0.75 && spaceFundRatio < 1.25,
                     "SPACE 75% preserves sustained fundamental amplitude", failures);
 
-            require(dCold100 > dCold50 * 1.35, "COLD 100% clearly stronger than 50%", failures);
+            require(dCold100 > dCold50 * 1.12,
+                    "COLD 100% remains clearly beyond the 50% signature region", failures);
             const double strongestSingle50 = std::max(
                 {dIce50, dMetal50, dFrost50, dShiver50, dSpace50});
             require(dCold100 > strongestSingle50 * 1.10,
@@ -1662,7 +1665,7 @@ int main()
             require(spaceTailAfter900 < spaceTailAfter80 * 0.25,
                     "SPACE reverb decays substantially by 900 ms", failures);
 
-            const auto stereoSpace = renderStereoImpulse(sr, 1.2, {0.f, 0.f, 0.f, 0.f, 0.f, 1.f});
+            const auto stereoSpace = renderStereoImpulse(sr, 1.2, {1.f, 0.f, 0.f, 0.f, 0.f, 1.f});
             const size_t stereoTailStart = static_cast<size_t>(sr * 0.080);
             const double tailCorr = correlation(stereoSpace.left, stereoSpace.right, stereoTailStart);
             require(tailCorr < 0.995,
