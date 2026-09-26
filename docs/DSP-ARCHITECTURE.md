@@ -130,13 +130,19 @@ Candidate architecture:
 ### 6. SPACE engine
 
 Goal:
-- sparse, empty, cold distance.
+- sparse, empty, distinctly cold distance;
+- include an intentionally icy reverb character, not only early reflections.
 
 Candidate architecture:
-- short sparse reflections and/or very small decorrelation network;
+- short sparse early reflections as the front edge;
+- followed by a controlled cold reverb tail;
 - deliberately lower diffusion than a conventional lush reverb;
-- no long generic hall tail in the normal range;
-- space must not obscure transients or musical pitch.
+- spectrally lean / glassy / metallic decay rather than warm dense bloom;
+- decorrelated but stable stereo field;
+- tail may be clearly audible and extended, but must remain sparse enough to preserve transients and musical pitch;
+- avoid generic hall behavior, warm low-mid build-up and smooth analog-style glue.
+
+The intended percept is an empty frozen space: reflective, cold, slightly metallic and clear rather than soft, enveloping or warm.
 
 ## Signal-flow hypothesis
 
