@@ -69,6 +69,11 @@ private:
 
     std::array<std::vector<float>, kChannels> iceDelayBuffer_ {};
     std::array<int, kChannels> iceDelayWrite_ {};
+    std::array<std::vector<float>, kChannels> shiverDelayBuffer_ {};
+    std::array<int, kChannels> shiverDelayWrite_ {};
+    std::array<float, kChannels> shiverJitter_ {};
+    std::array<float, kChannels> shiverJitterTarget_ {};
+    std::array<int, kChannels> shiverJitterCounter_ {};
     std::array<float, kChannels> frostHeld_ {};
     std::array<int, kChannels> frostHoldCounter_ {};
 
