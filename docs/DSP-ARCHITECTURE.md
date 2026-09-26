@@ -201,3 +201,29 @@ Constants and mappings should be identified as:
 
 The present artistic material mappings are EMPIRICALLY TUNED until real-audio listening and
 measurement converge.
+
+
+## Material model architecture
+
+Each character module has six selectable material models. The selector changes the internal
+DSP behaviour, not merely parameter presets.
+
+- ICE: Crystal / Glass / Crack / Black Ice / Icicle / Shatter
+- METAL: Steel / Pipe / Chain / Sheet / Machine / Rust
+- FROST: Hoarfrost / Snow / Crunch / Frozen Dust / Rime / Deep Freeze
+- SHIVER: Tremble / Wind / Gust / Storm / Whiteout / Polar
+- SPACE: Morgue / Church / Bunker / Ice Cave / Cold Hall / Cemetery
+
+The module amount remains the participation weight in the COLD transformation. The material
+selector determines *how* that module sounds.
+
+Current implementation differences include:
+- distinct modal frequency sets for ICE and METAL;
+- different event density, decay and particle balance;
+- different FROST hold/crackle/noise behaviour;
+- different SHIVER delay, jitter and wind/gust behaviour;
+- different SPACE reflection geometry, damping and feedback.
+
+Material selectors use stable parameter IDs 108–112.
+Component state version 2 persists all five selections. Version-1 states remain loadable and
+migrate to material index 0, preserving the original v0.1.0 sound as closely as possible.
