@@ -107,9 +107,15 @@ tresult PLUGIN_API Processor::canProcessSampleSize(int32 symbolicSampleSize)
 tresult PLUGIN_API Processor::setBusArrangements(SpeakerArrangement* inputs, int32 numIns,
                                                   SpeakerArrangement* outputs, int32 numOuts)
 {
-    if (numIns == 1 && numOuts == 1 &&
-        inputs[0] == SpeakerArr::kStereo && outputs[0] == SpeakerArr::kStereo)
-        return AudioEffect::setBusArrangements(inputs, numIns, outputs, numOuts);
+    if (numIns == 1 && numOuts == 1)
+    {
+        const auto in = inputs[0];
+        const auto out = outputs[0];
+        const bool stereo = in == SpeakerArr::kStereo && out == SpeakerArr::kStereo;
+        const bool mono = in == SpeakerArr::kMono && out == SpeakerArr::kMono;
+        if (stereo || mono)
+            return AudioEffect::setBusArrangements(inputs, numIns, outputs, numOuts);
+    }
 
     return kResultFalse;
 }
