@@ -137,6 +137,7 @@ void Processor::resetDsp()
     }
     shiverPhaseA_ = 0.f;
     shiverPhaseB_ = 0.f;
+    resonatorUpdateCounter_ = 0;
 
     for (auto& channel : iceModes_)
         for (auto& mode : channel)
@@ -203,21 +204,24 @@ void Processor::applyParameter(ParamID id, float normalized)
 
 tresult PLUGIN_API Processor::process(ProcessData& data)
 {
+    constexpr int32 kMaxAutomationQueues = 16;
+    IParamValueQueue* automationQueues[kMaxAutomationQueues] {};
+    int32 automationIndices[kMaxAutomationQueues] {};
+    int32 automationCounts[kMaxAutomationQueues] {};
+    int32 automationQueueCount = 0;
+
     if (data.inputParameterChanges)
     {
-        const int32 count = data.inputParameterChanges->getParameterCount();
+        const int32 count = std::min<int32>(data.inputParameterChanges->getParameterCount(),
+                                            kMaxAutomationQueues);
         for (int32 i = 0; i < count; ++i)
         {
             if (auto* queue = data.inputParameterChanges->getParameterData(i))
             {
-                const int32 points = queue->getPointCount();
-                if (points > 0)
-                {
-                    int32 sampleOffset = 0;
-                    ParamValue value = 0.0;
-                    if (queue->getPoint(points - 1, sampleOffset, value) == kResultTrue)
-                        applyParameter(queue->getParameterId(), static_cast<float>(value));
-                }
+                automationQueues[automationQueueCount] = queue;
+                automationIndices[automationQueueCount] = 0;
+                automationCounts[automationQueueCount] = queue->getPointCount();
+                ++automationQueueCount;
             }
         }
     }
@@ -239,13 +243,32 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
     const float fastA = onePoleCoeff(sampleRate_, 95.f);
     const float slowA = onePoleCoeff(sampleRate_, 12.f);
 
-    const float coldIceBlock = 0.78f * std::pow(clamp01((smCold_ - 0.12f) / 0.88f), 1.30f);
-    const float coldMetalBlock = 0.68f * std::pow(clamp01((smCold_ - 0.22f) / 0.78f), 1.35f);
-    updateResonators(clamp01(smIce_ + coldIceBlock),
-                     clamp01(smMetal_ + coldMetalBlock));
-
     for (int32 sample = 0; sample < data.numSamples; ++sample)
     {
+        for (int32 q = 0; q < automationQueueCount; ++q)
+        {
+            auto* queue = automationQueues[q];
+            int32& pointIndex = automationIndices[q];
+            const int32 pointCount = automationCounts[q];
+
+            while (pointIndex < pointCount)
+            {
+                int32 sampleOffset = 0;
+                ParamValue value = 0.0;
+                if (queue->getPoint(pointIndex, sampleOffset, value) != kResultTrue)
+                {
+                    ++pointIndex;
+                    continue;
+                }
+
+                if (sampleOffset > sample)
+                    break;
+
+                applyParameter(queue->getParameterId(), static_cast<float>(value));
+                ++pointIndex;
+            }
+        }
+
         // Global parameter smoothing advances exactly once per sample so both
         // stereo channels see the same parameter state.
         smCold_ += (cold_ - smCold_) * smooth;
@@ -274,6 +297,16 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
         const float effectiveFrost = clamp01(smFrost_ + coldFrost);
         const float effectiveShiver = clamp01(smShiver_ + coldShiver);
         const float effectiveSpace = clamp01(smSpace_ + coldSpace);
+
+        if (resonatorUpdateCounter_ <= 0)
+        {
+            updateResonators(effectiveIce, effectiveMetal);
+            resonatorUpdateCounter_ = 15;
+        }
+        else
+        {
+            --resonatorUpdateCounter_;
+        }
 
         const float iceExtreme = clamp01((effectiveIce - 0.90f) / 0.10f);
         const float metalExtreme = clamp01((effectiveMetal - 0.90f) / 0.10f);
