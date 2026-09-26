@@ -12,7 +12,16 @@ enum ParamIds : Steinberg::Vst::ParamID
     kShiver,
     kSpace,
     kOutput,
-    kBypass
+    kBypass,
+
+    // Stable material selectors. Keep existing IDs untouched.
+    kIceMaterial = 108,
+    kMetalMaterial,
+    kFrostMaterial,
+    kShiverMaterial,
+    kSpaceMaterial
 };
+
+constexpr int kMaterialCount = 6;
 
 } // namespace Colderator
