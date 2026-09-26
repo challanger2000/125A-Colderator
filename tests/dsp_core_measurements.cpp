@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <chrono>
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -19,6 +20,9 @@ using Colderator::Processor;
 namespace {
 
 constexpr double kPi = 3.14159265358979323846;
+
+bool finiteBuffer(const std::vector<float>& x);
+double meanAbsDiff(const std::vector<float>& a, const std::vector<float>& b, size_t skip);
 
 struct Settings
 {
@@ -557,6 +561,242 @@ bool stateRoundtripMatches(double sr)
     return diff < 1e-7;
 }
 
+
+std::vector<float> renderMode(double sr, ProcessModes mode, const Settings& settings, int block = 128)
+{
+    Processor p;
+    if (p.initialize(nullptr) != kResultOk)
+        throw std::runtime_error("mode initialize failed");
+
+    ProcessSetup setup {};
+    setup.processMode = mode;
+    setup.symbolicSampleSize = kSample32;
+    setup.maxSamplesPerBlock = block;
+    setup.sampleRate = sr;
+    if (p.setupProcessing(setup) != kResultOk)
+        throw std::runtime_error("mode setupProcessing failed");
+
+    p.setTestParameter(Colderator::kCold, settings.cold);
+    p.setTestParameter(Colderator::kIce, settings.ice);
+    p.setTestParameter(Colderator::kMetal, settings.metal);
+    p.setTestParameter(Colderator::kFrost, settings.frost);
+    p.setTestParameter(Colderator::kShiver, settings.shiver);
+    p.setTestParameter(Colderator::kSpace, settings.space);
+    p.setTestParameter(Colderator::kOutput, 0.5f);
+    if (p.setActive(true) != kResultOk)
+        throw std::runtime_error("mode setActive failed");
+
+    const size_t total = static_cast<size_t>(std::llround(sr * 0.5));
+    std::vector<float> result(total, 0.f);
+    std::vector<float> inL(block), inR(block), outL(block), outR(block);
+    float* inPtrs[2] = {inL.data(), inR.data()};
+    float* outPtrs[2] = {outL.data(), outR.data()};
+    AudioBusBuffers inBus {};
+    inBus.numChannels = 2;
+    inBus.channelBuffers32 = inPtrs;
+    AudioBusBuffers outBus {};
+    outBus.numChannels = 2;
+    outBus.channelBuffers32 = outPtrs;
+
+    size_t pos = 0;
+    while (pos < total)
+    {
+        const int n = static_cast<int>(std::min<size_t>(block, total - pos));
+        for (int i = 0; i < n; ++i)
+        {
+            const double t = static_cast<double>(pos + static_cast<size_t>(i)) / sr;
+            const float x = 0.17f * static_cast<float>(std::sin(2.0 * kPi * 311.13 * t)) +
+                            0.09f * static_cast<float>(std::sin(2.0 * kPi * 733.0 * t));
+            inL[i] = x;
+            inR[i] = x;
+            outL[i] = outR[i] = 0.f;
+        }
+
+        ProcessData data {};
+        data.processMode = mode;
+        data.symbolicSampleSize = kSample32;
+        data.numSamples = n;
+        data.numInputs = 1;
+        data.numOutputs = 1;
+        data.inputs = &inBus;
+        data.outputs = &outBus;
+        if (p.process(data) != kResultOk)
+            throw std::runtime_error("mode process failed");
+
+        for (int i = 0; i < n; ++i)
+            result[pos + static_cast<size_t>(i)] = outL[i];
+        pos += static_cast<size_t>(n);
+    }
+
+    p.setActive(false);
+    p.terminate();
+    return result;
+}
+
+bool lifecycleAndRateChangeStable()
+{
+    Processor p;
+    if (p.initialize(nullptr) != kResultOk)
+        return false;
+
+    for (double sr : {44100.0, 96000.0, 48000.0})
+    {
+        ProcessSetup setup {};
+        setup.processMode = kRealtime;
+        setup.symbolicSampleSize = kSample32;
+        setup.maxSamplesPerBlock = 64;
+        setup.sampleRate = sr;
+        if (p.setupProcessing(setup) != kResultOk)
+            return false;
+
+        p.setTestParameter(Colderator::kCold, 0.8f);
+        p.setTestParameter(Colderator::kSpace, 0.8f);
+        if (p.setActive(true) != kResultOk)
+            return false;
+
+        const auto out = renderConfiguredProcessor(p, sr, 0.08, 440.0, 64);
+        if (!finiteBuffer(out))
+            return false;
+
+        if (p.setActive(false) != kResultOk)
+            return false;
+    }
+
+    p.terminate();
+    return true;
+}
+
+bool activeStateLoadStable(double sr)
+{
+    constexpr int block = 64;
+    Processor p;
+    Processor donor;
+    if (p.initialize(nullptr) != kResultOk || donor.initialize(nullptr) != kResultOk)
+        return false;
+
+    ProcessSetup setup {};
+    setup.processMode = kRealtime;
+    setup.symbolicSampleSize = kSample32;
+    setup.maxSamplesPerBlock = block;
+    setup.sampleRate = sr;
+    if (p.setupProcessing(setup) != kResultOk || donor.setupProcessing(setup) != kResultOk)
+        return false;
+
+    p.setTestParameter(Colderator::kCold, 0.15f);
+    p.setTestParameter(Colderator::kSpace, 0.10f);
+    donor.setTestParameter(Colderator::kCold, 0.92f);
+    donor.setTestParameter(Colderator::kIce, 0.70f);
+    donor.setTestParameter(Colderator::kMetal, 0.75f);
+    donor.setTestParameter(Colderator::kFrost, 0.55f);
+    donor.setTestParameter(Colderator::kShiver, 0.45f);
+    donor.setTestParameter(Colderator::kSpace, 0.80f);
+    donor.setTestParameter(Colderator::kOutput, 0.5f);
+
+    if (p.setActive(true) != kResultOk)
+        return false;
+    const auto before = renderConfiguredProcessor(p, sr, 0.08, 440.0, block);
+
+    Steinberg::MemoryStream state;
+    if (donor.getState(&state) != kResultOk)
+        return false;
+    state.seek(0, Steinberg::IBStream::kIBSeekSet, nullptr);
+    if (p.setState(&state) != kResultOk)
+        return false;
+
+    const auto after = renderConfiguredProcessor(p, sr, 0.20, 440.0, block);
+    const bool ok = finiteBuffer(after) && meanAbsDiff(before, after, 0) > 1e-4;
+
+    p.setActive(false);
+    p.terminate();
+    donor.terminate();
+    return ok;
+}
+
+struct CpuStats
+{
+    double p95Us = 0.0;
+    double p99Us = 0.0;
+    double maxUs = 0.0;
+    double deadlineUs = 0.0;
+};
+
+CpuStats measureCpu(double sr, int block)
+{
+    Processor p;
+    if (p.initialize(nullptr) != kResultOk)
+        throw std::runtime_error("cpu initialize failed");
+
+    ProcessSetup setup {};
+    setup.processMode = kRealtime;
+    setup.symbolicSampleSize = kSample32;
+    setup.maxSamplesPerBlock = block;
+    setup.sampleRate = sr;
+    if (p.setupProcessing(setup) != kResultOk)
+        throw std::runtime_error("cpu setup failed");
+
+    p.setTestParameter(Colderator::kCold, 1.f);
+    p.setTestParameter(Colderator::kIce, 1.f);
+    p.setTestParameter(Colderator::kMetal, 1.f);
+    p.setTestParameter(Colderator::kFrost, 1.f);
+    p.setTestParameter(Colderator::kShiver, 1.f);
+    p.setTestParameter(Colderator::kSpace, 1.f);
+    p.setTestParameter(Colderator::kOutput, 0.5f);
+    p.setActive(true);
+
+    std::vector<float> inL(block), inR(block), outL(block), outR(block);
+    for (int i = 0; i < block; ++i)
+    {
+        const float x = 0.2f * static_cast<float>(std::sin(2.0 * kPi * 997.0 * i / sr));
+        inL[i] = inR[i] = x;
+    }
+    float* inPtrs[2] = {inL.data(), inR.data()};
+    float* outPtrs[2] = {outL.data(), outR.data()};
+    AudioBusBuffers inBus {};
+    inBus.numChannels = 2;
+    inBus.channelBuffers32 = inPtrs;
+    AudioBusBuffers outBus {};
+    outBus.numChannels = 2;
+    outBus.channelBuffers32 = outPtrs;
+
+    ProcessData data {};
+    data.processMode = kRealtime;
+    data.symbolicSampleSize = kSample32;
+    data.numSamples = block;
+    data.numInputs = 1;
+    data.numOutputs = 1;
+    data.inputs = &inBus;
+    data.outputs = &outBus;
+
+    for (int i = 0; i < 100; ++i)
+        p.process(data);
+
+    std::vector<double> us;
+    us.reserve(1200);
+    for (int i = 0; i < 1200; ++i)
+    {
+        const auto t0 = std::chrono::steady_clock::now();
+        p.process(data);
+        const auto t1 = std::chrono::steady_clock::now();
+        us.push_back(std::chrono::duration<double, std::micro>(t1 - t0).count());
+    }
+    std::sort(us.begin(), us.end());
+
+    auto pct = [&](double pctl) {
+        const size_t idx = static_cast<size_t>(pctl * static_cast<double>(us.size() - 1));
+        return us[idx];
+    };
+
+    CpuStats stats;
+    stats.p95Us = pct(0.95);
+    stats.p99Us = pct(0.99);
+    stats.maxUs = us.back();
+    stats.deadlineUs = 1.0e6 * static_cast<double>(block) / sr;
+
+    p.setActive(false);
+    p.terminate();
+    return stats;
+}
+
 double tailEnergy(const std::vector<float>& x, size_t start)
 {
     if (x.size() <= start)
@@ -648,6 +888,22 @@ int main()
             p.terminate();
         }
 
+        require(lifecycleAndRateChangeStable(),
+                "activate/deactivate and sample-rate changes remain stable", failures);
+
+        {
+            const auto cpu64 = measureCpu(48000.0, 64);
+            const auto cpu256 = measureCpu(48000.0, 256);
+            std::cout << "[INFO] CPU 48k/64 p95=" << cpu64.p95Us
+                      << "us p99=" << cpu64.p99Us << "us max=" << cpu64.maxUs
+                      << "us deadline=" << cpu64.deadlineUs << "us\n";
+            std::cout << "[INFO] CPU 48k/256 p95=" << cpu256.p95Us
+                      << "us p99=" << cpu256.p99Us << "us max=" << cpu256.maxUs
+                      << "us deadline=" << cpu256.deadlineUs << "us\n";
+            require(cpu64.p99Us < cpu64.deadlineUs && cpu256.p99Us < cpu256.deadlineUs,
+                    "CPU p99 stays inside realtime block deadlines on CI", failures);
+        }
+
         for (double sr : {44100.0, 48000.0, 96000.0})
         {
             require(stateRoundtripMatches(sr),
@@ -672,6 +928,15 @@ int main()
                         "reported tail covers designed cold reverb decay", failures);
                 tailProbe.terminate();
             }
+            const Settings paritySettings {0.78f, 0.52f, 0.63f, 0.35f, 0.28f, 0.67f};
+            const auto realtimeParity = renderMode(sr, kRealtime, paritySettings, 128);
+            const auto offlineParity = renderMode(sr, kOffline, paritySettings, 128);
+            require(meanAbsDiff(realtimeParity, offlineParity, 0) < 1e-8,
+                    "offline and realtime processing are sample-identical", failures);
+
+            require(activeStateLoadStable(sr),
+                    "state load while active remains finite and takes effect", failures);
+
             const size_t skip = static_cast<size_t>(sr * 0.15);
 
             const auto dry = renderSine(sr, 0.8, 440.0, {});
