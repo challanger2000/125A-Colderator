@@ -23,9 +23,15 @@ Music production and cinematic/game sound design are both first-class use cases.
 
 ### COLD — scene director
 
-COLD is the main transformation macro.
+COLD is the main transformation-intensity macro.
 
 It coordinates material, texture, movement and space. It is not a conventional wet/dry knob.
+The secondary module controls are participation weights:
+- module 0% = fully excluded, even when COLD is 100%;
+- COLD 0% = neutral, even when modules are set above 0%;
+- effective module strength is derived from COLD × module participation.
+
+This lets the user deliberately exclude potentially intrusive characters such as SHIVER.
 
 Target dramaturgy:
 - 0–20%: cold tint, source clearly dominant;
