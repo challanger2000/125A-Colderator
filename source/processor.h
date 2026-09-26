@@ -95,6 +95,8 @@ private:
     int resonatorUpdateCounter_ = 0;
     float lastResonatorIce_ = -1.f;
     float lastResonatorMetal_ = -1.f;
+    int lastIceMaterial_ = -1;
+    int lastMetalMaterial_ = -1;
 
     float cold_ = 0.f;
     float ice_ = 0.f;
@@ -104,6 +106,12 @@ private:
     float space_ = 0.f;
     float output_ = 0.5f;
     bool bypass_ = false;
+
+    int iceMaterial_ = 0;
+    int metalMaterial_ = 0;
+    int frostMaterial_ = 0;
+    int shiverMaterial_ = 0;
+    int spaceMaterial_ = 0;
 
     float smCold_ = 0.f;
     float smIce_ = 0.f;
