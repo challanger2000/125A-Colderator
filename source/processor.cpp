@@ -180,8 +180,13 @@ void Processor::resetDsp()
     smSpace_ = space_;
     smOutput_ = output_;
 
-    const float coldIceBlock = 0.92f * std::pow(clamp01((smCold_ - 0.08f) / 0.92f), 1.12f);
-    const float coldMetalBlock = 0.86f * std::pow(clamp01((smCold_ - 0.16f) / 0.84f), 1.18f);
+    const float coldUpperBlock = std::pow(clamp01((smCold_ - 0.50f) / 0.50f), 1.15f);
+    const float coldIceBlock = clamp01(
+        0.92f * std::pow(clamp01((smCold_ - 0.08f) / 0.92f), 1.12f) +
+        0.18f * coldUpperBlock);
+    const float coldMetalBlock = clamp01(
+        0.86f * std::pow(clamp01((smCold_ - 0.16f) / 0.84f), 1.18f) +
+        0.22f * coldUpperBlock);
     updateResonators(clamp01(smIce_ + coldIceBlock),
                      clamp01(smMetal_ + coldMetalBlock));
 }
@@ -342,11 +347,22 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
         const float metalCarrier = 0.58f * std::sin(metalPhaseA_) +
                                    0.42f * std::sin(metalPhaseB_);
 
-        const float coldIce = 0.92f * std::pow(clamp01((smCold_ - 0.08f) / 0.92f), 1.12f);
-        const float coldMetal = 0.86f * std::pow(clamp01((smCold_ - 0.16f) / 0.84f), 1.18f);
-        const float coldFrost = 0.94f * std::pow(clamp01((smCold_ - 0.24f) / 0.76f), 1.08f);
-        const float coldShiver = 0.72f * std::pow(clamp01((smCold_ - 0.34f) / 0.66f), 1.10f);
-        const float coldSpace = 0.72f * std::pow(clamp01((smCold_ - 0.42f) / 0.58f), 1.20f);
+        const float coldUpper = std::pow(clamp01((smCold_ - 0.50f) / 0.50f), 1.15f);
+        const float coldIce = clamp01(
+            0.92f * std::pow(clamp01((smCold_ - 0.08f) / 0.92f), 1.12f) +
+            0.18f * coldUpper);
+        const float coldMetal = clamp01(
+            0.86f * std::pow(clamp01((smCold_ - 0.16f) / 0.84f), 1.18f) +
+            0.22f * coldUpper);
+        const float coldFrost = clamp01(
+            0.94f * std::pow(clamp01((smCold_ - 0.24f) / 0.76f), 1.08f) +
+            0.20f * coldUpper);
+        const float coldShiver = clamp01(
+            0.72f * std::pow(clamp01((smCold_ - 0.34f) / 0.66f), 1.10f) +
+            0.26f * coldUpper);
+        const float coldSpace = clamp01(
+            0.72f * std::pow(clamp01((smCold_ - 0.42f) / 0.58f), 1.20f) +
+            0.18f * coldUpper);
 
         const float effectiveIce = clamp01(smIce_ + coldIce);
         const float effectiveMetal = clamp01(smMetal_ + coldMetal);
@@ -520,9 +536,9 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                 const float side = ch == 0 ? 1.f : -1.f;
                 const float motion = 0.62f * shiverMod +
                                      0.38f * shiverJitter_[ch] * side;
-                const float baseMs = 1.6f + 1.4f * effectiveShiver;
-                const float depthMs = 0.7f + 2.4f * effectiveShiver +
-                                      1.8f * shiverExtreme;
+                const float baseMs = 1.6f + 1.6f * effectiveShiver;
+                const float depthMs = 0.8f + 2.8f * effectiveShiver +
+                                      3.8f * shiverExtreme;
                 float delaySamples = static_cast<float>(sampleRate_) *
                                      (baseMs + depthMs * motion) * 0.001f;
                 delaySamples = std::max(1.f, std::min(delaySamples, static_cast<float>(size - 3)));
@@ -535,8 +551,10 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                 const float shifted = shiverDelay[static_cast<size_t>(i0)] * (1.f - frac) +
                                       shiverDelay[static_cast<size_t>(i1)] * frac;
 
-                const float shiverTexture = 0.18f * x + 0.82f * shifted +
-                                            highDetail * shiverJitter_[ch] * 0.22f;
+                const float shiverTexture = (0.18f - 0.10f * shiverExtreme) * x +
+                                            (0.82f + 0.18f * shiverExtreme) * shifted +
+                                            highDetail * shiverJitter_[ch] *
+                                                (0.22f + 0.38f * shiverExtreme);
                 const float shiverWet = materialWet(effectiveShiver);
                 y = y * (1.f - shiverWet) + shiverTexture * shiverWet;
                 shiverDelayWrite_[ch] = (w + 1 >= size) ? 0 : (w + 1);
