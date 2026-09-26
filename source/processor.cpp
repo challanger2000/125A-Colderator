@@ -118,6 +118,11 @@ void Processor::resetDsp()
     frostPrevNoise_.fill(0.f);
     frostRng_[0] = 0x125A91u;
     frostRng_[1] = 0xC01D77u;
+    for (int ch = 0; ch < kChannels; ++ch)
+    {
+        spaceBuffer_[ch].assign(static_cast<size_t>(sampleRate_ * 0.06) + 8u, 0.f);
+        spaceWrite_[ch] = 0;
+    }
     shiverPhaseA_ = 0.f;
     shiverPhaseB_ = 0.f;
 
@@ -134,6 +139,7 @@ void Processor::resetDsp()
     smMetal_ = metal_;
     smFrost_ = frost_;
     smShiver_ = shiver_;
+    smSpace_ = space_;
     smOutput_ = output_;
 
     updateResonators(smIce_, smMetal_);
@@ -241,6 +247,7 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
         smMetal_ += (metal_ - smMetal_) * smooth;
         smFrost_ += (frost_ - smFrost_) * smooth;
         smShiver_ += (shiver_ - smShiver_) * smooth;
+        smSpace_ += (space_ - smSpace_) * smooth;
         smOutput_ += (output_ - smOutput_) * smooth;
 
         shiverPhaseA_ += 2.f * kPi * 4.7f / static_cast<float>(sampleRate_);
@@ -319,6 +326,37 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
             const float shiverExtreme = clamp01((smShiver_ - 0.90f) / 0.10f);
             const float shiverDepth = smShiver_ * (0.018f + 0.032f * shiverExtreme);
             y += highDetail * shiverMod * shiverDepth;
+
+            // SPACE: three sparse early reflections with deliberately low
+            // diffusion. No feedback, so the normal range stays clear and
+            // the tail remains short instead of turning into a conventional hall.
+            auto& spaceBuffer = spaceBuffer_[ch];
+            if (!spaceBuffer.empty())
+            {
+                const float side = ch == 0 ? 0.96f : 1.04f;
+                const int d1 = std::max(1, static_cast<int>(sampleRate_ * 0.0073 * side));
+                const int d2 = std::max(1, static_cast<int>(sampleRate_ * 0.0137 / side));
+                const int d3 = std::max(1, static_cast<int>(sampleRate_ * 0.0239 * side));
+                const int size = static_cast<int>(spaceBuffer.size());
+                const int w = spaceWrite_[ch];
+
+                auto readTap = [&](int delay) {
+                    int index = w - delay;
+                    while (index < 0) index += size;
+                    return spaceBuffer[static_cast<size_t>(index)];
+                };
+
+                const float sparse = 0.58f * readTap(d1) -
+                                     0.31f * readTap(d2) +
+                                     0.19f * readTap(d3);
+
+                const float spaceExtreme = clamp01((smSpace_ - 0.90f) / 0.10f);
+                const float spaceMix = smSpace_ * (0.16f + 0.18f * spaceExtreme);
+                y += sparse * spaceMix;
+
+                spaceBuffer[static_cast<size_t>(w)] = y;
+                spaceWrite_[ch] = (w + 1 >= size) ? 0 : (w + 1);
+            }
 
             y *= outputGain;
 
