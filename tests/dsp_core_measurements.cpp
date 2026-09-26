@@ -23,6 +23,8 @@ struct Settings
     float cold = 0.f;
     float ice = 0.f;
     float metal = 0.f;
+    float frost = 0.f;
+    float shiver = 0.f;
 };
 
 std::vector<float> renderSine(double sr, double seconds, double hz, const Settings& settings)
@@ -45,6 +47,8 @@ std::vector<float> renderSine(double sr, double seconds, double hz, const Settin
     p.setTestParameter(Colderator::kCold, settings.cold);
     p.setTestParameter(Colderator::kIce, settings.ice);
     p.setTestParameter(Colderator::kMetal, settings.metal);
+    p.setTestParameter(Colderator::kFrost, settings.frost);
+    p.setTestParameter(Colderator::kShiver, settings.shiver);
     p.setTestParameter(Colderator::kOutput, 0.5f);
 
     if (p.setActive(true) != kResultOk)
@@ -124,6 +128,8 @@ std::vector<float> renderImpulse(double sr, double seconds, const Settings& sett
     p.setTestParameter(Colderator::kCold, settings.cold);
     p.setTestParameter(Colderator::kIce, settings.ice);
     p.setTestParameter(Colderator::kMetal, settings.metal);
+    p.setTestParameter(Colderator::kFrost, settings.frost);
+    p.setTestParameter(Colderator::kShiver, settings.shiver);
     p.setTestParameter(Colderator::kOutput, 0.5f);
 
     if (p.setActive(true) != kResultOk)
@@ -264,6 +270,12 @@ int main()
             const auto ice100 = renderSine(sr, 0.8, 440.0, {0.f, 1.f, 0.f});
             const auto metal50 = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 0.50f});
             const auto metal100 = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 1.f});
+            const auto frost50 = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 0.f, 0.50f, 0.f});
+            const auto frost100 = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 0.f, 1.f, 0.f});
+            const auto frost100Repeat = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 0.f, 1.f, 0.f});
+            const auto frostSilence = renderSine(sr, 0.8, 0.0, {0.f, 0.f, 0.f, 1.f, 0.f});
+            const auto shiver50 = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 0.f, 0.f, 0.50f});
+            const auto shiver100 = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 0.f, 0.f, 1.f});
 
             const auto impulseDry = renderImpulse(sr, 0.25, {});
             const auto impulseIce50 = renderImpulse(sr, 0.25, {0.f, 0.50f, 0.f});
@@ -272,7 +284,8 @@ int main()
             const auto impulseMetal100 = renderImpulse(sr, 0.25, {0.f, 0.f, 1.f});
 
             require(finiteBuffer(dry) && finiteBuffer(cold100) &&
-                    finiteBuffer(ice100) && finiteBuffer(metal100),
+                    finiteBuffer(ice100) && finiteBuffer(metal100) &&
+                    finiteBuffer(frost100) && finiteBuffer(shiver100),
                     "finite output at " + std::to_string(static_cast<int>(sr)) + " Hz",
                     failures);
 
@@ -286,10 +299,32 @@ int main()
             const double dIce100 = meanAbsDiff(dry, ice100, skip);
             const double dMetal50 = meanAbsDiff(dry, metal50, skip);
             const double dMetal100 = meanAbsDiff(dry, metal100, skip);
+            const double dFrost50 = meanAbsDiff(dry, frost50, skip);
+            const double dFrost100 = meanAbsDiff(dry, frost100, skip);
+            const double dShiver50 = meanAbsDiff(dry, shiver50, skip);
+            const double dShiver100 = meanAbsDiff(dry, shiver100, skip);
 
             require(dCold50 > 1e-4, "COLD 50% is measurably active", failures);
             require(dIce50 > 1e-5, "ICE 50% is measurably active", failures);
             require(dMetal50 > 1e-5, "METAL 50% is measurably active", failures);
+            require(dFrost50 > 1e-5, "FROST 50% is measurably active", failures);
+            require(dShiver50 > 1e-5, "SHIVER 50% is measurably active", failures);
+
+            require(dFrost100 > dFrost50 * 1.20, "FROST 100% stronger than 50%", failures);
+            require(dShiver100 > dShiver50 * 1.20, "SHIVER 100% stronger than 50%", failures);
+            require(meanAbsDiff(frost100, frost100Repeat, 0) < 1e-8,
+                    "FROST render is deterministic", failures);
+
+            double silencePeak = 0.0;
+            for (float v : frostSilence)
+                silencePeak = std::max(silencePeak, std::fabs(static_cast<double>(v)));
+            require(silencePeak < 1e-12, "FROST produces no output on silence", failures);
+
+            const double dryFund = toneAmplitude(dry, sr, 440.0, skip);
+            const double shiverFund = toneAmplitude(shiver100, sr, 440.0, skip);
+            const double shiverFundRatio = dryFund > 1e-12 ? shiverFund / dryFund : 0.0;
+            require(shiverFundRatio > 0.90 && shiverFundRatio < 1.10,
+                    "SHIVER preserves sustained fundamental amplitude", failures);
 
             require(dCold100 > dCold50 * 1.25, "COLD 100% stronger than 50%", failures);
 
