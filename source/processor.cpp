@@ -39,6 +39,12 @@ inline float zapDenormal(float v)
     return std::fabs(v) < 1.0e-30f ? 0.f : v;
 }
 
+inline int materialIndex(float v)
+{
+    return std::max(0, std::min(kMaterialCount - 1,
+        static_cast<int>(std::lround(clamp01(v) * static_cast<float>(kMaterialCount - 1)))));
+}
+
 inline float materialWet(float v)
 {
     v = clamp01(v);
@@ -204,18 +210,37 @@ void Processor::updateResonators(float ice, float metal)
     const float iceQ = 0.75f + 2.6f * ice + 16.f * iceExtreme * iceExtreme;
     const float metalQ = 0.70f + 3.4f * metal + 22.f * metalExtreme * metalExtreme;
 
-    constexpr float iceHz[kIceModes] = { 2410.f, 3670.f, 5530.f, 8210.f };
-    constexpr float metalHz[kMetalModes] = { 710.f, 1230.f, 2070.f, 3490.f, 5870.f };
+    constexpr float iceHz[kMaterialCount][kIceModes] = {
+        {2410.f, 3670.f, 5530.f, 8210.f}, // Crystal
+        {1780.f, 2960.f, 4720.f, 7480.f}, // Glass
+        {3290.f, 4870.f, 6910.f, 9340.f}, // Crack
+        {620.f, 1180.f, 2390.f, 5110.f},  // Black Ice
+        {1540.f, 3080.f, 6160.f, 9120.f}, // Icicle
+        {2710.f, 4210.f, 6820.f, 10300.f} // Shatter
+    };
+    constexpr float metalHz[kMaterialCount][kMetalModes] = {
+        {710.f, 1230.f, 2070.f, 3490.f, 5870.f},  // Steel
+        {220.f, 510.f, 930.f, 1670.f, 2890.f},    // Pipe
+        {430.f, 860.f, 1410.f, 2380.f, 4010.f},   // Chain
+        {180.f, 740.f, 1910.f, 3670.f, 6530.f},   // Sheet
+        {310.f, 970.f, 1880.f, 4120.f, 7210.f},   // Machine
+        {260.f, 620.f, 1320.f, 2740.f, 4980.f}    // Rust
+    };
+
+    const int iceModel = std::max(0, std::min(kMaterialCount - 1, iceMaterial_));
+    const int metalModel = std::max(0, std::min(kMaterialCount - 1, metalMaterial_));
+    lastIceMaterial_ = iceModel;
+    lastMetalMaterial_ = metalModel;
 
     for (int ch = 0; ch < kChannels; ++ch)
     {
         const float stereoSkew = ch == 0 ? 0.993f : 1.007f;
 
         for (int i = 0; i < kIceModes; ++i)
-            iceModes_[ch][i].setBandpass(sampleRate_, iceHz[i] * stereoSkew, iceQ);
+            iceModes_[ch][i].setBandpass(sampleRate_, iceHz[iceModel][i] * stereoSkew, iceQ);
 
         for (int i = 0; i < kMetalModes; ++i)
-            metalModes_[ch][i].setBandpass(sampleRate_, metalHz[i] * stereoSkew, metalQ);
+            metalModes_[ch][i].setBandpass(sampleRate_, metalHz[metalModel][i] * stereoSkew, metalQ);
     }
 }
 
@@ -236,6 +261,11 @@ void Processor::applyParameter(ParamID id, float normalized)
         case kSpace:  space_ = v; break;
         case kOutput: output_ = v; break;
         case kBypass: bypass_ = v >= 0.5f; break;
+        case kIceMaterial: iceMaterial_ = materialIndex(v); break;
+        case kMetalMaterial: metalMaterial_ = materialIndex(v); break;
+        case kFrostMaterial: frostMaterial_ = materialIndex(v); break;
+        case kShiverMaterial: shiverMaterial_ = materialIndex(v); break;
+        case kSpaceMaterial: spaceMaterial_ = materialIndex(v); break;
         default: break;
     }
 }
@@ -366,7 +396,8 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
         {
             constexpr float kResonatorUpdateEpsilon = 1.0e-4f;
             if (std::fabs(effectiveIce - lastResonatorIce_) > kResonatorUpdateEpsilon ||
-                std::fabs(effectiveMetal - lastResonatorMetal_) > kResonatorUpdateEpsilon)
+                std::fabs(effectiveMetal - lastResonatorMetal_) > kResonatorUpdateEpsilon ||
+                iceMaterial_ != lastIceMaterial_ || metalMaterial_ != lastMetalMaterial_)
             {
                 updateResonators(effectiveIce, effectiveMetal);
             }
