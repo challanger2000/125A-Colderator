@@ -130,13 +130,19 @@ void Processor::resetDsp()
     frostRng_[0] = 0x125A91u;
     frostRng_[1] = 0xC01D77u;
     spaceLowState_.fill(0.f);
+    frostHeld_.fill(0.f);
+    frostHoldCounter_.fill(0);
     for (int ch = 0; ch < kChannels; ++ch)
     {
         spaceBuffer_[ch].assign(static_cast<size_t>(sampleRate_ * 0.18) + 8u, 0.f);
         spaceWrite_[ch] = 0;
+        iceDelayBuffer_[ch].assign(static_cast<size_t>(sampleRate_ * 0.012) + 8u, 0.f);
+        iceDelayWrite_[ch] = 0;
     }
     shiverPhaseA_ = 0.f;
     shiverPhaseB_ = 0.f;
+    metalPhaseA_ = 0.f;
+    metalPhaseB_ = 0.f;
     resonatorUpdateCounter_ = 0;
     lastResonatorIce_ = -1.f;
     lastResonatorMetal_ = -1.f;
@@ -308,10 +314,16 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
 
         shiverPhaseA_ += 2.f * kPi * 4.7f / static_cast<float>(sampleRate_);
         shiverPhaseB_ += 2.f * kPi * 7.9f / static_cast<float>(sampleRate_);
+        metalPhaseA_ += 2.f * kPi * 1133.f / static_cast<float>(sampleRate_);
+        metalPhaseB_ += 2.f * kPi * 1777.f / static_cast<float>(sampleRate_);
         if (shiverPhaseA_ >= 2.f * kPi) shiverPhaseA_ -= 2.f * kPi;
         if (shiverPhaseB_ >= 2.f * kPi) shiverPhaseB_ -= 2.f * kPi;
+        if (metalPhaseA_ >= 2.f * kPi) metalPhaseA_ -= 2.f * kPi;
+        if (metalPhaseB_ >= 2.f * kPi) metalPhaseB_ -= 2.f * kPi;
         const float shiverMod = 0.62f * std::sin(shiverPhaseA_) +
                                 0.38f * std::sin(shiverPhaseB_);
+        const float metalCarrier = 0.58f * std::sin(metalPhaseA_) +
+                                   0.42f * std::sin(metalPhaseB_);
 
         const float coldIce = 0.92f * std::pow(clamp01((smCold_ - 0.08f) / 0.92f), 1.12f);
         const float coldMetal = 0.86f * std::pow(clamp01((smCold_ - 0.16f) / 0.84f), 1.18f);
@@ -390,6 +402,41 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
             y += iceSignal * iceMix;
             y += metalSignal * metalMix;
 
+            // FROZEN CORE / ICE: short stereo-skewed micro-comb structure.
+            // This creates an immediately audible glassy/icy transformation,
+            // while leaving the dry fundamental present in the normal range.
+            auto& iceDelay = iceDelayBuffer_[ch];
+            if (!iceDelay.empty())
+            {
+                const float side = ch == 0 ? 0.97f : 1.03f;
+                const int size = static_cast<int>(iceDelay.size());
+                const int w = iceDelayWrite_[ch];
+                const int d1 = std::max(1, static_cast<int>(sampleRate_ * 0.00073 * side));
+                const int d2 = std::max(1, static_cast<int>(sampleRate_ * 0.00131 / side));
+                const int d3 = std::max(1, static_cast<int>(sampleRate_ * 0.00217 * side));
+                auto readIce = [&](int delay) {
+                    int index = w - delay;
+                    while (index < 0) index += size;
+                    return iceDelay[static_cast<size_t>(index)];
+                };
+
+                const float glass = 0.56f * readIce(d1) - 0.31f * readIce(d2) + 0.21f * readIce(d3);
+                const float iceCoreMix = effectiveIce * (0.12f + 0.42f * iceExtreme);
+                y += (glass - 0.18f * highDetail) * iceCoreMix;
+
+                const float write = zapDenormal(highDetail + 0.18f * glass * effectiveIce);
+                iceDelay[static_cast<size_t>(w)] = std::isfinite(write) ? write : 0.f;
+                iceDelayWrite_[ch] = (w + 1 >= size) ? 0 : (w + 1);
+            }
+
+            // FROZEN CORE / METAL: controlled inharmonic sidebands.
+            // Normal range remains blended with the source; extreme values
+            // intentionally become synthetic and machine-like.
+            const float metalSideband = highDetail * metalCarrier;
+            const float metalCoreMix = effectiveMetal * effectiveMetal *
+                                       (0.10f + 0.34f * metalExtreme);
+            y += metalSideband * metalCoreMix;
+
             // FROST: deterministic, signal-dependent high-frequency texture.
             // No input energy means no frost output, even though the RNG state advances.
             unsigned int r = frostRng_[ch];
@@ -404,7 +451,24 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
             const float frostExtreme = clamp01((effectiveFrost - 0.90f) / 0.10f);
             const float frostDrive = effectiveFrost * (0.18f + 0.34f * frostExtreme);
             const float frostCarrier = 1.35f * std::fabs(highDetail) + 0.55f * slowEnv_[ch];
+
+            const int holdSamples = std::max(1, static_cast<int>(
+                sampleRate_ * (0.000025 + 0.00019 * effectiveFrost)));
+            if (frostHoldCounter_[ch] <= 0)
+            {
+                frostHeld_[ch] = highDetail;
+                frostHoldCounter_[ch] = holdSamples;
+            }
+            else
+            {
+                --frostHoldCounter_[ch];
+            }
+            const float microFreeze = frostHeld_[ch] - highDetail;
+            const float freezeMix = effectiveFrost * effectiveFrost *
+                                    (0.18f + 0.36f * frostExtreme);
+
             y += frostNoise * frostCarrier * frostDrive;
+            y += microFreeze * freezeMix;
 
             // SHIVER: shallow dual-rate spectral tremor. It modulates only the
             // high-detail component, so the fundamental is not frequency-shifted.
