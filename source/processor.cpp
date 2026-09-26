@@ -139,6 +139,8 @@ void Processor::resetDsp()
     shiverPhaseA_ = 0.f;
     shiverPhaseB_ = 0.f;
     resonatorUpdateCounter_ = 0;
+    lastResonatorIce_ = -1.f;
+    lastResonatorMetal_ = -1.f;
 
     for (auto& channel : iceModes_)
         for (auto& mode : channel)
@@ -164,6 +166,8 @@ void Processor::resetDsp()
 
 void Processor::updateResonators(float ice, float metal)
 {
+    lastResonatorIce_ = ice;
+    lastResonatorMetal_ = metal;
     const float iceExtreme = clamp01((ice - 0.90f) / 0.10f);
     const float metalExtreme = clamp01((metal - 0.90f) / 0.10f);
 
@@ -324,7 +328,12 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
 
         if (resonatorUpdateCounter_ <= 0)
         {
-            updateResonators(effectiveIce, effectiveMetal);
+            constexpr float kResonatorUpdateEpsilon = 1.0e-4f;
+            if (std::fabs(effectiveIce - lastResonatorIce_) > kResonatorUpdateEpsilon ||
+                std::fabs(effectiveMetal - lastResonatorMetal_) > kResonatorUpdateEpsilon)
+            {
+                updateResonators(effectiveIce, effectiveMetal);
+            }
             resonatorUpdateCounter_ = 15;
         }
         else
