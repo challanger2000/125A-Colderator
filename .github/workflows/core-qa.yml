@@ -1,0 +1,64 @@
+name: Colderator Windows Core QA
+
+on:
+  push:
+    branches:
+      - v0.1.0
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-2025
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure
+        shell: pwsh
+        run: |
+          cmake --version
+          cmake -S . -B build -G "Visual Studio 18 2026" -A x64
+
+      - name: Build plugin tests and validator
+        shell: pwsh
+        run: |
+          cmake --build build --config Release --target Colderator ColderatorMeasurements validator --parallel
+
+      - name: Cold Core measurements
+        shell: pwsh
+        run: |
+          ctest --test-dir build -C Release --output-on-failure
+
+      - name: Locate VST3
+        shell: pwsh
+        run: |
+          $plugin = Get-ChildItem -Path build -Recurse -Directory -Filter "Colderator.vst3" | Select-Object -First 1
+          if (-not $plugin) { Write-Error "Colderator.vst3 not found"; exit 1 }
+          New-Item -ItemType Directory -Force -Path packaged | Out-Null
+          Copy-Item -Path $plugin.FullName -Destination "packaged\125A Colderator.vst3" -Recurse -Force
+
+          $archDir = "packaged\125A Colderator.vst3\Contents\x86_64-win"
+          $oldBinary = Join-Path $archDir "Colderator.vst3"
+          if (Test-Path $oldBinary) {
+            Rename-Item -Path $oldBinary -NewName "125A Colderator.vst3"
+          }
+
+      - name: Steinberg Validator
+        shell: pwsh
+        run: |
+          $plugin = Get-ChildItem -Path packaged -Directory -Filter "125A Colderator.vst3" | Select-Object -First 1
+          $validator = Get-ChildItem -Path build -Recurse -File -Filter "validator.exe" | Select-Object -First 1
+          if (-not $plugin) { Write-Error "Packaged Colderator not found"; exit 1 }
+          if (-not $validator) { Write-Error "validator.exe not found"; exit 1 }
+          & $validator.FullName $plugin.FullName
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Upload VST3
+        uses: actions/upload-artifact@v4
+        with:
+          name: 125A-Colderator-v0.1.0-Core
+          path: packaged/
+          if-no-files-found: error
+          retention-days: 7
