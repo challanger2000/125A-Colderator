@@ -1055,6 +1055,128 @@ bool silentInputPreservesTail(double sr)
     return foundTail;
 }
 
+
+struct StereoRender
+{
+    std::vector<float> left;
+    std::vector<float> right;
+};
+
+StereoRender renderStereoImpulse(double sr, double seconds, const Settings& settings, int block = 128)
+{
+    Processor p;
+    if (p.initialize(nullptr) != kResultOk)
+        throw std::runtime_error("stereo impulse initialize failed");
+
+    ProcessSetup setup {};
+    setup.processMode = kRealtime;
+    setup.symbolicSampleSize = kSample32;
+    setup.maxSamplesPerBlock = block;
+    setup.sampleRate = sr;
+    if (p.setupProcessing(setup) != kResultOk)
+        throw std::runtime_error("stereo impulse setup failed");
+
+    p.setTestParameter(Colderator::kCold, settings.cold);
+    p.setTestParameter(Colderator::kIce, settings.ice);
+    p.setTestParameter(Colderator::kMetal, settings.metal);
+    p.setTestParameter(Colderator::kFrost, settings.frost);
+    p.setTestParameter(Colderator::kShiver, settings.shiver);
+    p.setTestParameter(Colderator::kSpace, settings.space);
+    p.setTestParameter(Colderator::kOutput, 0.5f);
+    if (p.setActive(true) != kResultOk)
+        throw std::runtime_error("stereo impulse active failed");
+
+    const size_t total = static_cast<size_t>(std::llround(sr * seconds));
+    StereoRender result;
+    result.left.assign(total, 0.f);
+    result.right.assign(total, 0.f);
+
+    std::vector<float> inL(block, 0.f), inR(block, 0.f), outL(block, 0.f), outR(block, 0.f);
+    float* inPtrs[2] = {inL.data(), inR.data()};
+    float* outPtrs[2] = {outL.data(), outR.data()};
+    AudioBusBuffers inBus {};
+    inBus.numChannels = 2;
+    inBus.channelBuffers32 = inPtrs;
+    AudioBusBuffers outBus {};
+    outBus.numChannels = 2;
+    outBus.channelBuffers32 = outPtrs;
+
+    bool sent = false;
+    size_t pos = 0;
+    while (pos < total)
+    {
+        const int n = static_cast<int>(std::min<size_t>(block, total - pos));
+        std::fill(inL.begin(), inL.end(), 0.f);
+        std::fill(inR.begin(), inR.end(), 0.f);
+        std::fill(outL.begin(), outL.end(), 0.f);
+        std::fill(outR.begin(), outR.end(), 0.f);
+        if (!sent)
+        {
+            inL[0] = 1.f;
+            inR[0] = 1.f;
+            sent = true;
+        }
+
+        ProcessData data {};
+        data.processMode = kRealtime;
+        data.symbolicSampleSize = kSample32;
+        data.numSamples = n;
+        data.numInputs = 1;
+        data.numOutputs = 1;
+        data.inputs = &inBus;
+        data.outputs = &outBus;
+        if (p.process(data) != kResultOk)
+            throw std::runtime_error("stereo impulse process failed");
+
+        for (int i = 0; i < n; ++i)
+        {
+            result.left[pos + static_cast<size_t>(i)] = outL[i];
+            result.right[pos + static_cast<size_t>(i)] = outR[i];
+        }
+        pos += static_cast<size_t>(n);
+    }
+
+    p.setActive(false);
+    p.terminate();
+    return result;
+}
+
+double correlation(const std::vector<float>& a, const std::vector<float>& b, size_t start)
+{
+    const size_t n = std::min(a.size(), b.size());
+    if (n <= start)
+        return 1.0;
+
+    double aa = 0.0, bb = 0.0, ab = 0.0;
+    for (size_t i = start; i < n; ++i)
+    {
+        const double x = a[i];
+        const double y = b[i];
+        aa += x * x;
+        bb += y * y;
+        ab += x * y;
+    }
+    const double denom = std::sqrt(aa * bb);
+    return denom > 1e-20 ? ab / denom : 1.0;
+}
+
+double spectralMagnitude(const std::vector<float>& x, double sr, double hz, size_t start, size_t end)
+{
+    end = std::min(end, x.size());
+    if (end <= start)
+        return 0.0;
+
+    double re = 0.0;
+    double im = 0.0;
+    for (size_t i = start; i < end; ++i)
+    {
+        const double phase = 2.0 * kPi * hz * static_cast<double>(i) / sr;
+        re += static_cast<double>(x[i]) * std::cos(phase);
+        im -= static_cast<double>(x[i]) * std::sin(phase);
+    }
+    return std::sqrt(re * re + im * im) / static_cast<double>(end - start);
+}
+
 double tailEnergy(const std::vector<float>& x, size_t start)
 {
     if (x.size() <= start)
@@ -1216,7 +1338,10 @@ int main()
             const size_t skip = static_cast<size_t>(sr * 0.15);
 
             const auto dry = renderSine(sr, 0.8, 440.0, {});
+            const auto cold25 = renderSine(sr, 0.8, 440.0, {0.25f, 0.f, 0.f});
             const auto cold50 = renderSine(sr, 0.8, 440.0, {0.50f, 0.f, 0.f});
+            const auto cold75Stage = renderSine(sr, 0.8, 440.0, {0.75f, 0.f, 0.f});
+            const auto cold90 = renderSine(sr, 0.8, 440.0, {0.90f, 0.f, 0.f});
             const auto cold100 = renderSine(sr, 0.8, 440.0, {1.f, 0.f, 0.f});
             const auto ice50 = renderSine(sr, 0.8, 440.0, {0.f, 0.50f, 0.f});
             const auto ice100 = renderSine(sr, 0.8, 440.0, {0.f, 1.f, 0.f});
@@ -1300,7 +1425,10 @@ int main()
             require(meanAbsDiff(bypassed, continuous, bypassEndSample) < 1e-6,
                     "bypass state resumes without stale tail discontinuity", failures);
 
+            const double dCold25 = meanAbsDiff(dry, cold25, skip);
             const double dCold50 = meanAbsDiff(dry, cold50, skip);
+            const double dCold75 = meanAbsDiff(dry, cold75Stage, skip);
+            const double dCold90 = meanAbsDiff(dry, cold90, skip);
             const double dCold100 = meanAbsDiff(dry, cold100, skip);
             const double dIce50 = meanAbsDiff(dry, ice50, skip);
             const double dIce100 = meanAbsDiff(dry, ice100, skip);
@@ -1313,6 +1441,11 @@ int main()
             const double dSpace50 = meanAbsDiff(dry, space50, skip);
             const double dSpace100 = meanAbsDiff(dry, space100, skip);
 
+            require(dCold25 > 1e-5, "COLD 25% is already measurably cool", failures);
+            require(dCold50 > dCold25 * 1.15, "COLD 50% clearly advances beyond 25%", failures);
+            require(dCold75 > dCold50 * 1.10, "COLD 75% clearly advances beyond 50%", failures);
+            require(dCold90 > dCold75 * 1.05, "COLD 90% enters stronger creative territory", failures);
+            require(dCold100 > dCold90 * 1.01, "COLD 100% remains a meaningful maximum", failures);
             require(dCold50 > 1e-4, "COLD 50% is measurably active", failures);
             require(dIce50 > 1e-5, "ICE 50% is measurably active", failures);
             require(dMetal50 > 1e-5, "METAL 50% is measurably active", failures);
@@ -1374,6 +1507,22 @@ int main()
                     "SPACE has a clearly measurable icy reverb tail", failures);
             require(spaceTailAfter900 < spaceTailAfter80 * 0.25,
                     "SPACE reverb decays substantially by 900 ms", failures);
+
+            const auto stereoSpace = renderStereoImpulse(sr, 1.2, {0.f, 0.f, 0.f, 0.f, 0.f, 1.f});
+            const size_t stereoTailStart = static_cast<size_t>(sr * 0.080);
+            const double tailCorr = correlation(stereoSpace.left, stereoSpace.right, stereoTailStart);
+            require(tailCorr < 0.995,
+                    "SPACE tail develops measurable stereo decorrelation", failures);
+
+            const size_t spectralEnd = static_cast<size_t>(sr * 0.500);
+            const double lowMidTail =
+                0.5 * (spectralMagnitude(stereoSpace.left, sr, 250.0, stereoTailStart, spectralEnd) +
+                       spectralMagnitude(stereoSpace.left, sr, 400.0, stereoTailStart, spectralEnd));
+            const double upperTail =
+                0.5 * (spectralMagnitude(stereoSpace.left, sr, 3000.0, stereoTailStart, spectralEnd) +
+                       spectralMagnitude(stereoSpace.left, sr, 5000.0, stereoTailStart, spectralEnd));
+            require(upperTail > lowMidTail * 0.80,
+                    "SPACE tail avoids warm low-mid bloom and retains upper-band coldness", failures);
 
             const double coldTailAfter80 = tailEnergy(impulseCold100, reverbStart);
             require(coldTailAfter80 > 1e-6,
