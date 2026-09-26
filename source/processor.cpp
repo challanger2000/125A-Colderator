@@ -118,9 +118,10 @@ void Processor::resetDsp()
     frostPrevNoise_.fill(0.f);
     frostRng_[0] = 0x125A91u;
     frostRng_[1] = 0xC01D77u;
+    spaceLowState_.fill(0.f);
     for (int ch = 0; ch < kChannels; ++ch)
     {
-        spaceBuffer_[ch].assign(static_cast<size_t>(sampleRate_ * 0.06) + 8u, 0.f);
+        spaceBuffer_[ch].assign(static_cast<size_t>(sampleRate_ * 0.18) + 8u, 0.f);
         spaceWrite_[ch] = 0;
     }
     shiverPhaseA_ = 0.f;
@@ -142,7 +143,10 @@ void Processor::resetDsp()
     smSpace_ = space_;
     smOutput_ = output_;
 
-    updateResonators(smIce_, smMetal_);
+    const float coldIceBlock = 0.78f * std::pow(clamp01((smCold_ - 0.12f) / 0.88f), 1.30f);
+    const float coldMetalBlock = 0.68f * std::pow(clamp01((smCold_ - 0.22f) / 0.78f), 1.35f);
+    updateResonators(clamp01(smIce_ + coldIceBlock),
+                     clamp01(smMetal_ + coldMetalBlock));
 }
 
 void Processor::updateResonators(float ice, float metal)
@@ -257,10 +261,22 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
         const float shiverMod = 0.62f * std::sin(shiverPhaseA_) +
                                 0.38f * std::sin(shiverPhaseB_);
 
-        const float iceExtreme = clamp01((smIce_ - 0.90f) / 0.10f);
-        const float metalExtreme = clamp01((smMetal_ - 0.90f) / 0.10f);
-        const float iceMix = smIce_ * (0.18f + 0.34f * iceExtreme);
-        const float metalMix = smMetal_ * (0.22f + 0.52f * metalExtreme);
+        const float coldIce = 0.78f * std::pow(clamp01((smCold_ - 0.12f) / 0.88f), 1.30f);
+        const float coldMetal = 0.68f * std::pow(clamp01((smCold_ - 0.22f) / 0.78f), 1.35f);
+        const float coldFrost = 0.82f * std::pow(clamp01((smCold_ - 0.34f) / 0.66f), 1.15f);
+        const float coldShiver = 0.55f * std::pow(clamp01((smCold_ - 0.48f) / 0.52f), 1.20f);
+        const float coldSpace = 0.72f * std::pow(clamp01((smCold_ - 0.42f) / 0.58f), 1.20f);
+
+        const float effectiveIce = clamp01(smIce_ + coldIce);
+        const float effectiveMetal = clamp01(smMetal_ + coldMetal);
+        const float effectiveFrost = clamp01(smFrost_ + coldFrost);
+        const float effectiveShiver = clamp01(smShiver_ + coldShiver);
+        const float effectiveSpace = clamp01(smSpace_ + coldSpace);
+
+        const float iceExtreme = clamp01((effectiveIce - 0.90f) / 0.10f);
+        const float metalExtreme = clamp01((effectiveMetal - 0.90f) / 0.10f);
+        const float iceMix = effectiveIce * (0.18f + 0.34f * iceExtreme);
+        const float metalMix = effectiveMetal * (0.22f + 0.52f * metalExtreme);
         const float outputGain = std::pow(10.f, normalizedOutputToDb(smOutput_) / 20.f);
 
         for (int32 ch = 0; ch < channels; ++ch)
@@ -316,28 +332,29 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
             const float frostNoise = 0.5f * (white - frostPrevNoise_[ch]);
             frostPrevNoise_[ch] = white;
 
-            const float frostExtreme = clamp01((smFrost_ - 0.90f) / 0.10f);
-            const float frostDrive = smFrost_ * (0.055f + 0.095f * frostExtreme);
+            const float frostExtreme = clamp01((effectiveFrost - 0.90f) / 0.10f);
+            const float frostDrive = effectiveFrost * (0.055f + 0.095f * frostExtreme);
             const float frostCarrier = std::fabs(highDetail) + 0.35f * slowEnv_[ch];
             y += frostNoise * frostCarrier * frostDrive;
 
             // SHIVER: shallow dual-rate spectral tremor. It modulates only the
             // high-detail component, so the fundamental is not frequency-shifted.
-            const float shiverExtreme = clamp01((smShiver_ - 0.90f) / 0.10f);
-            const float shiverDepth = smShiver_ * (0.018f + 0.032f * shiverExtreme);
+            const float shiverExtreme = clamp01((effectiveShiver - 0.90f) / 0.10f);
+            const float shiverDepth = effectiveShiver * (0.018f + 0.032f * shiverExtreme);
             y += highDetail * shiverMod * shiverDepth;
 
-            // SPACE: three sparse early reflections with deliberately low
-            // diffusion. No feedback, so the normal range stays clear and
-            // the tail remains short instead of turning into a conventional hall.
+            // SPACE: sparse early reflections feed a deliberately cold,
+            // low-diffusion feedback tail. The feedback is high-passed so the
+            // decay stays lean/glassy instead of building warm low-mid bloom.
             const float spaceInput = y;
             auto& spaceBuffer = spaceBuffer_[ch];
             if (!spaceBuffer.empty())
             {
-                const float side = ch == 0 ? 0.96f : 1.04f;
+                const float side = ch == 0 ? 0.965f : 1.035f;
                 const int d1 = std::max(1, static_cast<int>(sampleRate_ * 0.0073 * side));
                 const int d2 = std::max(1, static_cast<int>(sampleRate_ * 0.0137 / side));
                 const int d3 = std::max(1, static_cast<int>(sampleRate_ * 0.0239 * side));
+                const int df = std::max(1, static_cast<int>(sampleRate_ * 0.0417 / side));
                 const int size = static_cast<int>(spaceBuffer.size());
                 const int w = spaceWrite_[ch];
 
@@ -347,15 +364,24 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                     return spaceBuffer[static_cast<size_t>(index)];
                 };
 
-                const float sparse = 0.58f * readTap(d1) -
-                                     0.31f * readTap(d2) +
-                                     0.19f * readTap(d3);
+                const float early = 0.54f * readTap(d1) -
+                                    0.29f * readTap(d2) +
+                                    0.17f * readTap(d3);
+                const float feedbackTap = readTap(df);
 
-                const float spaceExtreme = clamp01((smSpace_ - 0.90f) / 0.10f);
-                const float spaceMix = smSpace_ * (0.16f + 0.18f * spaceExtreme);
-                y += sparse * spaceMix;
+                const float lowAspace = onePoleCoeff(sampleRate_, 420.f);
+                spaceLowState_[ch] = lowAspace * spaceLowState_[ch] +
+                                     (1.f - lowAspace) * feedbackTap;
+                const float icyFeedback = feedbackTap - 0.82f * spaceLowState_[ch];
 
-                spaceBuffer[static_cast<size_t>(w)] = spaceInput;
+                const float spaceExtreme = clamp01((effectiveSpace - 0.90f) / 0.10f);
+                const float spaceMix = effectiveSpace * (0.18f + 0.24f * spaceExtreme);
+                const float feedback = 0.28f + 0.46f * effectiveSpace +
+                                       0.10f * spaceExtreme;
+                y += (early + 0.55f * icyFeedback) * spaceMix;
+
+                const float writeValue = spaceInput + icyFeedback * std::min(0.86f, feedback);
+                spaceBuffer[static_cast<size_t>(w)] = std::isfinite(writeValue) ? writeValue : 0.f;
                 spaceWrite_[ch] = (w + 1 >= size) ? 0 : (w + 1);
             }
 
