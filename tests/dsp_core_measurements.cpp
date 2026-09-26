@@ -28,9 +28,8 @@ struct Settings
     float space = 0.f;
 };
 
-std::vector<float> renderSine(double sr, double seconds, double hz, const Settings& settings)
+std::vector<float> renderSine(double sr, double seconds, double hz, const Settings& settings, int block = 128)
 {
-    constexpr int block = 128;
 
     Processor p;
     if (p.initialize(nullptr) != kResultOk)
@@ -110,9 +109,8 @@ std::vector<float> renderSine(double sr, double seconds, double hz, const Settin
 }
 
 
-std::vector<float> renderImpulse(double sr, double seconds, const Settings& settings)
+std::vector<float> renderImpulse(double sr, double seconds, const Settings& settings, int block = 128)
 {
-    constexpr int block = 128;
 
     Processor p;
     if (p.initialize(nullptr) != kResultOk)
@@ -224,6 +222,14 @@ double meanAbsDiff(const std::vector<float>& a, const std::vector<float>& b, siz
     return sum / static_cast<double>(n - skip);
 }
 
+double maxAbs(const std::vector<float>& x)
+{
+    double m = 0.0;
+    for (float v : x)
+        m = std::max(m, std::fabs(static_cast<double>(v)));
+    return m;
+}
+
 double toneAmplitude(const std::vector<float>& x, double sr, double hz, size_t skip)
 {
     if (x.size() <= skip)
@@ -303,6 +309,18 @@ int main()
                     "neutral render deterministic at " + std::to_string(static_cast<int>(sr)) + " Hz",
                     failures);
 
+            const auto block32 = renderSine(sr, 0.8, 440.0, {0.72f, 0.35f, 0.40f, 0.25f, 0.20f, 0.30f}, 32);
+            const auto block128 = renderSine(sr, 0.8, 440.0, {0.72f, 0.35f, 0.40f, 0.25f, 0.20f, 0.30f}, 128);
+            const auto block1024 = renderSine(sr, 0.8, 440.0, {0.72f, 0.35f, 0.40f, 0.25f, 0.20f, 0.30f}, 1024);
+            require(meanAbsDiff(block32, block128, skip) < 2e-4 &&
+                    meanAbsDiff(block128, block1024, skip) < 2e-4,
+                    "block-size response remains consistent at " + std::to_string(static_cast<int>(sr)) + " Hz",
+                    failures);
+
+            const auto denormStress = renderImpulse(sr, 4.0, {1.f, 1.f, 1.f, 1.f, 1.f, 1.f}, 64);
+            require(finiteBuffer(denormStress), "denormal stress remains finite", failures);
+            require(maxAbs(denormStress) < 20.0, "denormal stress remains bounded", failures);
+
             const double dCold50 = meanAbsDiff(dry, cold50, skip);
             const double dCold100 = meanAbsDiff(dry, cold100, skip);
             const double dIce50 = meanAbsDiff(dry, ice50, skip);
@@ -348,6 +366,12 @@ int main()
             require(dCold100 > dCold50 * 1.35, "COLD 100% clearly stronger than 50%", failures);
             require(dCold100 > dIce50 + dMetal50,
                     "COLD 100% behaves as a compound character macro", failures);
+
+            const auto cold75 = renderSine(sr, 0.8, 440.0, {0.75f, 0.f, 0.f, 0.f, 0.f, 0.f});
+            const double cold75Fund = toneAmplitude(cold75, sr, 440.0, skip);
+            const double cold75Ratio = dryFund > 1e-12 ? cold75Fund / dryFund : 0.0;
+            require(cold75Ratio > 0.35,
+                    "COLD 75% retains clear fundamental identity", failures);
 
             const size_t tailStart = static_cast<size_t>(sr * 0.002);
             const double dryTail = tailEnergy(impulseDry, tailStart);
