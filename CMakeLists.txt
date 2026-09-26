@@ -34,6 +34,21 @@ smtg_add_vst3plugin(Colderator
 target_link_libraries(Colderator PRIVATE sdk)
 smtg_target_configure_version_file(Colderator)
 
+
+add_executable(ColderatorMeasurements
+  tests/dsp_core_measurements.cpp
+  source/processor.cpp
+  ${vst3sdk_SOURCE_DIR}/public.sdk/source/common/memorystream.cpp
+  ${vst3sdk_SOURCE_DIR}/public.sdk/source/vst/hosting/parameterchanges.cpp
+)
+
+target_compile_definitions(ColderatorMeasurements PRIVATE COLDERATOR_TESTING=1)
+target_include_directories(ColderatorMeasurements PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
+target_link_libraries(ColderatorMeasurements PRIVATE sdk)
+
+enable_testing()
+add_test(NAME ColderatorMeasurements COMMAND ColderatorMeasurements)
+
 if(SMTG_WIN AND MSVC)
   set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT Colderator)
 endif()
