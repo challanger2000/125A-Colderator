@@ -225,21 +225,29 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
 
     updateResonators(ice_, metal_);
 
-    for (int32 ch = 0; ch < channels; ++ch)
+    for (int32 sample = 0; sample < data.numSamples; ++sample)
     {
-        const float* in = inBus.channelBuffers32[ch];
-        float* out = outBus.channelBuffers32[ch];
-        if (!in || !out)
-            continue;
+        // Global parameter smoothing advances exactly once per sample so both
+        // stereo channels see the same parameter state.
+        smCold_ += (cold_ - smCold_) * smooth;
+        smIce_ += (ice_ - smIce_) * smooth;
+        smMetal_ += (metal_ - smMetal_) * smooth;
+        smOutput_ += (output_ - smOutput_) * smooth;
 
-        for (int32 s = 0; s < data.numSamples; ++s)
+        const float iceExtreme = clamp01((smIce_ - 0.90f) / 0.10f);
+        const float metalExtreme = clamp01((smMetal_ - 0.90f) / 0.10f);
+        const float iceMix = smIce_ * (0.18f + 0.34f * iceExtreme);
+        const float metalMix = smMetal_ * (0.22f + 0.52f * metalExtreme);
+        const float outputGain = std::pow(10.f, normalizedOutputToDb(smOutput_) / 20.f);
+
+        for (int32 ch = 0; ch < channels; ++ch)
         {
-            smCold_ += (cold_ - smCold_) * smooth;
-            smIce_ += (ice_ - smIce_) * smooth;
-            smMetal_ += (metal_ - smMetal_) * smooth;
-            smOutput_ += (output_ - smOutput_) * smooth;
+            const float* in = inBus.channelBuffers32[ch];
+            float* out = outBus.channelBuffers32[ch];
+            if (!in || !out)
+                continue;
 
-            const float x = in[s];
+            const float x = in[sample];
 
             lowState_[ch] = lowA * lowState_[ch] + (1.f - lowA) * x;
             midLowState_[ch] = deepA * midLowState_[ch] + (1.f - deepA) * x;
@@ -257,9 +265,6 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
             const float edgeAmount = 0.22f * smCold_ * clamp01(transientNorm * 1.7f);
             float y = x - lowMid * coldCut + highDetail * edgeAmount;
 
-            const float iceExtreme = clamp01((smIce_ - 0.90f) / 0.10f);
-            const float metalExtreme = clamp01((smMetal_ - 0.90f) / 0.10f);
-
             const float transientExcitation = clamp01(0.15f + transientNorm * 2.2f);
             const float iceInput = highDetail * (0.25f + 0.75f * transientExcitation);
             const float metalInput = x * (0.12f + 0.88f * transientExcitation);
@@ -274,19 +279,14 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                 metalSignal += mode.process(metalInput);
             metalSignal *= 1.f / static_cast<float>(kMetalModes);
 
-            const float iceMix = smIce_ * (0.18f + 0.34f * iceExtreme);
-            const float metalMix = smMetal_ * (0.22f + 0.52f * metalExtreme);
-
             y += iceSignal * iceMix;
             y += metalSignal * metalMix;
-
-            const float outputGain = std::pow(10.f, normalizedOutputToDb(smOutput_) / 20.f);
             y *= outputGain;
 
             if (!std::isfinite(y))
                 y = 0.f;
 
-            out[s] = y;
+            out[sample] = y;
         }
     }
 
