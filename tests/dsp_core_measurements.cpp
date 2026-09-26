@@ -2,6 +2,7 @@
 #include "parameters.h"
 
 #include "pluginterfaces/vst/ivstaudioprocessor.h"
+#include "public.sdk/source/vst/hosting/parameterchanges.h"
 
 #include <algorithm>
 #include <cmath>
@@ -276,6 +277,178 @@ std::vector<float> renderImpulse(double sr, double seconds, const Settings& sett
     return result;
 }
 
+
+std::vector<float> renderAutomationPattern(double sr, int block)
+{
+    Processor p;
+    if (p.initialize(nullptr) != kResultOk)
+        throw std::runtime_error("initialize failed");
+
+    ProcessSetup setup {};
+    setup.processMode = kRealtime;
+    setup.symbolicSampleSize = kSample32;
+    setup.maxSamplesPerBlock = block;
+    setup.sampleRate = sr;
+
+    if (p.setupProcessing(setup) != kResultOk)
+        throw std::runtime_error("setupProcessing failed");
+
+    p.setTestParameter(Colderator::kCold, 0.f);
+    p.setTestParameter(Colderator::kIce, 0.15f);
+    p.setTestParameter(Colderator::kMetal, 0.10f);
+    p.setTestParameter(Colderator::kFrost, 0.05f);
+    p.setTestParameter(Colderator::kShiver, 0.05f);
+    p.setTestParameter(Colderator::kSpace, 0.10f);
+    p.setTestParameter(Colderator::kOutput, 0.5f);
+    p.setTestParameter(Colderator::kBypass, 0.f);
+
+    if (p.setActive(true) != kResultOk)
+        throw std::runtime_error("setActive failed");
+
+    const size_t total = static_cast<size_t>(std::llround(sr * 0.18));
+    std::vector<float> result(total, 0.f);
+    std::vector<float> inL(block, 0.f), inR(block, 0.f), outL(block, 0.f), outR(block, 0.f);
+    float* inPtrs[2] = { inL.data(), inR.data() };
+    float* outPtrs[2] = { outL.data(), outR.data() };
+
+    AudioBusBuffers inBus {};
+    inBus.numChannels = 2;
+    inBus.channelBuffers32 = inPtrs;
+
+    AudioBusBuffers outBus {};
+    outBus.numChannels = 2;
+    outBus.channelBuffers32 = outPtrs;
+
+    struct Event { size_t sample; ParamID id; ParamValue value; };
+    const std::array<Event, 8> events {{
+        {static_cast<size_t>(sr * 0.020), Colderator::kCold, 0.35},
+        {static_cast<size_t>(sr * 0.045), Colderator::kCold, 0.82},
+        {static_cast<size_t>(sr * 0.070), Colderator::kSpace, 0.75},
+        {static_cast<size_t>(sr * 0.090), Colderator::kBypass, 1.0},
+        {static_cast<size_t>(sr * 0.105), Colderator::kBypass, 0.0},
+        {static_cast<size_t>(sr * 0.120), Colderator::kMetal, 0.65},
+        {static_cast<size_t>(sr * 0.140), Colderator::kCold, 1.0},
+        {static_cast<size_t>(sr * 0.155), Colderator::kFrost, 0.70}
+    }};
+
+    size_t pos = 0;
+    while (pos < total)
+    {
+        const int n = static_cast<int>(std::min<size_t>(block, total - pos));
+        for (int i = 0; i < n; ++i)
+        {
+            const double t = static_cast<double>(pos + static_cast<size_t>(i)) / sr;
+            const float x = 0.2f * static_cast<float>(std::sin(2.0 * kPi * 440.0 * t));
+            inL[i] = x;
+            inR[i] = x;
+            outL[i] = 0.f;
+            outR[i] = 0.f;
+        }
+
+        ParameterChanges changes(8);
+        for (const auto& e : events)
+        {
+            if (e.sample >= pos && e.sample < pos + static_cast<size_t>(n))
+            {
+                int32 queueIndex = 0;
+                auto* queue = changes.addParameterData(e.id, queueIndex);
+                int32 pointIndex = 0;
+                queue->addPoint(static_cast<int32>(e.sample - pos), e.value, pointIndex);
+            }
+        }
+
+        ProcessData data {};
+        data.processMode = kRealtime;
+        data.symbolicSampleSize = kSample32;
+        data.numSamples = n;
+        data.numInputs = 1;
+        data.numOutputs = 1;
+        data.inputs = &inBus;
+        data.outputs = &outBus;
+        data.inputParameterChanges = changes.getParameterCount() > 0 ? &changes : nullptr;
+
+        if (p.process(data) != kResultOk)
+            throw std::runtime_error("automation process failed");
+
+        for (int i = 0; i < n; ++i)
+            result[pos + static_cast<size_t>(i)] = outL[i];
+
+        pos += static_cast<size_t>(n);
+    }
+
+    p.setActive(false);
+    p.terminate();
+    return result;
+}
+
+std::vector<float> renderSingleBlockBypassAutomation(double sr)
+{
+    constexpr int block = 128;
+    Processor p;
+    if (p.initialize(nullptr) != kResultOk)
+        throw std::runtime_error("initialize failed");
+
+    ProcessSetup setup {};
+    setup.processMode = kRealtime;
+    setup.symbolicSampleSize = kSample32;
+    setup.maxSamplesPerBlock = block;
+    setup.sampleRate = sr;
+    if (p.setupProcessing(setup) != kResultOk)
+        throw std::runtime_error("setupProcessing failed");
+
+    p.setTestParameter(Colderator::kCold, 0.85f);
+    p.setTestParameter(Colderator::kSpace, 0.70f);
+    p.setTestParameter(Colderator::kOutput, 0.5f);
+    p.setTestParameter(Colderator::kBypass, 0.f);
+    if (p.setActive(true) != kResultOk)
+        throw std::runtime_error("setActive failed");
+
+    std::vector<float> inL(block), inR(block), outL(block, 0.f), outR(block, 0.f);
+    for (int i = 0; i < block; ++i)
+    {
+        const float x = 0.2f * static_cast<float>(std::sin(2.0 * kPi * 440.0 * i / sr));
+        inL[i] = x;
+        inR[i] = x;
+    }
+
+    float* inPtrs[2] = { inL.data(), inR.data() };
+    float* outPtrs[2] = { outL.data(), outR.data() };
+    AudioBusBuffers inBus {};
+    inBus.numChannels = 2;
+    inBus.channelBuffers32 = inPtrs;
+    AudioBusBuffers outBus {};
+    outBus.numChannels = 2;
+    outBus.channelBuffers32 = outPtrs;
+
+    ParameterChanges changes(1);
+    int32 queueIndex = 0;
+    auto* queue = changes.addParameterData(Colderator::kBypass, queueIndex);
+    int32 pointIndex = 0;
+    queue->addPoint(32, 1.0, pointIndex);
+    queue->addPoint(96, 0.0, pointIndex);
+
+    ProcessData data {};
+    data.processMode = kRealtime;
+    data.symbolicSampleSize = kSample32;
+    data.numSamples = block;
+    data.numInputs = 1;
+    data.numOutputs = 1;
+    data.inputs = &inBus;
+    data.outputs = &outBus;
+    data.inputParameterChanges = &changes;
+
+    if (p.process(data) != kResultOk)
+        throw std::runtime_error("bypass automation process failed");
+
+    p.setActive(false);
+    p.terminate();
+
+    std::vector<float> packed(static_cast<size_t>(block * 2), 0.f);
+    std::copy(outL.begin(), outL.end(), packed.begin());
+    std::copy(inL.begin(), inL.end(), packed.begin() + block);
+    return packed;
+}
+
 double tailEnergy(const std::vector<float>& x, size_t start)
 {
     if (x.size() <= start)
@@ -407,6 +580,19 @@ int main()
             require(meanAbsDiff(dry, renderSine(sr, 0.8, 440.0, {}), skip) < 1e-8,
                     "neutral render deterministic at " + std::to_string(static_cast<int>(sr)) + " Hz",
                     failures);
+
+            const auto automation64 = renderAutomationPattern(sr, 64);
+            const auto automation257 = renderAutomationPattern(sr, 257);
+            require(meanAbsDiff(automation64, automation257, 0) < 2e-4,
+                    "sample-offset automation is block-boundary independent", failures);
+
+            const auto bypassAutomation = renderSingleBlockBypassAutomation(sr);
+            double bypassExactDiff = 0.0;
+            for (size_t i = 32; i < 96; ++i)
+                bypassExactDiff = std::max(bypassExactDiff,
+                    std::fabs(static_cast<double>(bypassAutomation[i] - bypassAutomation[128 + i])));
+            require(bypassExactDiff < 1e-7,
+                    "multiple bypass points inside one block apply at exact sample offsets", failures);
 
             const auto block32 = renderSine(sr, 0.8, 440.0, {0.72f, 0.35f, 0.40f, 0.25f, 0.20f, 0.30f}, 32);
             const auto block128 = renderSine(sr, 0.8, 440.0, {0.72f, 0.35f, 0.40f, 0.25f, 0.20f, 0.30f}, 128);
