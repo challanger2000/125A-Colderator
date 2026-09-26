@@ -115,6 +115,11 @@ void Processor::resetDsp()
     midLowState_.fill(0.f);
     fastEnv_.fill(0.f);
     slowEnv_.fill(0.f);
+    frostPrevNoise_.fill(0.f);
+    frostRng_[0] = 0x125A91u;
+    frostRng_[1] = 0xC01D77u;
+    shiverPhaseA_ = 0.f;
+    shiverPhaseB_ = 0.f;
 
     for (auto& channel : iceModes_)
         for (auto& mode : channel)
@@ -127,6 +132,8 @@ void Processor::resetDsp()
     smCold_ = cold_;
     smIce_ = ice_;
     smMetal_ = metal_;
+    smFrost_ = frost_;
+    smShiver_ = shiver_;
     smOutput_ = output_;
 
     updateResonators(smIce_, smMetal_);
@@ -232,7 +239,16 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
         smCold_ += (cold_ - smCold_) * smooth;
         smIce_ += (ice_ - smIce_) * smooth;
         smMetal_ += (metal_ - smMetal_) * smooth;
+        smFrost_ += (frost_ - smFrost_) * smooth;
+        smShiver_ += (shiver_ - smShiver_) * smooth;
         smOutput_ += (output_ - smOutput_) * smooth;
+
+        shiverPhaseA_ += 2.f * kPi * 4.7f / static_cast<float>(sampleRate_);
+        shiverPhaseB_ += 2.f * kPi * 7.9f / static_cast<float>(sampleRate_);
+        if (shiverPhaseA_ >= 2.f * kPi) shiverPhaseA_ -= 2.f * kPi;
+        if (shiverPhaseB_ >= 2.f * kPi) shiverPhaseB_ -= 2.f * kPi;
+        const float shiverMod = 0.62f * std::sin(shiverPhaseA_) +
+                                0.38f * std::sin(shiverPhaseB_);
 
         const float iceExtreme = clamp01((smIce_ - 0.90f) / 0.10f);
         const float metalExtreme = clamp01((smMetal_ - 0.90f) / 0.10f);
@@ -281,6 +297,29 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
 
             y += iceSignal * iceMix;
             y += metalSignal * metalMix;
+
+            // FROST: deterministic, signal-dependent high-frequency texture.
+            // No input energy means no frost output, even though the RNG state advances.
+            unsigned int r = frostRng_[ch];
+            r ^= r << 13;
+            r ^= r >> 17;
+            r ^= r << 5;
+            frostRng_[ch] = r;
+            const float white = (static_cast<float>(r & 0x00FFFFFFu) / 8388607.5f) - 1.f;
+            const float frostNoise = 0.5f * (white - frostPrevNoise_[ch]);
+            frostPrevNoise_[ch] = white;
+
+            const float frostExtreme = clamp01((smFrost_ - 0.90f) / 0.10f);
+            const float frostDrive = smFrost_ * (0.055f + 0.095f * frostExtreme);
+            const float frostCarrier = std::fabs(highDetail) + 0.35f * slowEnv_[ch];
+            y += frostNoise * frostCarrier * frostDrive;
+
+            // SHIVER: shallow dual-rate spectral tremor. It modulates only the
+            // high-detail component, so the fundamental is not frequency-shifted.
+            const float shiverExtreme = clamp01((smShiver_ - 0.90f) / 0.10f);
+            const float shiverDepth = smShiver_ * (0.018f + 0.032f * shiverExtreme);
+            y += highDetail * shiverMod * shiverDepth;
+
             y *= outputGain;
 
             if (!std::isfinite(y))
