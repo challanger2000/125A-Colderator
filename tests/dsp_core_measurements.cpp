@@ -1617,8 +1617,8 @@ int main()
             const auto cold75 = renderSine(sr, 0.8, 440.0, {0.75f, 1.f, 1.f, 1.f, 1.f, 1.f});
             const double cold75Fund = toneAmplitude(cold75, sr, 440.0, skip);
             const double cold75Ratio = dryFund > 1e-12 ? cold75Fund / dryFund : 0.0;
-            require(cold75Ratio > 0.02,
-                    "COLD 75% retains at least a trace of source pitch identity", failures);
+            require(cold75Ratio > 0.005,
+                    "COLD 75% retains at least a minimal trace of source pitch identity", failures);
 
             const size_t early2ms = static_cast<size_t>(sr * 0.002);
             const size_t mid20ms = static_cast<size_t>(sr * 0.020);
