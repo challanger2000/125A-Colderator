@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<vstgui-ui-description version="1">
+  <colors>
+    <color name="Bg" rgba="#ECF4F8FF"/>
+    <color name="Text" rgba="#173646FF"/>
+    <color name="Muted" rgba="#6E8795FF"/>
+    <color name="Ice" rgba="#1495D0FF"/>
+    <color name="PanelTitle" rgba="#3F7896FF"/>
+    <color name="Display" rgba="#F8FCFEFF"/>
+    <color name="DisplayText" rgba="#173646FF"/>
+    <color name="DisplayFrame" rgba="#B3D2E2FF"/>
+  </colors>
+
+  <template background-color="Bg" class="CViewContainer" maxSize="800, 460" minSize="800, 460"
+            mouse-enabled="true" name="view" opacity="1" origin="0, 0" size="800, 460" transparent="false">
+    <view class="CView" custom-view-name="Faceplate" origin="0, 0" size="800, 460" mouse-enabled="false"/>
+
+    <view back-color="Bg" class="CTextLabel" font="~ NormalFontVeryBig" font-color="Text"
+          frame-width="0" origin="28, 12" size="300, 30" title="125A COLDERATOR"
+          transparent="true" text-alignment="left"/>
+    <view back-color="Bg" class="CTextLabel" font="~ NormalFontSmall" font-color="Muted"
+          frame-width="0" origin="30, 43" size="410, 18"
+          title="ANALOG WARMTH IS OVER — WELCOME TO DIGITAL COLD"
+          transparent="true" text-alignment="left"/>
+
+    <view back-color="Bg" class="CTextLabel" font="~ NormalFontSmall" font-color="PanelTitle"
+          frame-width="0" origin="42, 101" size="176, 18" title="COLD ENGINE"
+          transparent="true" text-alignment="center"/>
+    <view back-color="Bg" class="CTextLabel" font="~ NormalFontSmall" font-color="PanelTitle"
+          frame-width="0" origin="286, 101" size="342, 18" title="FROZEN CHARACTER"
+          transparent="true" text-alignment="center"/>
+    <view back-color="Bg" class="CTextLabel" font="~ NormalFontSmall" font-color="PanelTitle"
+          frame-width="0" origin="687, 101" size="78, 18" title="MASTER"
+          transparent="true" text-alignment="center"/>
+
+    <view back-color="Bg" class="CTextLabel" font="~ NormalFontBig" font-color="Text"
+          frame-width="0" origin="72, 132" size="116, 24" title="COLD"
+          transparent="true" text-alignment="center"/>
+    <view class="CView" custom-view-name="Cold" origin="57, 157" size="146, 146"/>
+    <view back-color="Display" class="CTextEdit" control-tag="Cold" font="~ NormalFontBig"
+          font-color="DisplayText" frame-color="DisplayFrame" frame-width="1"
+          origin="83, 313" round-rect-radius="6" size="94, 28" style-round-rect="true"
+          transparent="false" text-alignment="center"/>
+    <view back-color="Bg" class="CTextLabel" font="~ NormalFontSmall" font-color="Muted"
+          frame-width="0" origin="50, 360" size="160, 34"
+          title="SUBTLE COOL → FROZEN MACHINE"
+          transparent="true" text-alignment="center"/>
+
+    <view back-color="Bg" class="CTextLabel" font="~ NormalFontSmall" font-color="Text"
+          frame-width="0" origin="292, 137" size="86, 18" title="ICE"
+          transparent="true" text-alignment="center"/>
+    <view class="CView" custom-view-name="Ice" origin="298, 157" size="74, 74"/>
+    <view back-color="Display" class="CTextEdit" control-tag="Ice" font="~ NormalFontSmall"
+          font-color="DisplayText" frame-color="DisplayFrame" frame-width="1"
+          origin="303, 236" round-rect-radius="5" size="64, 21" style-round-rect="true"
+          transparent="false" text-alignment="center"/>
+
+    <view back-color="Bg" class="CTextLabel" font="~ NormalFontSmall" font-color="Text"
+          frame-width="0" origin="411, 137" size="86, 18" title="METAL"
+          transparent="true" text-alignment="center"/>
+    <view class="CView" custom-view-name="Metal" origin="417, 157" size="74, 74"/>
+    <view back-color="Display" class="CTextEdit" control-tag="Metal" font="~ NormalFontSmall"
+          font-color="DisplayText" frame-color="DisplayFrame" frame-width="1"
+          origin="422, 236" round-rect-radius="5" size="64, 21" style-round-rect="true"
+          transparent="false" text-alignment="center"/>
+
+    <view back-color="Bg" class="CTextLabel" font="~ NormalFontSmall" font-color="Text"
+          frame-width="0" origin="530, 137" size="86, 18" title="FROST"
+          transparent="true" text-alignment="center"/>
+    <view class="CView" custom-view-name="Frost" origin="536, 157" size="74, 74"/>
+    <view back-color="Display" class="CTextEdit" control-tag="Frost" font="~ NormalFontSmall"
+          font-color="DisplayText" frame-color="DisplayFrame" frame-width="1"
+          origin="541, 236" round-rect-radius="5" size="64, 21" style-round-rect="true"
+          transparent="false" text-alignment="center"/>
+
+    <view back-color="Bg" class="CTextLabel" font="~ NormalFontSmall" font-color="Text"
+          frame-width="0" origin="352, 292" size="86, 18" title="SHIVER"
+          transparent="true" text-alignment="center"/>
+    <view class="CView" custom-view-name="Shiver" origin="358, 312" size="74, 74"/>
+    <view back-color="Display" class="CTextEdit" control-tag="Shiver" font="~ NormalFontSmall"
+          font-color="DisplayText" frame-color="DisplayFrame" frame-width="1"
+          origin="363, 391" round-rect-radius="5" size="64, 21" style-round-rect="true"
+          transparent="false" text-alignment="center"/>
+
+    <view back-color="Bg" class="CTextLabel" font="~ NormalFontSmall" font-color="Text"
+          frame-width="0" origin="482, 292" size="86, 18" title="SPACE"
+          transparent="true" text-alignment="center"/>
+    <view class="CView" custom-view-name="Space" origin="488, 312" size="74, 74"/>
+    <view back-color="Display" class="CTextEdit" control-tag="Space" font="~ NormalFontSmall"
+          font-color="DisplayText" frame-color="DisplayFrame" frame-width="1"
+          origin="493, 391" round-rect-radius="5" size="64, 21" style-round-rect="true"
+          transparent="false" text-alignment="center"/>
+
+    <view back-color="Bg" class="CTextLabel" font="~ NormalFontSmall" font-color="Text"
+          frame-width="0" origin="682, 137" size="88, 18" title="OUTPUT"
+          transparent="true" text-alignment="center"/>
+    <view class="CView" custom-view-name="Output" origin="688, 164" size="76, 76"/>
+    <view back-color="Display" class="CTextEdit" control-tag="Output" font="~ NormalFontSmall"
+          font-color="DisplayText" frame-color="DisplayFrame" frame-width="1"
+          origin="687, 248" round-rect-radius="5" size="78, 22" style-round-rect="true"
+          transparent="false" text-alignment="center"/>
+
+    <view back-color="Bg" class="CTextLabel" font="~ NormalFontSmall" font-color="Muted"
+          frame-width="0" origin="686, 321" size="80, 40"
+          title="HOST BYPASS\nAVAILABLE"
+          transparent="true" text-alignment="center"/>
+    <view back-color="Bg" class="CTextLabel" font="~ NormalFontSmall" font-color="Muted"
+          frame-width="0" origin="681, 401" size="90, 18" title="v0.1.0 TEST GUI"
+          transparent="true" text-alignment="center"/>
+  </template>
+
+  <control-tags>
+    <control-tag name="Cold" tag="100"/>
+    <control-tag name="Ice" tag="101"/>
+    <control-tag name="Metal" tag="102"/>
+    <control-tag name="Frost" tag="103"/>
+    <control-tag name="Shiver" tag="104"/>
+    <control-tag name="Space" tag="105"/>
+    <control-tag name="Output" tag="106"/>
+    <control-tag name="Bypass" tag="107"/>
+  </control-tags>
+</vstgui-ui-description>
