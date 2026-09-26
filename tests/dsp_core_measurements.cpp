@@ -1436,6 +1436,9 @@ int main()
             const auto frost100 = renderSine(sr, 0.8, 440.0, {1.f, 0.f, 0.f, 1.f, 0.f, 0.f});
             const auto frost100Repeat = renderSine(sr, 0.8, 440.0, {1.f, 0.f, 0.f, 1.f, 0.f, 0.f});
             const auto frostSilence = renderSine(sr, 0.8, 0.0, {1.f, 0.f, 0.f, 1.f, 0.f, 0.f});
+            const auto textureSilence = renderSine(sr, 0.8, 0.0, {1.f, 1.f, 1.f, 1.f, 1.f, 0.f});
+            const auto textureRepeatA = renderSine(sr, 0.8, 440.0, {1.f, 0.72f, 0.66f, 0.80f, 0.64f, 0.f});
+            const auto textureRepeatB = renderSine(sr, 0.8, 440.0, {1.f, 0.72f, 0.66f, 0.80f, 0.64f, 0.f});
             const auto shiver25 = renderSine(sr, 0.8, 440.0, {1.f, 0.f, 0.f, 0.f, 0.25f, 0.f});
             const auto shiver50 = renderSine(sr, 0.8, 440.0, {1.f, 0.f, 0.f, 0.f, 0.50f, 0.f});
             const auto shiver100 = renderSine(sr, 0.8, 440.0, {1.f, 0.f, 0.f, 0.f, 1.f, 0.f});
@@ -1584,6 +1587,14 @@ int main()
             for (float v : frostSilence)
                 silencePeak = std::max(silencePeak, std::fabs(static_cast<double>(v)));
             require(silencePeak < 1e-12, "FROST produces no output on silence", failures);
+
+            double textureSilencePeak = 0.0;
+            for (float v : textureSilence)
+                textureSilencePeak = std::max(textureSilencePeak, std::fabs(static_cast<double>(v)));
+            require(textureSilencePeak < 1e-12,
+                    "generative material textures produce no output on silence", failures);
+            require(meanAbsDiff(textureRepeatA, textureRepeatB, 0) < 1e-8,
+                    "generative material textures are deterministic across renders", failures);
 
             const double dryFund = toneAmplitude(dry, sr, 440.0, skip);
             const double shiverFund = toneAmplitude(shiver50, sr, 440.0, skip);
