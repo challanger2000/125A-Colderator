@@ -813,6 +813,7 @@ CpuStats measureCpu(double sr, int block)
     p.setTestParameter(Colderator::kMetal, 1.f);
     p.setTestParameter(Colderator::kFrost, 1.f);
     p.setTestParameter(Colderator::kShiver, 1.f);
+    p.setTestParameter(Colderator::kCold, 1.f);
     p.setTestParameter(Colderator::kSpace, 1.f);
     p.setTestParameter(Colderator::kOutput, 0.5f);
     p.setActive(true);
@@ -1411,38 +1412,47 @@ int main()
             const size_t skip = static_cast<size_t>(sr * 0.15);
 
             const auto dry = renderSine(sr, 0.8, 440.0, {});
-            const auto cold25 = renderSine(sr, 0.8, 440.0, {0.25f, 0.f, 0.f});
-            const auto cold50 = renderSine(sr, 0.8, 440.0, {0.50f, 0.f, 0.f});
-            const auto cold75Stage = renderSine(sr, 0.8, 440.0, {0.75f, 0.f, 0.f});
-            const auto cold90 = renderSine(sr, 0.8, 440.0, {0.90f, 0.f, 0.f});
-            const auto cold100 = renderSine(sr, 0.8, 440.0, {1.f, 0.f, 0.f});
-            const auto ice25 = renderSine(sr, 0.8, 440.0, {0.f, 0.25f, 0.f});
-            const auto ice50 = renderSine(sr, 0.8, 440.0, {0.f, 0.50f, 0.f});
-            const auto ice100 = renderSine(sr, 0.8, 440.0, {0.f, 1.f, 0.f});
-            const auto metal25 = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 0.25f});
-            const auto metal50 = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 0.50f});
-            const auto metal75 = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 0.75f});
-            const auto metal100 = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 1.f});
-            const auto frost25 = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 0.f, 0.25f, 0.f});
-            const auto frost50 = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 0.f, 0.50f, 0.f});
-            const auto frost100 = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 0.f, 1.f, 0.f});
-            const auto frost100Repeat = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 0.f, 1.f, 0.f});
-            const auto frostSilence = renderSine(sr, 0.8, 0.0, {0.f, 0.f, 0.f, 1.f, 0.f});
-            const auto shiver25 = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 0.f, 0.f, 0.25f});
-            const auto shiver50 = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 0.f, 0.f, 0.50f});
-            const auto shiver100 = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 0.f, 0.f, 1.f});
-            const auto space50 = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 0.f, 0.f, 0.f, 0.50f});
-            const auto space75 = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 0.f, 0.f, 0.f, 0.75f});
-            const auto space100 = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 0.f, 0.f, 0.f, 1.f});
+            const auto coldOffModules = renderSine(sr, 0.8, 440.0, {1.f, 0.f, 0.f, 0.f, 0.f, 0.f});
+            const auto modulesWithColdOff = renderSine(sr, 0.8, 440.0, {0.f, 1.f, 1.f, 1.f, 1.f, 1.f});
 
-            const auto impulseDry = renderImpulse(sr, 0.25, {});
-            const auto impulseIce50 = renderImpulse(sr, 0.25, {0.f, 0.50f, 0.f});
-            const auto impulseIce100 = renderImpulse(sr, 0.25, {0.f, 1.f, 0.f});
-            const auto impulseMetal50 = renderImpulse(sr, 0.25, {0.f, 0.f, 0.50f});
-            const auto impulseMetal100 = renderImpulse(sr, 0.25, {0.f, 0.f, 1.f});
-            const auto impulseSpace50 = renderImpulse(sr, 1.6, {0.f, 0.f, 0.f, 0.f, 0.f, 0.50f});
-            const auto impulseSpace100 = renderImpulse(sr, 1.6, {0.f, 0.f, 0.f, 0.f, 0.f, 1.f});
-            const auto impulseCold100 = renderImpulse(sr, 1.6, {1.f, 0.f, 0.f, 0.f, 0.f, 0.f});
+            const auto cold25 = renderSine(sr, 0.8, 440.0, {0.25f, 1.f, 1.f, 1.f, 1.f, 1.f});
+            const auto cold50 = renderSine(sr, 0.8, 440.0, {0.50f, 1.f, 1.f, 1.f, 1.f, 1.f});
+            const auto cold75Stage = renderSine(sr, 0.8, 440.0, {0.75f, 1.f, 1.f, 1.f, 1.f, 1.f});
+            const auto cold90 = renderSine(sr, 0.8, 440.0, {0.90f, 1.f, 1.f, 1.f, 1.f, 1.f});
+            const auto cold100 = renderSine(sr, 0.8, 440.0, {1.f, 1.f, 1.f, 1.f, 1.f, 1.f});
+
+            const auto ice25 = renderSine(sr, 0.8, 440.0, {1.f, 0.25f, 0.f, 0.f, 0.f, 0.f});
+            const auto ice50 = renderSine(sr, 0.8, 440.0, {1.f, 0.50f, 0.f, 0.f, 0.f, 0.f});
+            const auto ice100 = renderSine(sr, 0.8, 440.0, {1.f, 1.f, 0.f, 0.f, 0.f, 0.f});
+            const auto metal25 = renderSine(sr, 0.8, 440.0, {1.f, 0.f, 0.25f, 0.f, 0.f, 0.f});
+            const auto metal50 = renderSine(sr, 0.8, 440.0, {1.f, 0.f, 0.50f, 0.f, 0.f, 0.f});
+            const auto metal75 = renderSine(sr, 0.8, 440.0, {1.f, 0.f, 0.75f, 0.f, 0.f, 0.f});
+            const auto metal100 = renderSine(sr, 0.8, 440.0, {1.f, 0.f, 1.f, 0.f, 0.f, 0.f});
+            const auto frost25 = renderSine(sr, 0.8, 440.0, {1.f, 0.f, 0.f, 0.25f, 0.f, 0.f});
+            const auto frost50 = renderSine(sr, 0.8, 440.0, {1.f, 0.f, 0.f, 0.50f, 0.f, 0.f});
+            const auto frost100 = renderSine(sr, 0.8, 440.0, {1.f, 0.f, 0.f, 1.f, 0.f, 0.f});
+            const auto frost100Repeat = renderSine(sr, 0.8, 440.0, {1.f, 0.f, 0.f, 1.f, 0.f, 0.f});
+            const auto frostSilence = renderSine(sr, 0.8, 0.0, {1.f, 0.f, 0.f, 1.f, 0.f, 0.f});
+            const auto shiver25 = renderSine(sr, 0.8, 440.0, {1.f, 0.f, 0.f, 0.f, 0.25f, 0.f});
+            const auto shiver50 = renderSine(sr, 0.8, 440.0, {1.f, 0.f, 0.f, 0.f, 0.50f, 0.f});
+            const auto shiver100 = renderSine(sr, 0.8, 440.0, {1.f, 0.f, 0.f, 0.f, 1.f, 0.f});
+            const auto space50 = renderSine(sr, 0.8, 440.0, {1.f, 0.f, 0.f, 0.f, 0.f, 0.50f});
+            const auto space75 = renderSine(sr, 0.8, 440.0, {1.f, 0.f, 0.f, 0.f, 0.f, 0.75f});
+            const auto space100 = renderSine(sr, 0.8, 440.0, {1.f, 0.f, 0.f, 0.f, 0.f, 1.f});
+
+            // Per-module spike fingerprints: one full-scale impulse through COLD=100
+            // with exactly one participating module. These expose the actual
+            // time-domain signature far more clearly than steady tones.
+            const auto impulseDry = renderImpulse(sr, 0.40, {});
+            const auto impulseIce50 = renderImpulse(sr, 0.40, {1.f, 0.50f, 0.f, 0.f, 0.f, 0.f});
+            const auto impulseIce100 = renderImpulse(sr, 0.40, {1.f, 1.f, 0.f, 0.f, 0.f, 0.f});
+            const auto impulseMetal50 = renderImpulse(sr, 0.40, {1.f, 0.f, 0.50f, 0.f, 0.f, 0.f});
+            const auto impulseMetal100 = renderImpulse(sr, 0.40, {1.f, 0.f, 1.f, 0.f, 0.f, 0.f});
+            const auto impulseFrost100 = renderImpulse(sr, 0.40, {1.f, 0.f, 0.f, 1.f, 0.f, 0.f});
+            const auto impulseShiver100 = renderImpulse(sr, 0.40, {1.f, 0.f, 0.f, 0.f, 1.f, 0.f});
+            const auto impulseSpace50 = renderImpulse(sr, 1.6, {1.f, 0.f, 0.f, 0.f, 0.f, 0.50f});
+            const auto impulseSpace100 = renderImpulse(sr, 1.6, {1.f, 0.f, 0.f, 0.f, 0.f, 1.f});
+            const auto impulseCold100 = renderImpulse(sr, 1.6, {1.f, 1.f, 1.f, 1.f, 1.f, 1.f});
 
             require(finiteBuffer(dry) && finiteBuffer(cold100) &&
                     finiteBuffer(ice100) && finiteBuffer(metal100) &&
@@ -1454,6 +1464,10 @@ int main()
             require(meanAbsDiff(dry, renderSine(sr, 0.8, 440.0, {}), skip) < 1e-8,
                     "neutral render deterministic at " + std::to_string(static_cast<int>(sr)) + " Hz",
                     failures);
+            require(meanAbsDiff(dry, coldOffModules, skip) < 1e-8,
+                    "COLD 100% with every module at 0% is truly neutral", failures);
+            require(meanAbsDiff(dry, modulesWithColdOff, skip) < 1e-8,
+                    "all modules at 100% with COLD at 0% are truly neutral", failures);
 
             const auto automation64 = renderAutomationPattern(sr, 64);
             const auto automation257 = renderAutomationPattern(sr, 257);
@@ -1582,11 +1596,48 @@ int main()
             require(dCold100 > strongestSingle50 * 1.10,
                     "COLD 100% exceeds every individual 50% material transformation", failures);
 
-            const auto cold75 = renderSine(sr, 0.8, 440.0, {0.75f, 0.f, 0.f, 0.f, 0.f, 0.f});
+            const auto cold75 = renderSine(sr, 0.8, 440.0, {0.75f, 1.f, 1.f, 1.f, 1.f, 1.f});
             const double cold75Fund = toneAmplitude(cold75, sr, 440.0, skip);
             const double cold75Ratio = dryFund > 1e-12 ? cold75Fund / dryFund : 0.0;
             require(cold75Ratio > 0.02,
                     "COLD 75% retains at least a trace of source pitch identity", failures);
+
+            const size_t early2ms = static_cast<size_t>(sr * 0.002);
+            const size_t mid20ms = static_cast<size_t>(sr * 0.020);
+            const size_t late100ms = static_cast<size_t>(sr * 0.100);
+
+            auto windowEnergy = [](const std::vector<float>& x, size_t a, size_t b) {
+                b = std::min(b, x.size());
+                if (b <= a) return 0.0;
+                double e = 0.0;
+                for (size_t i = a; i < b; ++i)
+                    e += static_cast<double>(x[i]) * static_cast<double>(x[i]);
+                return e;
+            };
+
+            const double iceEarly = windowEnergy(impulseIce100, early2ms, mid20ms);
+            const double metalEarly = windowEnergy(impulseMetal100, early2ms, mid20ms);
+            const double frostEarly = windowEnergy(impulseFrost100, early2ms, mid20ms);
+            const double shiverEarly = windowEnergy(impulseShiver100, early2ms, mid20ms);
+            const double spaceLateFingerprint = windowEnergy(impulseSpace100, mid20ms, late100ms);
+
+            std::cout << "[INFO] SPIKE SR=" << static_cast<int>(sr)
+                      << " ICE(2-20ms)=" << iceEarly
+                      << " METAL(2-20ms)=" << metalEarly
+                      << " FROST(2-20ms)=" << frostEarly
+                      << " SHIVER(2-20ms)=" << shiverEarly
+                      << " SPACE(20-100ms)=" << spaceLateFingerprint << "\n";
+
+            require(iceEarly > 1e-7,
+                    "ICE spike produces a distinct crystal/glass time-domain fingerprint", failures);
+            require(metalEarly > 1e-7,
+                    "METAL spike produces a distinct industrial resonance fingerprint", failures);
+            require(frostEarly > 1e-8,
+                    "FROST spike produces a distinct frozen-surface fingerprint", failures);
+            require(shiverEarly > 1e-8,
+                    "SHIVER spike produces a distinct moving-delay fingerprint", failures);
+            require(spaceLateFingerprint > 1e-7,
+                    "SPACE spike produces a distinct cold-room reflection fingerprint", failures);
 
             const size_t tailStart = static_cast<size_t>(sr * 0.002);
             const double dryTail = tailEnergy(impulseDry, tailStart);
