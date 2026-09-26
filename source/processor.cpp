@@ -17,6 +17,8 @@ using namespace Steinberg::Vst;
 namespace Colderator {
 
 namespace {
+constexpr float kPi = 3.14159265358979323846f;
+
 inline float clamp01(float v)
 {
     return std::max(0.f, std::min(1.f, v));
@@ -26,6 +28,40 @@ inline float normalizedOutputToDb(float v)
 {
     return -12.f + 24.f * clamp01(v);
 }
+
+inline float onePoleCoeff(double sampleRate, float hz)
+{
+    return std::exp(-2.f * kPi * hz / static_cast<float>(sampleRate));
+}
+}
+
+void Processor::Resonator::setBandpass(double sampleRate, float frequency, float q)
+{
+    const float fs = static_cast<float>(std::max(8000.0, sampleRate));
+    const float f = std::max(20.f, std::min(frequency, fs * 0.45f));
+    const float safeQ = std::max(0.25f, q);
+    const float w0 = 2.f * kPi * f / fs;
+    const float alpha = std::sin(w0) / (2.f * safeQ);
+    const float a0 = 1.f + alpha;
+
+    b0 = alpha / a0;
+    b2 = -alpha / a0;
+    a1 = (-2.f * std::cos(w0)) / a0;
+    a2 = (1.f - alpha) / a0;
+}
+
+float Processor::Resonator::process(float x)
+{
+    const float y = b0 * x + z1;
+    z1 = -a1 * y + z2;
+    z2 = b2 * x - a2 * y;
+
+    if (!std::isfinite(y) || !std::isfinite(z1) || !std::isfinite(z2))
+    {
+        clear();
+        return 0.f;
+    }
+    return y;
 }
 
 Processor::Processor()
@@ -44,6 +80,20 @@ tresult PLUGIN_API Processor::initialize(FUnknown* context)
     return kResultOk;
 }
 
+tresult PLUGIN_API Processor::setupProcessing(ProcessSetup& setup)
+{
+    sampleRate_ = setup.sampleRate > 1.0 ? setup.sampleRate : 44100.0;
+    resetDsp();
+    return AudioEffect::setupProcessing(setup);
+}
+
+tresult PLUGIN_API Processor::setActive(TBool state)
+{
+    if (state)
+        resetDsp();
+    return AudioEffect::setActive(state);
+}
+
 tresult PLUGIN_API Processor::canProcessSampleSize(int32 symbolicSampleSize)
 {
     return symbolicSampleSize == kSample32 ? kResultTrue : kResultFalse;
@@ -57,6 +107,52 @@ tresult PLUGIN_API Processor::setBusArrangements(SpeakerArrangement* inputs, int
         return AudioEffect::setBusArrangements(inputs, numIns, outputs, numOuts);
 
     return kResultFalse;
+}
+
+void Processor::resetDsp()
+{
+    lowState_.fill(0.f);
+    midLowState_.fill(0.f);
+    fastEnv_.fill(0.f);
+    slowEnv_.fill(0.f);
+
+    for (auto& channel : iceModes_)
+        for (auto& mode : channel)
+            mode.clear();
+
+    for (auto& channel : metalModes_)
+        for (auto& mode : channel)
+            mode.clear();
+
+    smCold_ = cold_;
+    smIce_ = ice_;
+    smMetal_ = metal_;
+    smOutput_ = output_;
+
+    updateResonators(smIce_, smMetal_);
+}
+
+void Processor::updateResonators(float ice, float metal)
+{
+    const float iceExtreme = clamp01((ice - 0.90f) / 0.10f);
+    const float metalExtreme = clamp01((metal - 0.90f) / 0.10f);
+
+    const float iceQ = 0.75f + 2.6f * ice + 16.f * iceExtreme * iceExtreme;
+    const float metalQ = 0.70f + 3.4f * metal + 22.f * metalExtreme * metalExtreme;
+
+    constexpr float iceHz[kIceModes] = { 2410.f, 3670.f, 5530.f, 8210.f };
+    constexpr float metalHz[kMetalModes] = { 710.f, 1230.f, 2070.f, 3490.f, 5870.f };
+
+    for (int ch = 0; ch < kChannels; ++ch)
+    {
+        const float stereoSkew = ch == 0 ? 0.993f : 1.007f;
+
+        for (int i = 0; i < kIceModes; ++i)
+            iceModes_[ch][i].setBandpass(sampleRate_, iceHz[i] * stereoSkew, iceQ);
+
+        for (int i = 0; i < kMetalModes; ++i)
+            metalModes_[ch][i].setBandpass(sampleRate_, metalHz[i] * stereoSkew, metalQ);
+    }
 }
 
 void Processor::applyParameter(ParamID id, float normalized)
@@ -106,9 +202,28 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
 
     const auto& inBus = data.inputs[0];
     auto& outBus = data.outputs[0];
-    const int32 channels = std::min(inBus.numChannels, outBus.numChannels);
+    const int32 channels = std::min<int32>(
+        std::min(inBus.numChannels, outBus.numChannels), kChannels);
 
-    const float gain = bypass_ ? 1.f : std::pow(10.f, normalizedOutputToDb(output_) / 20.f);
+    if (bypass_)
+    {
+        for (int32 ch = 0; ch < channels; ++ch)
+        {
+            const float* in = inBus.channelBuffers32[ch];
+            float* out = outBus.channelBuffers32[ch];
+            if (in && out && in != out)
+                std::memcpy(out, in, static_cast<size_t>(data.numSamples) * sizeof(float));
+        }
+        return kResultOk;
+    }
+
+    const float smooth = 1.f - std::exp(-1.f / static_cast<float>(sampleRate_ * 0.015));
+    const float lowA = onePoleCoeff(sampleRate_, 520.f);
+    const float deepA = onePoleCoeff(sampleRate_, 145.f);
+    const float fastA = onePoleCoeff(sampleRate_, 95.f);
+    const float slowA = onePoleCoeff(sampleRate_, 12.f);
+
+    updateResonators(ice_, metal_);
 
     for (int32 ch = 0; ch < channels; ++ch)
     {
@@ -117,20 +232,64 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
         if (!in || !out)
             continue;
 
-        if (gain == 1.f)
+        for (int32 s = 0; s < data.numSamples; ++s)
         {
-            if (in != out)
-                std::memcpy(out, in, static_cast<size_t>(data.numSamples) * sizeof(float));
-        }
-        else
-        {
-            for (int32 s = 0; s < data.numSamples; ++s)
-                out[s] = in[s] * gain;
+            smCold_ += (cold_ - smCold_) * smooth;
+            smIce_ += (ice_ - smIce_) * smooth;
+            smMetal_ += (metal_ - smMetal_) * smooth;
+            smOutput_ += (output_ - smOutput_) * smooth;
+
+            const float x = in[s];
+
+            lowState_[ch] = lowA * lowState_[ch] + (1.f - lowA) * x;
+            midLowState_[ch] = deepA * midLowState_[ch] + (1.f - deepA) * x;
+
+            const float lowMid = lowState_[ch] - midLowState_[ch];
+            const float highDetail = x - lowState_[ch];
+
+            const float absX = std::fabs(x);
+            fastEnv_[ch] = fastA * fastEnv_[ch] + (1.f - fastA) * absX;
+            slowEnv_[ch] = slowA * slowEnv_[ch] + (1.f - slowA) * absX;
+            const float transient = std::max(0.f, fastEnv_[ch] - slowEnv_[ch]);
+            const float transientNorm = transient / (0.02f + slowEnv_[ch]);
+
+            const float coldCut = 0.52f * smCold_;
+            const float edgeAmount = 0.22f * smCold_ * clamp01(transientNorm * 1.7f);
+            float y = x - lowMid * coldCut + highDetail * edgeAmount;
+
+            const float iceExtreme = clamp01((smIce_ - 0.90f) / 0.10f);
+            const float metalExtreme = clamp01((smMetal_ - 0.90f) / 0.10f);
+
+            const float transientExcitation = clamp01(0.15f + transientNorm * 2.2f);
+            const float iceInput = highDetail * (0.25f + 0.75f * transientExcitation);
+            const float metalInput = x * (0.12f + 0.88f * transientExcitation);
+
+            float iceSignal = 0.f;
+            for (auto& mode : iceModes_[ch])
+                iceSignal += mode.process(iceInput);
+            iceSignal *= 1.f / static_cast<float>(kIceModes);
+
+            float metalSignal = 0.f;
+            for (auto& mode : metalModes_[ch])
+                metalSignal += mode.process(metalInput);
+            metalSignal *= 1.f / static_cast<float>(kMetalModes);
+
+            const float iceMix = smIce_ * (0.18f + 0.34f * iceExtreme);
+            const float metalMix = smMetal_ * (0.22f + 0.52f * metalExtreme);
+
+            y += iceSignal * iceMix;
+            y += metalSignal * metalMix;
+
+            const float outputGain = std::pow(10.f, normalizedOutputToDb(smOutput_) / 20.f);
+            y *= outputGain;
+
+            if (!std::isfinite(y))
+                y = 0.f;
+
+            out[s] = y;
         }
     }
 
-    // v0.1.0 scaffold intentionally performs no COLD/ICE/METAL/FROST/SHIVER/SPACE DSP yet.
-    // Each block will be introduced independently and measured against this neutral baseline.
     return kResultOk;
 }
 
