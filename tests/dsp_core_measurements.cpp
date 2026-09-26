@@ -910,6 +910,44 @@ bool invalidParameterValuesAreIgnored(double sr)
     return finiteBuffer(ra) && meanAbsDiff(ra, rb, 0) < 1e-8;
 }
 
+
+bool outOfRangeParametersClamp(double sr)
+{
+    Processor lowA, lowB, highA, highB;
+    if (lowA.initialize(nullptr) != kResultOk || lowB.initialize(nullptr) != kResultOk ||
+        highA.initialize(nullptr) != kResultOk || highB.initialize(nullptr) != kResultOk)
+        return false;
+
+    ProcessSetup setup {};
+    setup.processMode = kRealtime;
+    setup.symbolicSampleSize = kSample32;
+    setup.maxSamplesPerBlock = 128;
+    setup.sampleRate = sr;
+    if (lowA.setupProcessing(setup) != kResultOk || lowB.setupProcessing(setup) != kResultOk ||
+        highA.setupProcessing(setup) != kResultOk || highB.setupProcessing(setup) != kResultOk)
+        return false;
+
+    lowA.setTestParameter(Colderator::kCold, -5.f);
+    lowB.setTestParameter(Colderator::kCold, 0.f);
+    highA.setTestParameter(Colderator::kCold, 7.f);
+    highB.setTestParameter(Colderator::kCold, 1.f);
+
+    if (lowA.setActive(true) != kResultOk || lowB.setActive(true) != kResultOk ||
+        highA.setActive(true) != kResultOk || highB.setActive(true) != kResultOk)
+        return false;
+
+    const auto la = renderConfiguredProcessor(lowA, sr, 0.12, 440.0, 128);
+    const auto lb = renderConfiguredProcessor(lowB, sr, 0.12, 440.0, 128);
+    const auto ha = renderConfiguredProcessor(highA, sr, 0.12, 440.0, 128);
+    const auto hb = renderConfiguredProcessor(highB, sr, 0.12, 440.0, 128);
+
+    lowA.setActive(false); lowB.setActive(false);
+    highA.setActive(false); highB.setActive(false);
+    lowA.terminate(); lowB.terminate(); highA.terminate(); highB.terminate();
+
+    return meanAbsDiff(la, lb, 0) < 1e-8 && meanAbsDiff(ha, hb, 0) < 1e-8;
+}
+
 bool nullIoIsHandled(double sr)
 {
     Processor p;
@@ -1162,6 +1200,9 @@ int main()
 
             require(invalidParameterValuesAreIgnored(sr),
                     "NaN and Inf parameter values are ignored safely", failures);
+
+            require(outOfRangeParametersClamp(sr),
+                    "out-of-range normalized parameter values clamp safely", failures);
 
             require(silentInputPreservesTail(sr),
                     "silent-input flags do not truncate an active SPACE tail", failures);
