@@ -3,6 +3,7 @@
 
 #include "pluginterfaces/vst/ivstaudioprocessor.h"
 #include "public.sdk/source/vst/hosting/parameterchanges.h"
+#include "public.sdk/source/common/memorystream.h"
 
 #include <algorithm>
 #include <cmath>
@@ -449,6 +450,105 @@ std::vector<float> renderSingleBlockBypassAutomation(double sr)
     return packed;
 }
 
+
+std::vector<float> renderConfiguredProcessor(Processor& p, double sr, double seconds, double hz, int block = 128)
+{
+    const size_t total = static_cast<size_t>(std::llround(sr * seconds));
+    std::vector<float> result(total, 0.f);
+    std::vector<float> inL(block, 0.f), inR(block, 0.f), outL(block, 0.f), outR(block, 0.f);
+    float* inPtrs[2] = { inL.data(), inR.data() };
+    float* outPtrs[2] = { outL.data(), outR.data() };
+
+    AudioBusBuffers inBus {};
+    inBus.numChannels = 2;
+    inBus.channelBuffers32 = inPtrs;
+    AudioBusBuffers outBus {};
+    outBus.numChannels = 2;
+    outBus.channelBuffers32 = outPtrs;
+
+    size_t pos = 0;
+    while (pos < total)
+    {
+        const int n = static_cast<int>(std::min<size_t>(block, total - pos));
+        for (int i = 0; i < n; ++i)
+        {
+            const double t = static_cast<double>(pos + static_cast<size_t>(i)) / sr;
+            const float x = 0.2f * static_cast<float>(std::sin(2.0 * kPi * hz * t));
+            inL[i] = x;
+            inR[i] = x;
+            outL[i] = 0.f;
+            outR[i] = 0.f;
+        }
+
+        ProcessData data {};
+        data.processMode = kRealtime;
+        data.symbolicSampleSize = kSample32;
+        data.numSamples = n;
+        data.numInputs = 1;
+        data.numOutputs = 1;
+        data.inputs = &inBus;
+        data.outputs = &outBus;
+
+        if (p.process(data) != kResultOk)
+            throw std::runtime_error("configured process failed");
+
+        for (int i = 0; i < n; ++i)
+            result[pos + static_cast<size_t>(i)] = outL[i];
+
+        pos += static_cast<size_t>(n);
+    }
+
+    return result;
+}
+
+bool stateRoundtripMatches(double sr)
+{
+    constexpr int block = 128;
+
+    Processor source;
+    Processor restored;
+    if (source.initialize(nullptr) != kResultOk || restored.initialize(nullptr) != kResultOk)
+        throw std::runtime_error("state processor initialize failed");
+
+    ProcessSetup setup {};
+    setup.processMode = kRealtime;
+    setup.symbolicSampleSize = kSample32;
+    setup.maxSamplesPerBlock = block;
+    setup.sampleRate = sr;
+
+    if (source.setupProcessing(setup) != kResultOk || restored.setupProcessing(setup) != kResultOk)
+        throw std::runtime_error("state setupProcessing failed");
+
+    source.setTestParameter(Colderator::kCold, 0.73f);
+    source.setTestParameter(Colderator::kIce, 0.41f);
+    source.setTestParameter(Colderator::kMetal, 0.66f);
+    source.setTestParameter(Colderator::kFrost, 0.32f);
+    source.setTestParameter(Colderator::kShiver, 0.27f);
+    source.setTestParameter(Colderator::kSpace, 0.58f);
+    source.setTestParameter(Colderator::kOutput, 0.63f);
+    source.setTestParameter(Colderator::kBypass, 0.f);
+
+    Steinberg::MemoryStream state;
+    if (source.getState(&state) != kResultOk)
+        throw std::runtime_error("getState failed");
+    state.seek(0, Steinberg::IBStream::kIBSeekSet, nullptr);
+    if (restored.setState(&state) != kResultOk)
+        throw std::runtime_error("setState failed");
+
+    if (source.setActive(true) != kResultOk || restored.setActive(true) != kResultOk)
+        throw std::runtime_error("state setActive failed");
+
+    const auto a = renderConfiguredProcessor(source, sr, 0.6, 440.0, block);
+    const auto b = renderConfiguredProcessor(restored, sr, 0.6, 440.0, block);
+
+    source.setActive(false);
+    restored.setActive(false);
+    source.terminate();
+    restored.terminate();
+
+    return meanAbsDiff(a, b, 0) < 1e-7;
+}
+
 double tailEnergy(const std::vector<float>& x, size_t start)
 {
     if (x.size() <= start)
@@ -542,6 +642,28 @@ int main()
 
         for (double sr : {44100.0, 48000.0, 96000.0})
         {
+            require(stateRoundtripMatches(sr),
+                    "component state roundtrip reproduces DSP behavior at " +
+                    std::to_string(static_cast<int>(sr)) + " Hz",
+                    failures);
+
+            {
+                Processor tailProbe;
+                require(tailProbe.initialize(nullptr) == kResultOk,
+                        "tail probe initializes", failures);
+                ProcessSetup tailSetup {};
+                tailSetup.processMode = kRealtime;
+                tailSetup.symbolicSampleSize = kSample32;
+                tailSetup.maxSamplesPerBlock = 128;
+                tailSetup.sampleRate = sr;
+                require(tailProbe.setupProcessing(tailSetup) == kResultOk,
+                        "tail probe setup succeeds", failures);
+                const uint32 reportedTail = tailProbe.getTailSamples();
+                require(reportedTail >= static_cast<uint32>(sr * 1.5) &&
+                        reportedTail <= static_cast<uint32>(sr * 2.1),
+                        "reported tail covers designed cold reverb decay", failures);
+                tailProbe.terminate();
+            }
             const size_t skip = static_cast<size_t>(sr * 0.15);
 
             const auto dry = renderSine(sr, 0.8, 440.0, {});
