@@ -223,7 +223,7 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
     const float fastA = onePoleCoeff(sampleRate_, 95.f);
     const float slowA = onePoleCoeff(sampleRate_, 12.f);
 
-    updateResonators(ice_, metal_);
+    updateResonators(smIce_, smMetal_);
 
     for (int32 sample = 0; sample < data.numSamples; ++sample)
     {
