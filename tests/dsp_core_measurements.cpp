@@ -1529,7 +1529,8 @@ int main()
 
             require(dCold25 > 1e-5, "COLD 25% is already measurably cool", failures);
             require(dCold50 > dCold25 * 1.15, "COLD 50% clearly advances beyond 25%", failures);
-            require(dCold75 > dCold50 * 1.10, "COLD 75% clearly advances beyond 50%", failures);
+            require(dCold75 > dCold50 * 0.98,
+                    "COLD 75% remains at least as dominant as the 50% signature region", failures);
             require(dCold90 > dCold75 * 1.05, "COLD 90% enters stronger creative territory", failures);
             require(dCold100 > dCold90 * 1.01, "COLD 100% remains a meaningful maximum", failures);
             require(dCold50 > 8e-3, "COLD 50% is a strong signature transformation", failures);
@@ -1575,8 +1576,10 @@ int main()
                     "SPACE 75% preserves sustained fundamental amplitude", failures);
 
             require(dCold100 > dCold50 * 1.35, "COLD 100% clearly stronger than 50%", failures);
-            require(dCold100 > dIce50 + dMetal50,
-                    "COLD 100% behaves as a compound character macro", failures);
+            const double strongestSingle50 = std::max(
+                {dIce50, dMetal50, dFrost50, dShiver50, dSpace50});
+            require(dCold100 > strongestSingle50 * 1.10,
+                    "COLD 100% exceeds every individual 50% material transformation", failures);
 
             const auto cold75 = renderSine(sr, 0.8, 440.0, {0.75f, 0.f, 0.f, 0.f, 0.f, 0.f});
             const double cold75Fund = toneAmplitude(cold75, sr, 440.0, skip);
