@@ -64,6 +64,7 @@ private:
     std::array<unsigned int, kChannels> frostRng_ {{0x125A91u, 0xC01D77u}};
     std::array<std::vector<float>, kChannels> spaceBuffer_ {};
     std::array<int, kChannels> spaceWrite_ {};
+    std::array<float, kChannels> spaceLowState_ {};
 
     float shiverPhaseA_ = 0.f;
     float shiverPhaseB_ = 0.f;
