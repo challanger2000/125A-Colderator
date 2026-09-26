@@ -59,6 +59,11 @@ private:
     std::array<float, kChannels> midLowState_ {};
     std::array<float, kChannels> fastEnv_ {};
     std::array<float, kChannels> slowEnv_ {};
+    std::array<float, kChannels> frostPrevNoise_ {};
+    std::array<unsigned int, kChannels> frostRng_ {{0x125A91u, 0xC01D77u}};
+
+    float shiverPhaseA_ = 0.f;
+    float shiverPhaseB_ = 0.f;
 
     float cold_ = 0.f;
     float ice_ = 0.f;
@@ -72,6 +77,8 @@ private:
     float smCold_ = 0.f;
     float smIce_ = 0.f;
     float smMetal_ = 0.f;
+    float smFrost_ = 0.f;
+    float smShiver_ = 0.f;
     float smOutput_ = 0.5f;
 };
 
