@@ -109,6 +109,91 @@ std::vector<float> renderSine(double sr, double seconds, double hz, const Settin
 }
 
 
+
+std::vector<float> renderImpulseWithBypassWindow(double sr, int block,
+                                                  int totalBlocks,
+                                                  int bypassStartBlock,
+                                                  int bypassEndBlock,
+                                                  const Settings& settings)
+{
+    Processor p;
+    if (p.initialize(nullptr) != kResultOk)
+        throw std::runtime_error("initialize failed");
+
+    ProcessSetup setup {};
+    setup.processMode = kRealtime;
+    setup.symbolicSampleSize = kSample32;
+    setup.maxSamplesPerBlock = block;
+    setup.sampleRate = sr;
+
+    if (p.setupProcessing(setup) != kResultOk)
+        throw std::runtime_error("setupProcessing failed");
+
+    p.setTestParameter(Colderator::kCold, settings.cold);
+    p.setTestParameter(Colderator::kIce, settings.ice);
+    p.setTestParameter(Colderator::kMetal, settings.metal);
+    p.setTestParameter(Colderator::kFrost, settings.frost);
+    p.setTestParameter(Colderator::kShiver, settings.shiver);
+    p.setTestParameter(Colderator::kSpace, settings.space);
+    p.setTestParameter(Colderator::kOutput, 0.5f);
+
+    if (p.setActive(true) != kResultOk)
+        throw std::runtime_error("setActive failed");
+
+    const size_t total = static_cast<size_t>(block * totalBlocks);
+    std::vector<float> result(total, 0.f);
+    std::vector<float> inL(block, 0.f), inR(block, 0.f), outL(block, 0.f), outR(block, 0.f);
+    float* inPtrs[2] = { inL.data(), inR.data() };
+    float* outPtrs[2] = { outL.data(), outR.data() };
+
+    AudioBusBuffers inBus {};
+    inBus.numChannels = 2;
+    inBus.channelBuffers32 = inPtrs;
+
+    AudioBusBuffers outBus {};
+    outBus.numChannels = 2;
+    outBus.channelBuffers32 = outPtrs;
+
+    for (int b = 0; b < totalBlocks; ++b)
+    {
+        std::fill(inL.begin(), inL.end(), 0.f);
+        std::fill(inR.begin(), inR.end(), 0.f);
+        std::fill(outL.begin(), outL.end(), 0.f);
+        std::fill(outR.begin(), outR.end(), 0.f);
+
+        if (b == 0)
+        {
+            inL[0] = 1.f;
+            inR[0] = 1.f;
+        }
+
+        if (b == bypassStartBlock)
+            p.setTestParameter(Colderator::kBypass, 1.f);
+        if (b == bypassEndBlock)
+            p.setTestParameter(Colderator::kBypass, 0.f);
+
+        ProcessData data {};
+        data.processMode = kRealtime;
+        data.symbolicSampleSize = kSample32;
+        data.numSamples = block;
+        data.numInputs = 1;
+        data.numOutputs = 1;
+        data.inputs = &inBus;
+        data.outputs = &outBus;
+
+        if (p.process(data) != kResultOk)
+            throw std::runtime_error("process failed");
+
+        const size_t base = static_cast<size_t>(b * block);
+        for (int i = 0; i < block; ++i)
+            result[base + static_cast<size_t>(i)] = outL[i];
+    }
+
+    p.setActive(false);
+    p.terminate();
+    return result;
+}
+
 std::vector<float> renderImpulse(double sr, double seconds, const Settings& settings, int block = 128)
 {
 
@@ -320,6 +405,29 @@ int main()
             const auto denormStress = renderImpulse(sr, 4.0, {1.f, 1.f, 1.f, 1.f, 1.f, 1.f}, 64);
             require(finiteBuffer(denormStress), "denormal stress remains finite", failures);
             require(maxAbs(denormStress) < 20.0, "denormal stress remains bounded", failures);
+
+            const int bypassBlockSize = 64;
+            const int totalBlocks = 700;
+            const int bypassStartBlock = 120;
+            const int bypassEndBlock = 420;
+            const Settings bypassSettings {0.75f, 0.55f, 0.65f, 0.25f, 0.20f, 0.85f};
+            const auto bypassed = renderImpulseWithBypassWindow(sr, bypassBlockSize, totalBlocks,
+                                                                bypassStartBlock, bypassEndBlock,
+                                                                bypassSettings);
+            const auto continuous = renderImpulseWithBypassWindow(sr, bypassBlockSize, totalBlocks,
+                                                                  totalBlocks + 1, totalBlocks + 2,
+                                                                  bypassSettings);
+            const size_t bypassStartSample = static_cast<size_t>(bypassStartBlock * bypassBlockSize);
+            const size_t bypassEndSample = static_cast<size_t>(bypassEndBlock * bypassBlockSize);
+
+            double bypassWindowPeak = 0.0;
+            for (size_t i = bypassStartSample; i < bypassEndSample; ++i)
+                bypassWindowPeak = std::max(bypassWindowPeak, std::fabs(static_cast<double>(bypassed[i])));
+            require(bypassWindowPeak < 1e-12,
+                    "bypass outputs exact dry silence while DSP state advances", failures);
+
+            require(meanAbsDiff(bypassed, continuous, bypassEndSample) < 1e-6,
+                    "bypass state resumes without stale tail discontinuity", failures);
 
             const double dCold50 = meanAbsDiff(dry, cold50, skip);
             const double dCold100 = meanAbsDiff(dry, cold100, skip);
