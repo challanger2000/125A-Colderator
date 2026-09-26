@@ -38,6 +38,18 @@ inline float zapDenormal(float v)
 {
     return std::fabs(v) < 1.0e-30f ? 0.f : v;
 }
+
+inline float materialWet(float v)
+{
+    v = clamp01(v);
+    if (v <= 0.20f)
+        return 1.25f * v; // 20% -> 25% transformed material
+    if (v <= 0.50f)
+        return 0.25f + (v - 0.20f) * (0.47f / 0.30f); // 50% -> 72%
+    if (v <= 0.75f)
+        return 0.72f + (v - 0.50f) * (0.16f / 0.25f); // 75% -> 88%
+    return 0.88f + (v - 0.75f) * (0.12f / 0.25f);     // 100% -> 100%
+}
 }
 
 void Processor::Resonator::setBandpass(double sampleRate, float frequency, float q)
@@ -138,6 +150,11 @@ void Processor::resetDsp()
         spaceWrite_[ch] = 0;
         iceDelayBuffer_[ch].assign(static_cast<size_t>(sampleRate_ * 0.012) + 8u, 0.f);
         iceDelayWrite_[ch] = 0;
+        shiverDelayBuffer_[ch].assign(static_cast<size_t>(sampleRate_ * 0.020) + 8u, 0.f);
+        shiverDelayWrite_[ch] = 0;
+        shiverJitter_[ch] = 0.f;
+        shiverJitterTarget_[ch] = 0.f;
+        shiverJitterCounter_[ch] = 0;
     }
     shiverPhaseA_ = 0.f;
     shiverPhaseB_ = 0.f;
@@ -399,12 +416,9 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                 metalSignal += mode.process(metalInput);
             metalSignal *= 1.f / static_cast<float>(kMetalModes);
 
-            y += iceSignal * iceMix;
-            y += metalSignal * metalMix;
-
-            // FROZEN CORE / ICE: short stereo-skewed micro-comb structure.
-            // This creates an immediately audible glassy/icy transformation,
-            // while leaving the dry fundamental present in the normal range.
+            // ICE = crystal / broken glass / icicles.
+            // It is a material morph, not a small parallel colour layer.
+            float glass = 0.f;
             auto& iceDelay = iceDelayBuffer_[ch];
             if (!iceDelay.empty())
             {
@@ -414,28 +428,32 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                 const int d1 = std::max(1, static_cast<int>(sampleRate_ * 0.00073 * side));
                 const int d2 = std::max(1, static_cast<int>(sampleRate_ * 0.00131 / side));
                 const int d3 = std::max(1, static_cast<int>(sampleRate_ * 0.00217 * side));
+                const int d4 = std::max(1, static_cast<int>(sampleRate_ * 0.00491 / side));
                 auto readIce = [&](int delay) {
                     int index = w - delay;
                     while (index < 0) index += size;
                     return iceDelay[static_cast<size_t>(index)];
                 };
 
-                const float glass = 0.56f * readIce(d1) - 0.31f * readIce(d2) + 0.21f * readIce(d3);
-                const float iceCoreMix = effectiveIce * (0.12f + 0.42f * iceExtreme);
-                y += (glass - 0.18f * highDetail) * iceCoreMix;
-
-                const float write = zapDenormal(highDetail + 0.18f * glass * effectiveIce);
+                glass = 0.72f * readIce(d1) - 0.53f * readIce(d2) +
+                        0.41f * readIce(d3) - 0.27f * readIce(d4);
+                const float write = zapDenormal(highDetail + 0.28f * glass * effectiveIce);
                 iceDelay[static_cast<size_t>(w)] = std::isfinite(write) ? write : 0.f;
                 iceDelayWrite_[ch] = (w + 1 >= size) ? 0 : (w + 1);
             }
+            const float iceTexture = 0.12f * x + 1.25f * glass +
+                                     iceSignal * (1.30f + 0.70f * iceExtreme);
+            const float iceWet = materialWet(effectiveIce);
+            y = y * (1.f - iceWet) + iceTexture * iceWet;
 
-            // FROZEN CORE / METAL: controlled inharmonic sidebands.
-            // Normal range remains blended with the source; extreme values
-            // intentionally become synthetic and machine-like.
+            // METAL = steel / pipes / machinery.
+            // Inharmonic resonances and sidebands increasingly replace the source.
             const float metalSideband = highDetail * metalCarrier;
-            const float metalCoreMix = effectiveMetal * effectiveMetal *
-                                       (0.10f + 0.34f * metalExtreme);
-            y += metalSideband * metalCoreMix;
+            const float metalTexture = 0.10f * x +
+                                       metalSignal * (1.45f + 0.95f * metalExtreme) +
+                                       metalSideband * (0.72f + 0.48f * metalExtreme);
+            const float metalWet = materialWet(effectiveMetal);
+            y = y * (1.f - metalWet) + metalTexture * metalWet;
 
             // FROST: deterministic, signal-dependent high-frequency texture.
             // No input energy means no frost output, even though the RNG state advances.
@@ -464,17 +482,65 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                 --frostHoldCounter_[ch];
             }
             const float microFreeze = frostHeld_[ch] - highDetail;
-            const float freezeMix = effectiveFrost * effectiveFrost *
-                                    (0.18f + 0.36f * frostExtreme);
+            const float frostTexture = 0.18f * x +
+                                       frostHeld_[ch] * 0.92f +
+                                       microFreeze * (0.72f + 0.38f * frostExtreme) +
+                                       frostNoise * frostCarrier *
+                                           (0.42f + 0.48f * frostExtreme);
+            const float frostWet = materialWet(effectiveFrost);
+            y = y * (1.f - frostWet) + frostTexture * frostWet;
 
-            y += frostNoise * frostCarrier * frostDrive;
-            y += microFreeze * freezeMix;
-
-            // SHIVER: shallow dual-rate spectral tremor. It modulates only the
-            // high-detail component, so the fundamental is not frequency-shifted.
+            // SHIVER = wind / cold tremor / irregular micro-Doppler.
+            // Use a moving short delay plus stepped deterministic jitter so
+            // it feels physically unstable rather than like a clean tremolo.
             const float shiverExtreme = clamp01((effectiveShiver - 0.90f) / 0.10f);
-            const float shiverDepth = effectiveShiver * (0.060f + 0.120f * shiverExtreme);
-            y += highDetail * shiverMod * shiverDepth;
+            auto& shiverDelay = shiverDelayBuffer_[ch];
+            if (!shiverDelay.empty())
+            {
+                const int size = static_cast<int>(shiverDelay.size());
+                const int w = shiverDelayWrite_[ch];
+                shiverDelay[static_cast<size_t>(w)] = x;
+
+                if (shiverJitterCounter_[ch] <= 0)
+                {
+                    unsigned int jr = frostRng_[ch];
+                    jr ^= jr << 13; jr ^= jr >> 17; jr ^= jr << 5;
+                    frostRng_[ch] = jr;
+                    shiverJitterTarget_[ch] =
+                        (static_cast<float>(jr & 0x00FFFFFFu) / 8388607.5f) - 1.f;
+                    shiverJitterCounter_[ch] = std::max(
+                        1, static_cast<int>(sampleRate_ * (0.035 + 0.045 * (1.f - effectiveShiver))));
+                }
+                else
+                {
+                    --shiverJitterCounter_[ch];
+                }
+
+                shiverJitter_[ch] += (shiverJitterTarget_[ch] - shiverJitter_[ch]) * 0.0025f;
+                const float side = ch == 0 ? 1.f : -1.f;
+                const float motion = 0.62f * shiverMod +
+                                     0.38f * shiverJitter_[ch] * side;
+                const float baseMs = 1.6f + 1.4f * effectiveShiver;
+                const float depthMs = 0.7f + 2.4f * effectiveShiver +
+                                      1.8f * shiverExtreme;
+                float delaySamples = static_cast<float>(sampleRate_) *
+                                     (baseMs + depthMs * motion) * 0.001f;
+                delaySamples = std::max(1.f, std::min(delaySamples, static_cast<float>(size - 3)));
+
+                float readPos = static_cast<float>(w) - delaySamples;
+                while (readPos < 0.f) readPos += static_cast<float>(size);
+                const int i0 = static_cast<int>(readPos);
+                const int i1 = (i0 + 1) % size;
+                const float frac = readPos - static_cast<float>(i0);
+                const float shifted = shiverDelay[static_cast<size_t>(i0)] * (1.f - frac) +
+                                      shiverDelay[static_cast<size_t>(i1)] * frac;
+
+                const float shiverTexture = 0.18f * x + 0.82f * shifted +
+                                            highDetail * shiverJitter_[ch] * 0.22f;
+                const float shiverWet = materialWet(effectiveShiver);
+                y = y * (1.f - shiverWet) + shiverTexture * shiverWet;
+                shiverDelayWrite_[ch] = (w + 1 >= size) ? 0 : (w + 1);
+            }
 
             // SPACE: sparse early reflections feed a deliberately cold,
             // low-diffusion feedback tail. The feedback is high-passed so the
