@@ -287,8 +287,9 @@ int main()
             const auto impulseIce100 = renderImpulse(sr, 0.25, {0.f, 1.f, 0.f});
             const auto impulseMetal50 = renderImpulse(sr, 0.25, {0.f, 0.f, 0.50f});
             const auto impulseMetal100 = renderImpulse(sr, 0.25, {0.f, 0.f, 1.f});
-            const auto impulseSpace50 = renderImpulse(sr, 0.25, {0.f, 0.f, 0.f, 0.f, 0.f, 0.50f});
-            const auto impulseSpace100 = renderImpulse(sr, 0.25, {0.f, 0.f, 0.f, 0.f, 0.f, 1.f});
+            const auto impulseSpace50 = renderImpulse(sr, 1.6, {0.f, 0.f, 0.f, 0.f, 0.f, 0.50f});
+            const auto impulseSpace100 = renderImpulse(sr, 1.6, {0.f, 0.f, 0.f, 0.f, 0.f, 1.f});
+            const auto impulseCold100 = renderImpulse(sr, 1.6, {1.f, 0.f, 0.f, 0.f, 0.f, 0.f});
 
             require(finiteBuffer(dry) && finiteBuffer(cold100) &&
                     finiteBuffer(ice100) && finiteBuffer(metal100) &&
@@ -343,7 +344,9 @@ int main()
             require(spaceFundRatio > 0.75 && spaceFundRatio < 1.25,
                     "SPACE preserves sustained fundamental amplitude", failures);
 
-            require(dCold100 > dCold50 * 1.25, "COLD 100% stronger than 50%", failures);
+            require(dCold100 > dCold50 * 1.35, "COLD 100% clearly stronger than 50%", failures);
+            require(dCold100 > dIce50 + dMetal50,
+                    "COLD 100% behaves as a compound character macro", failures);
 
             const size_t tailStart = static_cast<size_t>(sr * 0.002);
             const double dryTail = tailEnergy(impulseDry, tailStart);
@@ -358,9 +361,19 @@ int main()
             require(space100Tail > space50Tail * 1.20,
                     "SPACE 100% stronger than 50% on impulse", failures);
 
-            const size_t lateStart = static_cast<size_t>(sr * 0.060);
-            require(tailEnergy(impulseSpace100, lateStart) < 1e-10,
-                    "SPACE tail is effectively finished by 60 ms", failures);
+            const size_t reverbStart = static_cast<size_t>(sr * 0.080);
+            const size_t reverbLate = static_cast<size_t>(sr * 0.900);
+            const double spaceTailAfter80 = tailEnergy(impulseSpace100, reverbStart);
+            const double spaceTailAfter900 = tailEnergy(impulseSpace100, reverbLate);
+
+            require(spaceTailAfter80 > 1e-6,
+                    "SPACE has a clearly measurable icy reverb tail", failures);
+            require(spaceTailAfter900 < spaceTailAfter80 * 0.25,
+                    "SPACE reverb decays substantially by 900 ms", failures);
+
+            const double coldTailAfter80 = tailEnergy(impulseCold100, reverbStart);
+            require(coldTailAfter80 > 1e-6,
+                    "COLD 100% engages the cold Space tail as part of the macro", failures);
 
             require(ice100Tail > ice50Tail * 1.25,
                     "ICE 100% stronger than 50% on transient excitation", failures);
