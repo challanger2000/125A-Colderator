@@ -226,7 +226,24 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
         }
     }
 
-    if (data.numInputs < 1 || data.numOutputs < 1 || data.numSamples <= 0)
+    if (data.numSamples <= 0)
+    {
+        for (int32 q = 0; q < automationQueueCount; ++q)
+        {
+            auto* queue = automationQueues[q];
+            const int32 pointCount = automationCounts[q];
+            if (!queue || pointCount <= 0)
+                continue;
+
+            int32 sampleOffset = 0;
+            ParamValue value = 0.0;
+            if (queue->getPoint(pointCount - 1, sampleOffset, value) == kResultTrue)
+                applyParameter(queue->getParameterId(), static_cast<float>(value));
+        }
+        return kResultOk;
+    }
+
+    if (data.numInputs < 1 || data.numOutputs < 1)
         return kResultOk;
 
     if (data.symbolicSampleSize != kSample32)
