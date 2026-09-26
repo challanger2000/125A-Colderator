@@ -25,6 +25,7 @@ struct Settings
     float metal = 0.f;
     float frost = 0.f;
     float shiver = 0.f;
+    float space = 0.f;
 };
 
 std::vector<float> renderSine(double sr, double seconds, double hz, const Settings& settings)
@@ -49,6 +50,7 @@ std::vector<float> renderSine(double sr, double seconds, double hz, const Settin
     p.setTestParameter(Colderator::kMetal, settings.metal);
     p.setTestParameter(Colderator::kFrost, settings.frost);
     p.setTestParameter(Colderator::kShiver, settings.shiver);
+    p.setTestParameter(Colderator::kSpace, settings.space);
     p.setTestParameter(Colderator::kOutput, 0.5f);
 
     if (p.setActive(true) != kResultOk)
@@ -130,6 +132,7 @@ std::vector<float> renderImpulse(double sr, double seconds, const Settings& sett
     p.setTestParameter(Colderator::kMetal, settings.metal);
     p.setTestParameter(Colderator::kFrost, settings.frost);
     p.setTestParameter(Colderator::kShiver, settings.shiver);
+    p.setTestParameter(Colderator::kSpace, settings.space);
     p.setTestParameter(Colderator::kOutput, 0.5f);
 
     if (p.setActive(true) != kResultOk)
@@ -276,16 +279,21 @@ int main()
             const auto frostSilence = renderSine(sr, 0.8, 0.0, {0.f, 0.f, 0.f, 1.f, 0.f});
             const auto shiver50 = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 0.f, 0.f, 0.50f});
             const auto shiver100 = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 0.f, 0.f, 1.f});
+            const auto space50 = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 0.f, 0.f, 0.f, 0.50f});
+            const auto space100 = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 0.f, 0.f, 0.f, 1.f});
 
             const auto impulseDry = renderImpulse(sr, 0.25, {});
             const auto impulseIce50 = renderImpulse(sr, 0.25, {0.f, 0.50f, 0.f});
             const auto impulseIce100 = renderImpulse(sr, 0.25, {0.f, 1.f, 0.f});
             const auto impulseMetal50 = renderImpulse(sr, 0.25, {0.f, 0.f, 0.50f});
             const auto impulseMetal100 = renderImpulse(sr, 0.25, {0.f, 0.f, 1.f});
+            const auto impulseSpace50 = renderImpulse(sr, 0.25, {0.f, 0.f, 0.f, 0.f, 0.f, 0.50f});
+            const auto impulseSpace100 = renderImpulse(sr, 0.25, {0.f, 0.f, 0.f, 0.f, 0.f, 1.f});
 
             require(finiteBuffer(dry) && finiteBuffer(cold100) &&
                     finiteBuffer(ice100) && finiteBuffer(metal100) &&
-                    finiteBuffer(frost100) && finiteBuffer(shiver100),
+                    finiteBuffer(frost100) && finiteBuffer(shiver100) &&
+                    finiteBuffer(space100),
                     "finite output at " + std::to_string(static_cast<int>(sr)) + " Hz",
                     failures);
 
@@ -303,15 +311,19 @@ int main()
             const double dFrost100 = meanAbsDiff(dry, frost100, skip);
             const double dShiver50 = meanAbsDiff(dry, shiver50, skip);
             const double dShiver100 = meanAbsDiff(dry, shiver100, skip);
+            const double dSpace50 = meanAbsDiff(dry, space50, skip);
+            const double dSpace100 = meanAbsDiff(dry, space100, skip);
 
             require(dCold50 > 1e-4, "COLD 50% is measurably active", failures);
             require(dIce50 > 1e-5, "ICE 50% is measurably active", failures);
             require(dMetal50 > 1e-5, "METAL 50% is measurably active", failures);
             require(dFrost50 > 1e-5, "FROST 50% is measurably active", failures);
             require(dShiver50 > 1e-5, "SHIVER 50% is measurably active", failures);
+            require(dSpace50 > 1e-5, "SPACE 50% is measurably active", failures);
 
             require(dFrost100 > dFrost50 * 1.20, "FROST 100% stronger than 50%", failures);
             require(dShiver100 > dShiver50 * 1.20, "SHIVER 100% stronger than 50%", failures);
+            require(dSpace100 > dSpace50 * 1.20, "SPACE 100% stronger than 50%", failures);
             require(meanAbsDiff(frost100, frost100Repeat, 0) < 1e-8,
                     "FROST render is deterministic", failures);
 
@@ -326,6 +338,11 @@ int main()
             require(shiverFundRatio > 0.90 && shiverFundRatio < 1.10,
                     "SHIVER preserves sustained fundamental amplitude", failures);
 
+            const double spaceFund = toneAmplitude(space100, sr, 440.0, skip);
+            const double spaceFundRatio = dryFund > 1e-12 ? spaceFund / dryFund : 0.0;
+            require(spaceFundRatio > 0.75 && spaceFundRatio < 1.25,
+                    "SPACE preserves sustained fundamental amplitude", failures);
+
             require(dCold100 > dCold50 * 1.25, "COLD 100% stronger than 50%", failures);
 
             const size_t tailStart = static_cast<size_t>(sr * 0.002);
@@ -334,6 +351,16 @@ int main()
             const double ice100Tail = tailEnergy(impulseIce100, tailStart) - dryTail;
             const double metal50Tail = tailEnergy(impulseMetal50, tailStart) - dryTail;
             const double metal100Tail = tailEnergy(impulseMetal100, tailStart) - dryTail;
+            const double space50Tail = tailEnergy(impulseSpace50, tailStart) - dryTail;
+            const double space100Tail = tailEnergy(impulseSpace100, tailStart) - dryTail;
+
+            require(space50Tail > 1e-6, "SPACE 50% creates sparse early-reflection energy", failures);
+            require(space100Tail > space50Tail * 1.20,
+                    "SPACE 100% stronger than 50% on impulse", failures);
+
+            const size_t lateStart = static_cast<size_t>(sr * 0.060);
+            require(tailEnergy(impulseSpace100, lateStart) < 1e-10,
+                    "SPACE tail is effectively finished by 60 ms", failures);
 
             require(ice100Tail > ice50Tail * 1.25,
                     "ICE 100% stronger than 50% on transient excitation", failures);
