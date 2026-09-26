@@ -9,6 +9,7 @@
 #include <cmath>
 #include <chrono>
 #include <iostream>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -797,6 +798,225 @@ CpuStats measureCpu(double sr, int block)
     return stats;
 }
 
+
+std::vector<float> renderMono(double sr, double seconds, double hz, const Settings& settings, int block = 128)
+{
+    Processor p;
+    if (p.initialize(nullptr) != kResultOk)
+        throw std::runtime_error("mono initialize failed");
+
+    SpeakerArrangement monoIn = SpeakerArr::kMono;
+    SpeakerArrangement monoOut = SpeakerArr::kMono;
+    if (p.setBusArrangements(&monoIn, 1, &monoOut, 1) != kResultOk)
+        throw std::runtime_error("mono arrangement failed");
+
+    ProcessSetup setup {};
+    setup.processMode = kRealtime;
+    setup.symbolicSampleSize = kSample32;
+    setup.maxSamplesPerBlock = block;
+    setup.sampleRate = sr;
+    if (p.setupProcessing(setup) != kResultOk)
+        throw std::runtime_error("mono setup failed");
+
+    p.setTestParameter(Colderator::kCold, settings.cold);
+    p.setTestParameter(Colderator::kIce, settings.ice);
+    p.setTestParameter(Colderator::kMetal, settings.metal);
+    p.setTestParameter(Colderator::kFrost, settings.frost);
+    p.setTestParameter(Colderator::kShiver, settings.shiver);
+    p.setTestParameter(Colderator::kSpace, settings.space);
+    p.setTestParameter(Colderator::kOutput, 0.5f);
+    if (p.setActive(true) != kResultOk)
+        throw std::runtime_error("mono active failed");
+
+    const size_t total = static_cast<size_t>(std::llround(sr * seconds));
+    std::vector<float> result(total, 0.f);
+    std::vector<float> in(block), out(block);
+    float* inPtrs[1] = {in.data()};
+    float* outPtrs[1] = {out.data()};
+    AudioBusBuffers inBus {};
+    inBus.numChannels = 1;
+    inBus.channelBuffers32 = inPtrs;
+    AudioBusBuffers outBus {};
+    outBus.numChannels = 1;
+    outBus.channelBuffers32 = outPtrs;
+
+    size_t pos = 0;
+    while (pos < total)
+    {
+        const int n = static_cast<int>(std::min<size_t>(block, total - pos));
+        for (int i = 0; i < n; ++i)
+        {
+            const double t = static_cast<double>(pos + static_cast<size_t>(i)) / sr;
+            in[i] = 0.2f * static_cast<float>(std::sin(2.0 * kPi * hz * t));
+            out[i] = 0.f;
+        }
+
+        ProcessData data {};
+        data.processMode = kRealtime;
+        data.symbolicSampleSize = kSample32;
+        data.numSamples = n;
+        data.numInputs = 1;
+        data.numOutputs = 1;
+        data.inputs = &inBus;
+        data.outputs = &outBus;
+        if (p.process(data) != kResultOk)
+            throw std::runtime_error("mono process failed");
+
+        for (int i = 0; i < n; ++i)
+            result[pos + static_cast<size_t>(i)] = out[i];
+        pos += static_cast<size_t>(n);
+    }
+
+    p.setActive(false);
+    p.terminate();
+    return result;
+}
+
+bool invalidParameterValuesAreIgnored(double sr)
+{
+    Processor a;
+    Processor b;
+    if (a.initialize(nullptr) != kResultOk || b.initialize(nullptr) != kResultOk)
+        return false;
+
+    ProcessSetup setup {};
+    setup.processMode = kRealtime;
+    setup.symbolicSampleSize = kSample32;
+    setup.maxSamplesPerBlock = 128;
+    setup.sampleRate = sr;
+    if (a.setupProcessing(setup) != kResultOk || b.setupProcessing(setup) != kResultOk)
+        return false;
+
+    a.setTestParameter(Colderator::kCold, 0.42f);
+    b.setTestParameter(Colderator::kCold, 0.42f);
+    a.setTestParameter(Colderator::kSpace, 0.33f);
+    b.setTestParameter(Colderator::kSpace, 0.33f);
+
+    a.setTestParameter(Colderator::kCold, std::numeric_limits<float>::quiet_NaN());
+    a.setTestParameter(Colderator::kSpace, std::numeric_limits<float>::infinity());
+    a.setTestParameter(Colderator::kMetal, -std::numeric_limits<float>::infinity());
+
+    if (a.setActive(true) != kResultOk || b.setActive(true) != kResultOk)
+        return false;
+
+    const auto ra = renderConfiguredProcessor(a, sr, 0.20, 440.0, 128);
+    const auto rb = renderConfiguredProcessor(b, sr, 0.20, 440.0, 128);
+
+    a.setActive(false);
+    b.setActive(false);
+    a.terminate();
+    b.terminate();
+
+    return finiteBuffer(ra) && meanAbsDiff(ra, rb, 0) < 1e-8;
+}
+
+bool nullIoIsHandled(double sr)
+{
+    Processor p;
+    if (p.initialize(nullptr) != kResultOk)
+        return false;
+
+    ProcessSetup setup {};
+    setup.processMode = kRealtime;
+    setup.symbolicSampleSize = kSample32;
+    setup.maxSamplesPerBlock = 64;
+    setup.sampleRate = sr;
+    if (p.setupProcessing(setup) != kResultOk || p.setActive(true) != kResultOk)
+        return false;
+
+    AudioBusBuffers inBus {};
+    inBus.numChannels = 2;
+    inBus.channelBuffers32 = nullptr;
+    AudioBusBuffers outBus {};
+    outBus.numChannels = 2;
+    outBus.channelBuffers32 = nullptr;
+
+    ProcessData data {};
+    data.processMode = kRealtime;
+    data.symbolicSampleSize = kSample32;
+    data.numSamples = 64;
+    data.numInputs = 1;
+    data.numOutputs = 1;
+    data.inputs = &inBus;
+    data.outputs = &outBus;
+
+    const bool ok = p.process(data) == kResultOk;
+    p.setActive(false);
+    p.terminate();
+    return ok;
+}
+
+bool silentInputPreservesTail(double sr)
+{
+    constexpr int block = 64;
+    Processor p;
+    if (p.initialize(nullptr) != kResultOk)
+        return false;
+
+    ProcessSetup setup {};
+    setup.processMode = kRealtime;
+    setup.symbolicSampleSize = kSample32;
+    setup.maxSamplesPerBlock = block;
+    setup.sampleRate = sr;
+    if (p.setupProcessing(setup) != kResultOk)
+        return false;
+
+    p.setTestParameter(Colderator::kSpace, 1.f);
+    p.setTestParameter(Colderator::kOutput, 0.5f);
+    if (p.setActive(true) != kResultOk)
+        return false;
+
+    std::vector<float> inL(block, 0.f), inR(block, 0.f), outL(block, 0.f), outR(block, 0.f);
+    float* inPtrs[2] = {inL.data(), inR.data()};
+    float* outPtrs[2] = {outL.data(), outR.data()};
+    AudioBusBuffers inBus {};
+    inBus.numChannels = 2;
+    inBus.channelBuffers32 = inPtrs;
+    AudioBusBuffers outBus {};
+    outBus.numChannels = 2;
+    outBus.channelBuffers32 = outPtrs;
+
+    bool foundTail = false;
+    for (int b = 0; b < 80; ++b)
+    {
+        std::fill(inL.begin(), inL.end(), 0.f);
+        std::fill(inR.begin(), inR.end(), 0.f);
+        std::fill(outL.begin(), outL.end(), 0.f);
+        std::fill(outR.begin(), outR.end(), 0.f);
+
+        if (b == 0)
+        {
+            inL[0] = 1.f;
+            inR[0] = 1.f;
+        }
+
+        inBus.silenceFlags = (b == 0) ? 0 : 0x3;
+
+        ProcessData data {};
+        data.processMode = kRealtime;
+        data.symbolicSampleSize = kSample32;
+        data.numSamples = block;
+        data.numInputs = 1;
+        data.numOutputs = 1;
+        data.inputs = &inBus;
+        data.outputs = &outBus;
+
+        if (p.process(data) != kResultOk)
+            return false;
+
+        if (b > 10)
+        {
+            for (int i = 0; i < block; ++i)
+                if (std::fabs(outL[i]) > 1e-7f || std::fabs(outR[i]) > 1e-7f)
+                    foundTail = true;
+        }
+    }
+
+    p.setActive(false);
+    p.terminate();
+    return foundTail;
+}
+
 double tailEnergy(const std::vector<float>& x, size_t start)
 {
     if (x.size() <= start)
@@ -904,6 +1124,9 @@ int main()
                     "CPU p99 stays inside realtime block deadlines on CI", failures);
         }
 
+        require(nullIoIsHandled(48000.0),
+                "null audio buffer pointers are handled without crash", failures);
+
         for (double sr : {44100.0, 48000.0, 96000.0})
         {
             require(stateRoundtripMatches(sr),
@@ -936,6 +1159,18 @@ int main()
 
             require(activeStateLoadStable(sr),
                     "state load while active remains finite and takes effect", failures);
+
+            require(invalidParameterValuesAreIgnored(sr),
+                    "NaN and Inf parameter values are ignored safely", failures);
+
+            require(silentInputPreservesTail(sr),
+                    "silent-input flags do not truncate an active SPACE tail", failures);
+
+            const Settings monoSettings {0.62f, 0.38f, 0.44f, 0.21f, 0.18f, 0.35f};
+            const auto stereoForMono = renderSine(sr, 0.35, 440.0, monoSettings, 128);
+            const auto monoRender = renderMono(sr, 0.35, 440.0, monoSettings, 128);
+            require(meanAbsDiff(stereoForMono, monoRender, 0) < 1e-8,
+                    "mono DSP matches stereo left-channel behavior", failures);
 
             const size_t skip = static_cast<size_t>(sr * 0.15);
 
