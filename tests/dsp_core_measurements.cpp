@@ -546,7 +546,15 @@ bool stateRoundtripMatches(double sr)
     source.terminate();
     restored.terminate();
 
-    return meanAbsDiff(a, b, 0) < 1e-7;
+    if (a.size() != b.size())
+        return false;
+
+    double diff = 0.0;
+    for (size_t i = 0; i < a.size(); ++i)
+        diff += std::fabs(static_cast<double>(a[i]) - static_cast<double>(b[i]));
+    diff /= std::max<size_t>(1, a.size());
+
+    return diff < 1e-7;
 }
 
 double tailEnergy(const std::vector<float>& x, size_t start)
