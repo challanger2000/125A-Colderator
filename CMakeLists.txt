@@ -4,7 +4,7 @@ project(Colderator VERSION 0.1.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(SMTG_ENABLE_VSTGUI_SUPPORT OFF CACHE BOOL "" FORCE)
+set(SMTG_ENABLE_VSTGUI_SUPPORT ON CACHE BOOL "" FORCE)
 set(SMTG_ENABLE_VST3_PLUGIN_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(SMTG_ENABLE_VST3_HOSTING_EXAMPLES OFF CACHE BOOL "" FORCE)
 
@@ -28,10 +28,18 @@ smtg_add_vst3plugin(Colderator
   source/processor.cpp
   source/controller.h
   source/controller.cpp
+  source/ColderatorControls.h
+  source/ColderatorControls.cpp
   source/entry.cpp
+  resource/colderator.uidesc
 )
 
-target_link_libraries(Colderator PRIVATE sdk)
+target_link_libraries(Colderator PRIVATE sdk vstgui_support)
+
+smtg_target_add_plugin_resources(Colderator
+  RESOURCES
+    resource/colderator.uidesc
+)
 smtg_target_configure_version_file(Colderator)
 
 
