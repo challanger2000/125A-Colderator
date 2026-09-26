@@ -1075,6 +1075,7 @@ bool silentInputPreservesTail(double sr)
     if (p.setupProcessing(setup) != kResultOk)
         return false;
 
+    p.setTestParameter(Colderator::kCold, 1.f);
     p.setTestParameter(Colderator::kSpace, 1.f);
     p.setTestParameter(Colderator::kOutput, 0.5f);
     if (p.setActive(true) != kResultOk)
