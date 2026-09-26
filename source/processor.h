@@ -70,6 +70,8 @@ private:
     float shiverPhaseA_ = 0.f;
     float shiverPhaseB_ = 0.f;
     int resonatorUpdateCounter_ = 0;
+    float lastResonatorIce_ = -1.f;
+    float lastResonatorMetal_ = -1.f;
 
     float cold_ = 0.f;
     float ice_ = 0.f;
