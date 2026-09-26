@@ -1519,11 +1519,11 @@ int main()
             require(dCold75 > dCold50 * 1.10, "COLD 75% clearly advances beyond 50%", failures);
             require(dCold90 > dCold75 * 1.05, "COLD 90% enters stronger creative territory", failures);
             require(dCold100 > dCold90 * 1.01, "COLD 100% remains a meaningful maximum", failures);
-            require(dCold50 > 1e-4, "COLD 50% is measurably active", failures);
-            require(dIce50 > 1e-5, "ICE 50% is measurably active", failures);
-            require(dMetal50 > 1e-5, "METAL 50% is measurably active", failures);
-            require(dFrost50 > 1e-5, "FROST 50% is measurably active", failures);
-            require(dShiver50 > 1e-5, "SHIVER 50% is measurably active", failures);
+            require(dCold50 > 8e-4, "COLD 50% is clearly audible, not merely measurable", failures);
+            require(dIce50 > 2e-4, "ICE 50% is clearly audible, not merely measurable", failures);
+            require(dMetal50 > 3e-4, "METAL 50% is clearly audible, not merely measurable", failures);
+            require(dFrost50 > 8e-5, "FROST 50% is clearly audible, not merely measurable", failures);
+            require(dShiver50 > 8e-5, "SHIVER 50% is clearly audible, not merely measurable", failures);
             require(dSpace50 > 1e-5, "SPACE 50% is measurably active", failures);
 
             require(dFrost100 > dFrost50 * 1.20, "FROST 100% stronger than 50%", failures);
