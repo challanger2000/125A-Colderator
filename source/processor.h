@@ -27,6 +27,7 @@ public:
     Steinberg::tresult PLUGIN_API process(Steinberg::Vst::ProcessData& data) override;
     Steinberg::tresult PLUGIN_API setState(Steinberg::IBStream* state) override;
     Steinberg::tresult PLUGIN_API getState(Steinberg::IBStream* state) override;
+    Steinberg::uint32 PLUGIN_API getTailSamples() override;
 
 #ifdef COLDERATOR_TESTING
     void setTestParameter(Steinberg::Vst::ParamID id, float value) { applyParameter(id, value); }
