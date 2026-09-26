@@ -54,6 +54,10 @@
           font-color="DisplayText" frame-color="DisplayFrame" frame-width="1"
           origin="303, 236" round-rect-radius="5" size="64, 21" style-round-rect="true"
           transparent="false" text-alignment="center"/>
+    <view back-color="Display" class="COptionMenu" control-tag="IceMaterial"
+          font="~ NormalFontSmall" font-color="DisplayText" frame-color="DisplayFrame"
+          frame-width="1" origin="290, 264" round-rect-radius="5" size="90, 22"
+          style-round-rect="true" transparent="false"/>
 
     <view back-color="Bg" class="CTextLabel" font="~ NormalFontSmall" font-color="Text"
           frame-width="0" origin="411, 137" size="86, 18" title="METAL"
@@ -63,6 +67,10 @@
           font-color="DisplayText" frame-color="DisplayFrame" frame-width="1"
           origin="422, 236" round-rect-radius="5" size="64, 21" style-round-rect="true"
           transparent="false" text-alignment="center"/>
+    <view back-color="Display" class="COptionMenu" control-tag="MetalMaterial"
+          font="~ NormalFontSmall" font-color="DisplayText" frame-color="DisplayFrame"
+          frame-width="1" origin="409, 264" round-rect-radius="5" size="90, 22"
+          style-round-rect="true" transparent="false"/>
 
     <view back-color="Bg" class="CTextLabel" font="~ NormalFontSmall" font-color="Text"
           frame-width="0" origin="530, 137" size="86, 18" title="FROST"
@@ -72,6 +80,10 @@
           font-color="DisplayText" frame-color="DisplayFrame" frame-width="1"
           origin="541, 236" round-rect-radius="5" size="64, 21" style-round-rect="true"
           transparent="false" text-alignment="center"/>
+    <view back-color="Display" class="COptionMenu" control-tag="FrostMaterial"
+          font="~ NormalFontSmall" font-color="DisplayText" frame-color="DisplayFrame"
+          frame-width="1" origin="528, 264" round-rect-radius="5" size="90, 22"
+          style-round-rect="true" transparent="false"/>
 
     <view back-color="Bg" class="CTextLabel" font="~ NormalFontSmall" font-color="Text"
           frame-width="0" origin="352, 292" size="86, 18" title="SHIVER"
@@ -81,6 +93,10 @@
           font-color="DisplayText" frame-color="DisplayFrame" frame-width="1"
           origin="363, 391" round-rect-radius="5" size="64, 21" style-round-rect="true"
           transparent="false" text-alignment="center"/>
+    <view back-color="Display" class="COptionMenu" control-tag="ShiverMaterial"
+          font="~ NormalFontSmall" font-color="DisplayText" frame-color="DisplayFrame"
+          frame-width="1" origin="350, 416" round-rect-radius="5" size="90, 22"
+          style-round-rect="true" transparent="false"/>
 
     <view back-color="Bg" class="CTextLabel" font="~ NormalFontSmall" font-color="Text"
           frame-width="0" origin="482, 292" size="86, 18" title="SPACE"
@@ -90,6 +106,10 @@
           font-color="DisplayText" frame-color="DisplayFrame" frame-width="1"
           origin="493, 391" round-rect-radius="5" size="64, 21" style-round-rect="true"
           transparent="false" text-alignment="center"/>
+    <view back-color="Display" class="COptionMenu" control-tag="SpaceMaterial"
+          font="~ NormalFontSmall" font-color="DisplayText" frame-color="DisplayFrame"
+          frame-width="1" origin="480, 416" round-rect-radius="5" size="90, 22"
+          style-round-rect="true" transparent="false"/>
 
     <view back-color="Bg" class="CTextLabel" font="~ NormalFontSmall" font-color="Text"
           frame-width="0" origin="682, 137" size="88, 18" title="OUTPUT"
@@ -118,5 +138,10 @@
     <control-tag name="Space" tag="105"/>
     <control-tag name="Output" tag="106"/>
     <control-tag name="Bypass" tag="107"/>
+    <control-tag name="IceMaterial" tag="108"/>
+    <control-tag name="MetalMaterial" tag="109"/>
+    <control-tag name="FrostMaterial" tag="110"/>
+    <control-tag name="ShiverMaterial" tag="111"/>
+    <control-tag name="SpaceMaterial" tag="112"/>
   </control-tags>
 </vstgui-ui-description>
