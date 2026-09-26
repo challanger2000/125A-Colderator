@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <limits>
 
 using namespace Steinberg;
 using namespace Steinberg::Vst;
@@ -447,6 +448,17 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
     }
 
     return kResultOk;
+}
+
+
+uint32 PLUGIN_API Processor::getTailSamples()
+{
+    // The cold SPACE feedback is intentionally audible but bounded. Report a
+    // conservative two-second host tail so offline rendering and transport
+    // stops do not truncate the designed decay at supported sample rates.
+    const double samples = sampleRate_ * 2.0;
+    return static_cast<uint32>(std::min<double>(samples,
+                                                static_cast<double>(std::numeric_limits<uint32>::max())));
 }
 
 tresult PLUGIN_API Processor::setState(IBStream* state)
