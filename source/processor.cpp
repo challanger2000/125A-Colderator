@@ -33,6 +33,11 @@ inline float onePoleCoeff(double sampleRate, float hz)
 {
     return std::exp(-2.f * kPi * hz / static_cast<float>(sampleRate));
 }
+
+inline float zapDenormal(float v)
+{
+    return std::fabs(v) < 1.0e-30f ? 0.f : v;
+}
 }
 
 void Processor::Resonator::setBandpass(double sampleRate, float frequency, float q)
@@ -53,8 +58,8 @@ void Processor::Resonator::setBandpass(double sampleRate, float frequency, float
 float Processor::Resonator::process(float x)
 {
     const float y = b0 * x + z1;
-    z1 = -a1 * y + z2;
-    z2 = b2 * x - a2 * y;
+    z1 = zapDenormal(-a1 * y + z2);
+    z2 = zapDenormal(b2 * x - a2 * y);
 
     if (!std::isfinite(y) || !std::isfinite(z1) || !std::isfinite(z2))
     {
@@ -222,25 +227,16 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
     const int32 channels = std::min<int32>(
         std::min(inBus.numChannels, outBus.numChannels), kChannels);
 
-    if (bypass_)
-    {
-        for (int32 ch = 0; ch < channels; ++ch)
-        {
-            const float* in = inBus.channelBuffers32[ch];
-            float* out = outBus.channelBuffers32[ch];
-            if (in && out && in != out)
-                std::memcpy(out, in, static_cast<size_t>(data.numSamples) * sizeof(float));
-        }
-        return kResultOk;
-    }
-
     const float smooth = 1.f - std::exp(-1.f / static_cast<float>(sampleRate_ * 0.015));
     const float lowA = onePoleCoeff(sampleRate_, 520.f);
     const float deepA = onePoleCoeff(sampleRate_, 145.f);
     const float fastA = onePoleCoeff(sampleRate_, 95.f);
     const float slowA = onePoleCoeff(sampleRate_, 12.f);
 
-    updateResonators(smIce_, smMetal_);
+    const float coldIceBlock = 0.78f * std::pow(clamp01((smCold_ - 0.12f) / 0.88f), 1.30f);
+    const float coldMetalBlock = 0.68f * std::pow(clamp01((smCold_ - 0.22f) / 0.78f), 1.35f);
+    updateResonators(clamp01(smIce_ + coldIceBlock),
+                     clamp01(smMetal_ + coldMetalBlock));
 
     for (int32 sample = 0; sample < data.numSamples; ++sample)
     {
@@ -288,15 +284,15 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
 
             const float x = in[sample];
 
-            lowState_[ch] = lowA * lowState_[ch] + (1.f - lowA) * x;
-            midLowState_[ch] = deepA * midLowState_[ch] + (1.f - deepA) * x;
+            lowState_[ch] = zapDenormal(lowA * lowState_[ch] + (1.f - lowA) * x);
+            midLowState_[ch] = zapDenormal(deepA * midLowState_[ch] + (1.f - deepA) * x);
 
             const float lowMid = lowState_[ch] - midLowState_[ch];
             const float highDetail = x - lowState_[ch];
 
             const float absX = std::fabs(x);
-            fastEnv_[ch] = fastA * fastEnv_[ch] + (1.f - fastA) * absX;
-            slowEnv_[ch] = slowA * slowEnv_[ch] + (1.f - slowA) * absX;
+            fastEnv_[ch] = zapDenormal(fastA * fastEnv_[ch] + (1.f - fastA) * absX);
+            slowEnv_[ch] = zapDenormal(slowA * slowEnv_[ch] + (1.f - slowA) * absX);
             const float transient = std::max(0.f, fastEnv_[ch] - slowEnv_[ch]);
             const float transientNorm = transient / (0.02f + slowEnv_[ch]);
 
@@ -370,8 +366,8 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                 const float feedbackTap = readTap(df);
 
                 const float lowAspace = onePoleCoeff(sampleRate_, 420.f);
-                spaceLowState_[ch] = lowAspace * spaceLowState_[ch] +
-                                     (1.f - lowAspace) * feedbackTap;
+                spaceLowState_[ch] = zapDenormal(lowAspace * spaceLowState_[ch] +
+                                     (1.f - lowAspace) * feedbackTap);
                 const float icyFeedback = feedbackTap - 0.82f * spaceLowState_[ch];
 
                 const float spaceExtreme = clamp01((effectiveSpace - 0.90f) / 0.10f);
@@ -380,7 +376,7 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                                        0.10f * spaceExtreme;
                 y += (early + 0.55f * icyFeedback) * spaceMix;
 
-                const float writeValue = spaceInput + icyFeedback * std::min(0.86f, feedback);
+                const float writeValue = zapDenormal(spaceInput + icyFeedback * std::min(0.86f, feedback));
                 spaceBuffer[static_cast<size_t>(w)] = std::isfinite(writeValue) ? writeValue : 0.f;
                 spaceWrite_[ch] = (w + 1 >= size) ? 0 : (w + 1);
             }
@@ -390,7 +386,7 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
             if (!std::isfinite(y))
                 y = 0.f;
 
-            out[sample] = y;
+            out[sample] = bypass_ ? x : y;
         }
     }
 
