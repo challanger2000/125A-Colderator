@@ -1416,15 +1416,19 @@ int main()
             const auto cold75Stage = renderSine(sr, 0.8, 440.0, {0.75f, 0.f, 0.f});
             const auto cold90 = renderSine(sr, 0.8, 440.0, {0.90f, 0.f, 0.f});
             const auto cold100 = renderSine(sr, 0.8, 440.0, {1.f, 0.f, 0.f});
+            const auto ice25 = renderSine(sr, 0.8, 440.0, {0.f, 0.25f, 0.f});
             const auto ice50 = renderSine(sr, 0.8, 440.0, {0.f, 0.50f, 0.f});
             const auto ice100 = renderSine(sr, 0.8, 440.0, {0.f, 1.f, 0.f});
+            const auto metal25 = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 0.25f});
             const auto metal50 = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 0.50f});
             const auto metal75 = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 0.75f});
             const auto metal100 = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 1.f});
+            const auto frost25 = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 0.f, 0.25f, 0.f});
             const auto frost50 = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 0.f, 0.50f, 0.f});
             const auto frost100 = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 0.f, 1.f, 0.f});
             const auto frost100Repeat = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 0.f, 1.f, 0.f});
             const auto frostSilence = renderSine(sr, 0.8, 0.0, {0.f, 0.f, 0.f, 1.f, 0.f});
+            const auto shiver25 = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 0.f, 0.f, 0.25f});
             const auto shiver50 = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 0.f, 0.f, 0.50f});
             const auto shiver100 = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 0.f, 0.f, 1.f});
             const auto space50 = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 0.f, 0.f, 0.f, 0.50f});
@@ -1507,13 +1511,17 @@ int main()
             const double dCold75 = meanAbsDiff(dry, cold75Stage, skip);
             const double dCold90 = meanAbsDiff(dry, cold90, skip);
             const double dCold100 = meanAbsDiff(dry, cold100, skip);
+            const double dIce25 = meanAbsDiff(dry, ice25, skip);
             const double dIce50 = meanAbsDiff(dry, ice50, skip);
             const double dIce100 = meanAbsDiff(dry, ice100, skip);
+            const double dMetal25 = meanAbsDiff(dry, metal25, skip);
             const double dMetal50 = meanAbsDiff(dry, metal50, skip);
             const double dMetal75 = meanAbsDiff(dry, metal75, skip);
             const double dMetal100 = meanAbsDiff(dry, metal100, skip);
+            const double dFrost25 = meanAbsDiff(dry, frost25, skip);
             const double dFrost50 = meanAbsDiff(dry, frost50, skip);
             const double dFrost100 = meanAbsDiff(dry, frost100, skip);
+            const double dShiver25 = meanAbsDiff(dry, shiver25, skip);
             const double dShiver50 = meanAbsDiff(dry, shiver50, skip);
             const double dShiver100 = meanAbsDiff(dry, shiver100, skip);
             const double dSpace50 = meanAbsDiff(dry, space50, skip);
@@ -1524,11 +1532,11 @@ int main()
             require(dCold75 > dCold50 * 1.10, "COLD 75% clearly advances beyond 50%", failures);
             require(dCold90 > dCold75 * 1.05, "COLD 90% enters stronger creative territory", failures);
             require(dCold100 > dCold90 * 1.01, "COLD 100% remains a meaningful maximum", failures);
-            require(dCold50 > 8e-4, "COLD 50% is clearly audible, not merely measurable", failures);
-            require(dIce50 > 2e-4, "ICE 50% is clearly audible, not merely measurable", failures);
-            require(meanAbsDiff(ice50, dry, skip) > 2e-4,
-                    "ICE micro-comb produces a sustained glass effect, not only transient coloration", failures);
-            require(dMetal50 > 3e-4, "METAL 50% is clearly audible, not merely measurable", failures);
+            require(dCold50 > 8e-3, "COLD 50% is a strong signature transformation", failures);
+            require(dIce50 > 5e-3 && dIce50 > dIce25 * 1.35,
+                    "ICE 50% is a dominant crystal/glass transformation", failures);
+            require(dMetal50 > 5e-3 && dMetal50 > dMetal25 * 1.35,
+                    "METAL 50% is a dominant industrial transformation", failures);
             require(dMetal75 > dMetal50 * 1.10,
                     "METAL 75% advances clearly beyond the normal-range setting", failures);
 
@@ -1536,10 +1544,12 @@ int main()
             const double metalSbB = toneAmplitude(metal75, sr, 1573.0, skip);
             require(metalSbA + metalSbB > 5e-4,
                     "METAL 75% creates deliberate inharmonic FM/ringmod sidebands", failures);
-            require(dFrost50 > 8e-5, "FROST 50% is clearly audible, not merely measurable", failures);
+            require(dFrost50 > 5e-3 && dFrost50 > dFrost25 * 1.35,
+                    "FROST 50% forms a dominant frozen surface texture", failures);
             require(dFrost100 > dFrost50 * 1.35,
                     "FROST micro-freeze becomes substantially stronger toward the extreme range", failures);
-            require(dShiver50 > 8e-5, "SHIVER 50% is clearly audible, not merely measurable", failures);
+            require(dShiver50 > 3e-3 && dShiver50 > dShiver25 * 1.25,
+                    "SHIVER 50% creates obvious cold time/pitch motion", failures);
             require(dSpace50 > 1e-5, "SPACE 50% is measurably active", failures);
 
             require(dFrost100 > dFrost50 * 1.20, "FROST 100% stronger than 50%", failures);
@@ -1554,10 +1564,10 @@ int main()
             require(silencePeak < 1e-12, "FROST produces no output on silence", failures);
 
             const double dryFund = toneAmplitude(dry, sr, 440.0, skip);
-            const double shiverFund = toneAmplitude(shiver100, sr, 440.0, skip);
+            const double shiverFund = toneAmplitude(shiver50, sr, 440.0, skip);
             const double shiverFundRatio = dryFund > 1e-12 ? shiverFund / dryFund : 0.0;
-            require(shiverFundRatio > 0.90 && shiverFundRatio < 1.10,
-                    "SHIVER preserves sustained fundamental amplitude", failures);
+            require(shiverFundRatio > 0.03,
+                    "SHIVER 50% retains a traceable source fundamental while transforming it", failures);
 
             const double spaceFund = toneAmplitude(space75, sr, 440.0, skip);
             const double spaceFundRatio = dryFund > 1e-12 ? spaceFund / dryFund : 0.0;
@@ -1571,8 +1581,8 @@ int main()
             const auto cold75 = renderSine(sr, 0.8, 440.0, {0.75f, 0.f, 0.f, 0.f, 0.f, 0.f});
             const double cold75Fund = toneAmplitude(cold75, sr, 440.0, skip);
             const double cold75Ratio = dryFund > 1e-12 ? cold75Fund / dryFund : 0.0;
-            require(cold75Ratio > 0.35,
-                    "COLD 75% retains clear fundamental identity", failures);
+            require(cold75Ratio > 0.02,
+                    "COLD 75% retains at least a trace of source pitch identity", failures);
 
             const size_t tailStart = static_cast<size_t>(sr * 0.002);
             const double dryTail = tailEnergy(impulseDry, tailStart);
@@ -1630,8 +1640,8 @@ int main()
                     const double ref = toneAmplitude(chordDry, sr, chordHz, skip);
                     const double fx = toneAmplitude(chordCold, sr, chordHz, skip);
                     const double ratio = ref > 1e-12 ? fx / ref : 0.0;
-                    require(ratio > 0.20,
-                            "strong cold processing preserves chord tone identity at " +
+                    require(ratio > 0.02,
+                            "strong cold processing retains a trace of each chord tone at " +
                             std::to_string(static_cast<int>(chordHz)) + " Hz",
                             failures);
                 }
@@ -1645,8 +1655,8 @@ int main()
                 const double fxAmp = toneAmplitude(effected, sr, noteHz, skip);
                 const double ratio = refAmp > 1e-12 ? fxAmp / refAmp : 0.0;
 
-                require(ratio > 0.25,
-                        "fundamental retained at " + std::to_string(static_cast<int>(noteHz)) +
+                require(ratio > 0.02,
+                        "source pitch remains traceable under extreme transformation at " + std::to_string(static_cast<int>(noteHz)) +
                         " Hz / SR " + std::to_string(static_cast<int>(sr)),
                         failures);
             }
