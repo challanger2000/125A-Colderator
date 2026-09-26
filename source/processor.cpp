@@ -157,8 +157,8 @@ void Processor::resetDsp()
     smSpace_ = space_;
     smOutput_ = output_;
 
-    const float coldIceBlock = 0.78f * std::pow(clamp01((smCold_ - 0.12f) / 0.88f), 1.30f);
-    const float coldMetalBlock = 0.68f * std::pow(clamp01((smCold_ - 0.22f) / 0.78f), 1.35f);
+    const float coldIceBlock = 0.92f * std::pow(clamp01((smCold_ - 0.08f) / 0.92f), 1.12f);
+    const float coldMetalBlock = 0.86f * std::pow(clamp01((smCold_ - 0.16f) / 0.84f), 1.18f);
     updateResonators(clamp01(smIce_ + coldIceBlock),
                      clamp01(smMetal_ + coldMetalBlock));
 }
@@ -313,10 +313,10 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
         const float shiverMod = 0.62f * std::sin(shiverPhaseA_) +
                                 0.38f * std::sin(shiverPhaseB_);
 
-        const float coldIce = 0.78f * std::pow(clamp01((smCold_ - 0.12f) / 0.88f), 1.30f);
-        const float coldMetal = 0.68f * std::pow(clamp01((smCold_ - 0.22f) / 0.78f), 1.35f);
-        const float coldFrost = 0.82f * std::pow(clamp01((smCold_ - 0.34f) / 0.66f), 1.15f);
-        const float coldShiver = 0.55f * std::pow(clamp01((smCold_ - 0.48f) / 0.52f), 1.20f);
+        const float coldIce = 0.92f * std::pow(clamp01((smCold_ - 0.08f) / 0.92f), 1.12f);
+        const float coldMetal = 0.86f * std::pow(clamp01((smCold_ - 0.16f) / 0.84f), 1.18f);
+        const float coldFrost = 0.94f * std::pow(clamp01((smCold_ - 0.24f) / 0.76f), 1.08f);
+        const float coldShiver = 0.72f * std::pow(clamp01((smCold_ - 0.34f) / 0.66f), 1.10f);
         const float coldSpace = 0.72f * std::pow(clamp01((smCold_ - 0.42f) / 0.58f), 1.20f);
 
         const float effectiveIce = clamp01(smIce_ + coldIce);
@@ -342,8 +342,8 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
 
         const float iceExtreme = clamp01((effectiveIce - 0.90f) / 0.10f);
         const float metalExtreme = clamp01((effectiveMetal - 0.90f) / 0.10f);
-        const float iceMix = effectiveIce * (0.18f + 0.34f * iceExtreme);
-        const float metalMix = effectiveMetal * (0.22f + 0.52f * metalExtreme);
+        const float iceMix = effectiveIce * (0.48f + 0.92f * iceExtreme);
+        const float metalMix = effectiveMetal * (0.58f + 1.32f * metalExtreme);
         const float outputGain = std::pow(10.f, normalizedOutputToDb(smOutput_) / 20.f);
 
         for (int32 ch = 0; ch < channels; ++ch)
@@ -367,13 +367,15 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
             const float transient = std::max(0.f, fastEnv_[ch] - slowEnv_[ch]);
             const float transientNorm = transient / (0.02f + slowEnv_[ch]);
 
-            const float coldCut = 0.52f * smCold_;
-            const float edgeAmount = 0.22f * smCold_ * clamp01(transientNorm * 1.7f);
+            const float coldCurve = smCold_ * smCold_;
+            const float coldCut = 0.72f * smCold_ + 0.22f * coldCurve;
+            const float edgeAmount = (0.32f * smCold_ + 0.40f * coldCurve) *
+                                     clamp01(0.28f + transientNorm * 1.9f);
             float y = x - lowMid * coldCut + highDetail * edgeAmount;
 
-            const float transientExcitation = clamp01(0.15f + transientNorm * 2.2f);
-            const float iceInput = highDetail * (0.25f + 0.75f * transientExcitation);
-            const float metalInput = x * (0.12f + 0.88f * transientExcitation);
+            const float transientExcitation = clamp01(0.28f + transientNorm * 2.5f);
+            const float iceInput = highDetail * (0.55f + 0.95f * transientExcitation);
+            const float metalInput = x * (0.35f + 1.15f * transientExcitation);
 
             float iceSignal = 0.f;
             for (auto& mode : iceModes_[ch])
@@ -400,14 +402,14 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
             frostPrevNoise_[ch] = white;
 
             const float frostExtreme = clamp01((effectiveFrost - 0.90f) / 0.10f);
-            const float frostDrive = effectiveFrost * (0.055f + 0.095f * frostExtreme);
-            const float frostCarrier = std::fabs(highDetail) + 0.35f * slowEnv_[ch];
+            const float frostDrive = effectiveFrost * (0.18f + 0.34f * frostExtreme);
+            const float frostCarrier = 1.35f * std::fabs(highDetail) + 0.55f * slowEnv_[ch];
             y += frostNoise * frostCarrier * frostDrive;
 
             // SHIVER: shallow dual-rate spectral tremor. It modulates only the
             // high-detail component, so the fundamental is not frequency-shifted.
             const float shiverExtreme = clamp01((effectiveShiver - 0.90f) / 0.10f);
-            const float shiverDepth = effectiveShiver * (0.018f + 0.032f * shiverExtreme);
+            const float shiverDepth = effectiveShiver * (0.060f + 0.120f * shiverExtreme);
             y += highDetail * shiverMod * shiverDepth;
 
             // SPACE: sparse early reflections feed a deliberately cold,
