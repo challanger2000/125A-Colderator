@@ -180,15 +180,9 @@ void Processor::resetDsp()
     smSpace_ = space_;
     smOutput_ = output_;
 
-    const float coldUpperBlock = std::pow(clamp01((smCold_ - 0.50f) / 0.50f), 1.15f);
-    const float coldIceBlock = clamp01(
-        0.92f * std::pow(clamp01((smCold_ - 0.08f) / 0.92f), 1.12f) +
-        0.18f * coldUpperBlock);
-    const float coldMetalBlock = clamp01(
-        0.86f * std::pow(clamp01((smCold_ - 0.16f) / 0.84f), 1.18f) +
-        0.22f * coldUpperBlock);
-    updateResonators(clamp01(smIce_ + coldIceBlock),
-                     clamp01(smMetal_ + coldMetalBlock));
+    const float effectiveIceBlock = clamp01(smCold_ * smIce_);
+    const float effectiveMetalBlock = clamp01(smCold_ * smMetal_);
+    updateResonators(effectiveIceBlock, effectiveMetalBlock);
 }
 
 void Processor::updateResonators(float ice, float metal)
@@ -347,28 +341,17 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
         const float metalCarrier = 0.58f * std::sin(metalPhaseA_) +
                                    0.42f * std::sin(metalPhaseB_);
 
-        const float coldUpper = std::pow(clamp01((smCold_ - 0.50f) / 0.50f), 1.15f);
-        const float coldIce = clamp01(
-            0.92f * std::pow(clamp01((smCold_ - 0.08f) / 0.92f), 1.12f) +
-            0.18f * coldUpper);
-        const float coldMetal = clamp01(
-            0.86f * std::pow(clamp01((smCold_ - 0.16f) / 0.84f), 1.18f) +
-            0.22f * coldUpper);
-        const float coldFrost = clamp01(
-            0.94f * std::pow(clamp01((smCold_ - 0.24f) / 0.76f), 1.08f) +
-            0.20f * coldUpper);
-        const float coldShiver = clamp01(
-            0.72f * std::pow(clamp01((smCold_ - 0.34f) / 0.66f), 1.10f) +
-            0.26f * coldUpper);
-        const float coldSpace = clamp01(
-            0.72f * std::pow(clamp01((smCold_ - 0.42f) / 0.58f), 1.20f) +
-            0.18f * coldUpper);
+        // COLD is the global transformation intensity.
+        // Individual modules are participation weights: 0% means truly excluded.
+        const float effectiveIce = clamp01(smCold_ * smIce_);
+        const float effectiveMetal = clamp01(smCold_ * smMetal_);
+        const float effectiveFrost = clamp01(smCold_ * smFrost_);
+        const float effectiveShiver = clamp01(smCold_ * smShiver_);
+        const float effectiveSpace = clamp01(smCold_ * smSpace_);
 
-        const float effectiveIce = clamp01(smIce_ + coldIce);
-        const float effectiveMetal = clamp01(smMetal_ + coldMetal);
-        const float effectiveFrost = clamp01(smFrost_ + coldFrost);
-        const float effectiveShiver = clamp01(smShiver_ + coldShiver);
-        const float effectiveSpace = clamp01(smSpace_ + coldSpace);
+        const float moduleParticipation = std::max(
+            {smIce_, smMetal_, smFrost_, smShiver_, smSpace_});
+        const float effectiveCold = clamp01(smCold_ * moduleParticipation);
 
         if (resonatorUpdateCounter_ <= 0)
         {
@@ -412,9 +395,9 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
             const float transient = std::max(0.f, fastEnv_[ch] - slowEnv_[ch]);
             const float transientNorm = transient / (0.02f + slowEnv_[ch]);
 
-            const float coldCurve = smCold_ * smCold_;
-            const float coldCut = 0.72f * smCold_ + 0.22f * coldCurve;
-            const float edgeAmount = (0.32f * smCold_ + 0.40f * coldCurve) *
+            const float coldCurve = effectiveCold * effectiveCold;
+            const float coldCut = 0.72f * effectiveCold + 0.22f * coldCurve;
+            const float edgeAmount = (0.32f * effectiveCold + 0.40f * coldCurve) *
                                      clamp01(0.28f + transientNorm * 1.9f);
             float y = x - lowMid * coldCut + highDetail * edgeAmount;
 
