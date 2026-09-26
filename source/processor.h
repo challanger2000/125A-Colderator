@@ -1,6 +1,7 @@
 #pragma once
 
 #include "public.sdk/source/vst/vstaudioeffect.h"
+#include <array>
 
 namespace Colderator {
 
@@ -14,6 +15,8 @@ public:
     }
 
     Steinberg::tresult PLUGIN_API initialize(Steinberg::FUnknown* context) override;
+    Steinberg::tresult PLUGIN_API setupProcessing(Steinberg::Vst::ProcessSetup& setup) override;
+    Steinberg::tresult PLUGIN_API setActive(Steinberg::TBool state) override;
     Steinberg::tresult PLUGIN_API canProcessSampleSize(Steinberg::int32 symbolicSampleSize) override;
     Steinberg::tresult PLUGIN_API setBusArrangements(
         Steinberg::Vst::SpeakerArrangement* inputs,
@@ -25,7 +28,33 @@ public:
     Steinberg::tresult PLUGIN_API getState(Steinberg::IBStream* state) override;
 
 private:
+    struct Resonator
+    {
+        float b0 = 0.f, b2 = 0.f, a1 = 0.f, a2 = 0.f;
+        float z1 = 0.f, z2 = 0.f;
+
+        void clear() { z1 = z2 = 0.f; }
+        void setBandpass(double sampleRate, float frequency, float q);
+        float process(float x);
+    };
+
+    static constexpr int kChannels = 2;
+    static constexpr int kIceModes = 4;
+    static constexpr int kMetalModes = 5;
+
     void applyParameter(Steinberg::Vst::ParamID id, float normalized);
+    void resetDsp();
+    void updateResonators(float ice, float metal);
+
+    double sampleRate_ = 44100.0;
+
+    std::array<std::array<Resonator, kIceModes>, kChannels> iceModes_ {};
+    std::array<std::array<Resonator, kMetalModes>, kChannels> metalModes_ {};
+
+    std::array<float, kChannels> lowState_ {};
+    std::array<float, kChannels> midLowState_ {};
+    std::array<float, kChannels> fastEnv_ {};
+    std::array<float, kChannels> slowEnv_ {};
 
     float cold_ = 0.f;
     float ice_ = 0.f;
@@ -33,8 +62,13 @@ private:
     float frost_ = 0.f;
     float shiver_ = 0.f;
     float space_ = 0.f;
-    float output_ = 0.5f; // normalized -12..+12 dB, 0 dB = 0.5
+    float output_ = 0.5f;
     bool bypass_ = false;
+
+    float smCold_ = 0.f;
+    float smIce_ = 0.f;
+    float smMetal_ = 0.f;
+    float smOutput_ = 0.5f;
 };
 
 } // namespace Colderator
