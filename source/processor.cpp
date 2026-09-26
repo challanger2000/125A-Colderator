@@ -414,6 +414,42 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
         const float metalMix = effectiveMetal * (0.58f + 1.32f * metalExtreme);
         const float outputGain = std::pow(10.f, normalizedOutputToDb(smOutput_) / 20.f);
 
+        const int iceModel = std::max(0, std::min(kMaterialCount - 1, iceMaterial_));
+        const int metalModel = std::max(0, std::min(kMaterialCount - 1, metalMaterial_));
+        const int frostModel = std::max(0, std::min(kMaterialCount - 1, frostMaterial_));
+        const int shiverModel = std::max(0, std::min(kMaterialCount - 1, shiverMaterial_));
+        const int spaceModel = std::max(0, std::min(kMaterialCount - 1, spaceMaterial_));
+
+        constexpr float iceEventScale[kMaterialCount] = {1.00f, 0.55f, 1.75f, 0.35f, 0.75f, 2.20f};
+        constexpr float iceDecayMs[kMaterialCount] = {6.5f, 11.0f, 2.8f, 18.0f, 8.0f, 1.7f};
+        constexpr float iceShardGain[kMaterialCount] = {1.00f, 0.55f, 1.35f, 0.40f, 0.80f, 1.65f};
+        constexpr float iceGlassGain[kMaterialCount] = {1.00f, 1.35f, 0.55f, 0.72f, 1.10f, 0.62f};
+
+        constexpr float metalEventScale[kMaterialCount] = {1.00f, 0.45f, 1.65f, 0.65f, 1.20f, 1.85f};
+        constexpr float metalDecayMs[kMaterialCount] = {26.f, 58.f, 18.f, 42.f, 24.f, 12.f};
+        constexpr float metalParticleGain[kMaterialCount] = {1.00f, 0.72f, 1.30f, 0.90f, 1.15f, 1.45f};
+        constexpr float metalSidebandGain[kMaterialCount] = {1.00f, 0.55f, 0.82f, 1.25f, 1.50f, 0.68f};
+
+        constexpr float frostHoldBaseMs[kMaterialCount] = {0.025f, 0.060f, 0.018f, 0.010f, 0.085f, 0.140f};
+        constexpr float frostHoldRangeMs[kMaterialCount] = {0.190f, 0.280f, 0.120f, 0.060f, 0.360f, 0.520f};
+        constexpr float frostCrackleScale[kMaterialCount] = {1.00f, 0.45f, 2.20f, 1.70f, 0.70f, 1.25f};
+        constexpr float frostNoiseGain[kMaterialCount] = {1.00f, 0.55f, 0.82f, 1.55f, 0.72f, 0.42f};
+        constexpr float frostHeldGain[kMaterialCount] = {1.00f, 1.18f, 0.62f, 0.48f, 1.28f, 1.42f};
+
+        constexpr float shiverBaseMs[kMaterialCount] = {1.6f, 2.5f, 3.4f, 4.0f, 5.2f, 1.2f};
+        constexpr float shiverDepthScale[kMaterialCount] = {0.72f, 0.42f, 0.95f, 1.35f, 1.65f, 0.28f};
+        constexpr float shiverWindGain[kMaterialCount] = {0.18f, 0.72f, 0.95f, 1.25f, 1.65f, 0.38f};
+        constexpr float shiverJitterGain[kMaterialCount] = {1.20f, 0.45f, 0.85f, 1.05f, 0.72f, 1.65f};
+        constexpr float shiverGustMinSec[kMaterialCount] = {0.045f, 0.120f, 0.080f, 0.045f, 0.160f, 0.030f};
+
+        constexpr float spaceD1Ms[kMaterialCount] = {7.3f, 18.0f, 4.8f, 12.5f, 24.0f, 31.0f};
+        constexpr float spaceD2Ms[kMaterialCount] = {13.7f, 34.0f, 9.7f, 25.0f, 41.0f, 57.0f};
+        constexpr float spaceD3Ms[kMaterialCount] = {23.9f, 61.0f, 17.0f, 43.0f, 72.0f, 91.0f};
+        constexpr float spaceFbMs[kMaterialCount] = {41.7f, 83.0f, 31.0f, 69.0f, 109.0f, 137.0f};
+        constexpr float spaceHpHz[kMaterialCount] = {420.f, 280.f, 560.f, 520.f, 360.f, 240.f};
+        constexpr float spaceFeedbackBias[kMaterialCount] = {0.00f, 0.12f, -0.08f, 0.06f, 0.10f, 0.16f};
+        constexpr float spaceEarlyScale[kMaterialCount] = {1.00f, 0.72f, 1.35f, 0.92f, 0.60f, 0.48f};
+
         for (int32 ch = 0; ch < channels; ++ch)
         {
             const float* in = inBus.channelBuffers32[ch];
@@ -461,33 +497,35 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
 
             // ICE particles: transient-biased crystal shards.
             const float iceEventProb =
-                effectiveIce * sourceActivity * (0.00035f + 0.0025f * transientExcitation);
+                effectiveIce * sourceActivity * iceEventScale[iceModel] *
+                (0.00035f + 0.0025f * transientExcitation);
             const float iceRandom01 =
                 static_cast<float>((tr >> 8) & 0x0000FFFFu) / 65535.f;
             if (iceRandom01 < iceEventProb)
                 iceShardEnv_[ch] = 1.f;
             const float iceShardDecay =
-                std::exp(-1.f / static_cast<float>(sampleRate_ * 0.0065));
+                std::exp(-1.f / static_cast<float>(sampleRate_ * (iceDecayMs[iceModel] * 0.001f)));
             iceShardEnv_[ch] = zapDenormal(iceShardEnv_[ch] * iceShardDecay);
             const float iceShard =
                 textureWhite * iceShardEnv_[ch] * sourceScale;
 
             // METAL particles: rarer, longer mechanical impacts.
             const float metalEventProb =
-                effectiveMetal * sourceActivity * (0.00010f + 0.00075f * transientExcitation);
+                effectiveMetal * sourceActivity * metalEventScale[metalModel] *
+                (0.00010f + 0.00075f * transientExcitation);
             const float metalRandom01 =
                 static_cast<float>((tr >> 1) & 0x0000FFFFu) / 65535.f;
             if (metalRandom01 < metalEventProb)
                 metalParticleEnv_[ch] = 1.f;
             const float metalParticleDecay =
-                std::exp(-1.f / static_cast<float>(sampleRate_ * 0.026));
+                std::exp(-1.f / static_cast<float>(sampleRate_ * (metalDecayMs[metalModel] * 0.001f)));
             metalParticleEnv_[ch] = zapDenormal(metalParticleEnv_[ch] * metalParticleDecay);
             const float metalParticle =
                 textureWhite * metalParticleEnv_[ch] * sourceScale;
 
             // FROST crackles: many tiny irregular surface events.
             const float frostEventProb =
-                effectiveFrost * sourceActivity * 0.0035f;
+                effectiveFrost * sourceActivity * 0.0035f * frostCrackleScale[frostModel];
             const float frostRandom01 =
                 static_cast<float>((tr >> 16) & 0x0000FFFFu) / 65535.f;
             if (frostRandom01 < frostEventProb)
@@ -505,7 +543,8 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                     0.15f + 0.85f * std::fabs(textureWhite);
                 windGustCounter_[ch] = std::max(
                     1, static_cast<int>(sampleRate_ *
-                    (0.055 + 0.110 * (1.f - effectiveShiver))));
+                    (shiverGustMinSec[shiverModel] +
+                     0.110f * (1.f - effectiveShiver))));
             }
             else
             {
@@ -553,9 +592,11 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                 iceDelay[static_cast<size_t>(w)] = std::isfinite(write) ? write : 0.f;
                 iceDelayWrite_[ch] = (w + 1 >= size) ? 0 : (w + 1);
             }
-            const float iceTexture = 0.10f * x + 1.18f * glass +
+            const float iceTexture = 0.10f * x +
+                                     1.18f * iceGlassGain[iceModel] * glass +
                                      iceSignal * (1.22f + 0.66f * iceExtreme) +
-                                     iceShard * (0.36f + 0.58f * effectiveIce);
+                                     iceShard * iceShardGain[iceModel] *
+                                         (0.36f + 0.58f * effectiveIce);
             const float iceWet = materialWet(effectiveIce);
             y = y * (1.f - iceWet) + iceTexture * iceWet;
 
@@ -564,8 +605,9 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
             const float metalSideband = highDetail * metalCarrier;
             const float metalTexture = 0.08f * x +
                                        metalSignal * (1.38f + 0.92f * metalExtreme) +
-                                       metalSideband * (0.66f + 0.46f * metalExtreme) +
-                                       metalParticle * metalCarrier *
+                                       metalSideband * metalSidebandGain[metalModel] *
+                                           (0.66f + 0.46f * metalExtreme) +
+                                       metalParticle * metalCarrier * metalParticleGain[metalModel] *
                                            (0.48f + 0.62f * effectiveMetal);
             const float metalWet = materialWet(effectiveMetal);
             y = y * (1.f - metalWet) + metalTexture * metalWet;
@@ -586,7 +628,8 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
             const float frostCarrier = 1.35f * std::fabs(highDetail) + 0.55f * slowEnv_[ch];
 
             const int holdSamples = std::max(1, static_cast<int>(
-                sampleRate_ * (0.000025 + 0.00019 * effectiveFrost)));
+                sampleRate_ * ((frostHoldBaseMs[frostModel] +
+                                frostHoldRangeMs[frostModel] * effectiveFrost) * 0.001f)));
             if (frostHoldCounter_[ch] <= 0)
             {
                 frostHeld_[ch] = highDetail;
@@ -598,11 +641,12 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
             }
             const float microFreeze = frostHeld_[ch] - highDetail;
             const float frostTexture = 0.15f * x +
-                                       frostHeld_[ch] * 0.82f +
-                                       microFreeze * (0.64f + 0.34f * frostExtreme) +
-                                       frostNoise * frostCarrier *
+                                       frostHeld_[ch] * 0.82f * frostHeldGain[frostModel] +
+                                       microFreeze * frostHeldGain[frostModel] *
+                                           (0.64f + 0.34f * frostExtreme) +
+                                       frostNoise * frostCarrier * frostNoiseGain[frostModel] *
                                            (0.34f + 0.42f * frostExtreme) +
-                                       frostCrackle *
+                                       frostCrackle * frostCrackleScale[frostModel] *
                                            (0.52f + 0.58f * effectiveFrost);
             const float frostWet = materialWet(effectiveFrost);
             y = y * (1.f - frostWet) + frostTexture * frostWet;
@@ -635,11 +679,14 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
 
                 shiverJitter_[ch] += (shiverJitterTarget_[ch] - shiverJitter_[ch]) * 0.0025f;
                 const float side = ch == 0 ? 1.f : -1.f;
-                const float motion = 0.62f * shiverMod +
-                                     0.38f * shiverJitter_[ch] * side;
-                const float baseMs = 1.6f + 1.6f * effectiveShiver;
-                const float depthMs = 0.8f + 2.8f * effectiveShiver +
-                                      3.8f * shiverExtreme;
+                const float motion =
+                    (0.62f * shiverMod +
+                     0.38f * shiverJitter_[ch] * side * shiverJitterGain[shiverModel]);
+                const float baseMs =
+                    shiverBaseMs[shiverModel] + 1.2f * effectiveShiver;
+                const float depthMs =
+                    shiverDepthScale[shiverModel] *
+                    (0.8f + 2.8f * effectiveShiver + 3.8f * shiverExtreme);
                 float delaySamples = static_cast<float>(sampleRate_) *
                                      (baseMs + depthMs * motion) * 0.001f;
                 delaySamples = std::max(1.f, std::min(delaySamples, static_cast<float>(size - 3)));
@@ -656,7 +703,7 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                                             (0.78f + 0.16f * shiverExtreme) * shifted +
                                             highDetail * shiverJitter_[ch] *
                                                 (0.20f + 0.34f * shiverExtreme) +
-                                            windTexture *
+                                            windTexture * shiverWindGain[shiverModel] *
                                                 (0.18f + 0.34f * effectiveShiver);
                 const float shiverWet = materialWet(effectiveShiver);
                 y = y * (1.f - shiverWet) + shiverTexture * shiverWet;
@@ -671,10 +718,14 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
             if (!spaceBuffer.empty())
             {
                 const float side = ch == 0 ? 0.965f : 1.035f;
-                const int d1 = std::max(1, static_cast<int>(sampleRate_ * 0.0073 * side));
-                const int d2 = std::max(1, static_cast<int>(sampleRate_ * 0.0137 / side));
-                const int d3 = std::max(1, static_cast<int>(sampleRate_ * 0.0239 * side));
-                const int df = std::max(1, static_cast<int>(sampleRate_ * 0.0417 / side));
+                const int d1 = std::max(1, static_cast<int>(
+                    sampleRate_ * (spaceD1Ms[spaceModel] * 0.001f) * side));
+                const int d2 = std::max(1, static_cast<int>(
+                    sampleRate_ * (spaceD2Ms[spaceModel] * 0.001f) / side));
+                const int d3 = std::max(1, static_cast<int>(
+                    sampleRate_ * (spaceD3Ms[spaceModel] * 0.001f) * side));
+                const int df = std::max(1, static_cast<int>(
+                    sampleRate_ * (spaceFbMs[spaceModel] * 0.001f) / side));
                 const int size = static_cast<int>(spaceBuffer.size());
                 const int w = spaceWrite_[ch];
 
@@ -684,12 +735,13 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                     return spaceBuffer[static_cast<size_t>(index)];
                 };
 
-                const float early = 0.54f * readTap(d1) -
-                                    0.29f * readTap(d2) +
-                                    0.17f * readTap(d3);
+                const float early = spaceEarlyScale[spaceModel] *
+                                    (0.54f * readTap(d1) -
+                                     0.29f * readTap(d2) +
+                                     0.17f * readTap(d3));
                 const float feedbackTap = readTap(df);
 
-                const float lowAspace = onePoleCoeff(sampleRate_, 420.f);
+                const float lowAspace = onePoleCoeff(sampleRate_, spaceHpHz[spaceModel]);
                 spaceLowState_[ch] = zapDenormal(lowAspace * spaceLowState_[ch] +
                                      (1.f - lowAspace) * feedbackTap);
                 const float icyFeedback = feedbackTap - 0.82f * spaceLowState_[ch];
@@ -697,7 +749,8 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                 const float spaceExtreme = clamp01((effectiveSpace - 0.90f) / 0.10f);
                 const float spaceMix = effectiveSpace * (0.18f + 0.24f * spaceExtreme);
                 const float feedback = 0.28f + 0.46f * effectiveSpace +
-                                       0.10f * spaceExtreme;
+                                       0.10f * spaceExtreme +
+                                       spaceFeedbackBias[spaceModel];
                 y += (early + 0.55f * icyFeedback) * spaceMix;
 
                 const float writeValue = zapDenormal(spaceInput + icyFeedback * std::min(0.86f, feedback));
