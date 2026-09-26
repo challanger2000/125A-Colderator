@@ -187,6 +187,9 @@ void Processor::updateResonators(float ice, float metal)
 
 void Processor::applyParameter(ParamID id, float normalized)
 {
+    if (!std::isfinite(normalized))
+        return;
+
     const float v = clamp01(normalized);
 
     switch (id)
@@ -252,6 +255,9 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
 
     const auto& inBus = data.inputs[0];
     auto& outBus = data.outputs[0];
+    if (!inBus.channelBuffers32 || !outBus.channelBuffers32)
+        return kResultOk;
+
     const int32 channels = std::min<int32>(
         std::min(inBus.numChannels, outBus.numChannels), kChannels);
 
