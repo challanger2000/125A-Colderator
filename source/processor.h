@@ -67,8 +67,15 @@ private:
     std::array<int, kChannels> spaceWrite_ {};
     std::array<float, kChannels> spaceLowState_ {};
 
+    std::array<std::vector<float>, kChannels> iceDelayBuffer_ {};
+    std::array<int, kChannels> iceDelayWrite_ {};
+    std::array<float, kChannels> frostHeld_ {};
+    std::array<int, kChannels> frostHoldCounter_ {};
+
     float shiverPhaseA_ = 0.f;
     float shiverPhaseB_ = 0.f;
+    float metalPhaseA_ = 0.f;
+    float metalPhaseB_ = 0.f;
     int resonatorUpdateCounter_ = 0;
     float lastResonatorIce_ = -1.f;
     float lastResonatorMetal_ = -1.f;
