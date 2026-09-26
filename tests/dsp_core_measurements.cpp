@@ -103,6 +103,98 @@ std::vector<float> renderSine(double sr, double seconds, double hz, const Settin
     return result;
 }
 
+
+std::vector<float> renderImpulse(double sr, double seconds, const Settings& settings)
+{
+    constexpr int block = 128;
+
+    Processor p;
+    if (p.initialize(nullptr) != kResultOk)
+        throw std::runtime_error("initialize failed");
+
+    ProcessSetup setup {};
+    setup.processMode = kRealtime;
+    setup.symbolicSampleSize = kSample32;
+    setup.maxSamplesPerBlock = block;
+    setup.sampleRate = sr;
+
+    if (p.setupProcessing(setup) != kResultOk)
+        throw std::runtime_error("setupProcessing failed");
+
+    p.setTestParameter(Colderator::kCold, settings.cold);
+    p.setTestParameter(Colderator::kIce, settings.ice);
+    p.setTestParameter(Colderator::kMetal, settings.metal);
+    p.setTestParameter(Colderator::kOutput, 0.5f);
+
+    if (p.setActive(true) != kResultOk)
+        throw std::runtime_error("setActive failed");
+
+    const size_t total = static_cast<size_t>(std::llround(sr * seconds));
+    std::vector<float> result(total, 0.f);
+
+    std::vector<float> inL(block, 0.f), inR(block, 0.f), outL(block, 0.f), outR(block, 0.f);
+    float* inPtrs[2] = { inL.data(), inR.data() };
+    float* outPtrs[2] = { outL.data(), outR.data() };
+
+    AudioBusBuffers inBus {};
+    inBus.numChannels = 2;
+    inBus.channelBuffers32 = inPtrs;
+
+    AudioBusBuffers outBus {};
+    outBus.numChannels = 2;
+    outBus.channelBuffers32 = outPtrs;
+
+    bool sent = false;
+    size_t pos = 0;
+    while (pos < total)
+    {
+        const int n = static_cast<int>(std::min<size_t>(block, total - pos));
+        std::fill(inL.begin(), inL.end(), 0.f);
+        std::fill(inR.begin(), inR.end(), 0.f);
+        std::fill(outL.begin(), outL.end(), 0.f);
+        std::fill(outR.begin(), outR.end(), 0.f);
+
+        if (!sent)
+        {
+            inL[0] = 1.f;
+            inR[0] = 1.f;
+            sent = true;
+        }
+
+        ProcessData data {};
+        data.processMode = kRealtime;
+        data.symbolicSampleSize = kSample32;
+        data.numSamples = n;
+        data.numInputs = 1;
+        data.numOutputs = 1;
+        data.inputs = &inBus;
+        data.outputs = &outBus;
+
+        if (p.process(data) != kResultOk)
+            throw std::runtime_error("process failed");
+
+        for (int i = 0; i < n; ++i)
+            result[pos + static_cast<size_t>(i)] = outL[i];
+
+        pos += static_cast<size_t>(n);
+    }
+
+    p.setActive(false);
+    p.terminate();
+    return result;
+}
+
+double tailEnergy(const std::vector<float>& x, size_t start)
+{
+    if (x.size() <= start)
+        return 0.0;
+
+    double e = 0.0;
+    for (size_t i = start; i < x.size(); ++i)
+        e += static_cast<double>(x[i]) * static_cast<double>(x[i]);
+    return e;
+}
+
 bool finiteBuffer(const std::vector<float>& x)
 {
     for (float v : x)
@@ -173,6 +265,12 @@ int main()
             const auto metal50 = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 0.50f});
             const auto metal100 = renderSine(sr, 0.8, 440.0, {0.f, 0.f, 1.f});
 
+            const auto impulseDry = renderImpulse(sr, 0.25, {});
+            const auto impulseIce50 = renderImpulse(sr, 0.25, {0.f, 0.50f, 0.f});
+            const auto impulseIce100 = renderImpulse(sr, 0.25, {0.f, 1.f, 0.f});
+            const auto impulseMetal50 = renderImpulse(sr, 0.25, {0.f, 0.f, 0.50f});
+            const auto impulseMetal100 = renderImpulse(sr, 0.25, {0.f, 0.f, 1.f});
+
             require(finiteBuffer(dry) && finiteBuffer(cold100) &&
                     finiteBuffer(ice100) && finiteBuffer(metal100),
                     "finite output at " + std::to_string(static_cast<int>(sr)) + " Hz",
@@ -194,8 +292,18 @@ int main()
             require(dMetal50 > 1e-5, "METAL 50% is measurably active", failures);
 
             require(dCold100 > dCold50 * 1.25, "COLD 100% stronger than 50%", failures);
-            require(dIce100 > dIce50 * 1.25, "ICE 100% stronger than 50%", failures);
-            require(dMetal100 > dMetal50 * 1.25, "METAL 100% stronger than 50%", failures);
+
+            const size_t tailStart = static_cast<size_t>(sr * 0.002);
+            const double dryTail = tailEnergy(impulseDry, tailStart);
+            const double ice50Tail = tailEnergy(impulseIce50, tailStart) - dryTail;
+            const double ice100Tail = tailEnergy(impulseIce100, tailStart) - dryTail;
+            const double metal50Tail = tailEnergy(impulseMetal50, tailStart) - dryTail;
+            const double metal100Tail = tailEnergy(impulseMetal100, tailStart) - dryTail;
+
+            require(ice100Tail > ice50Tail * 1.25,
+                    "ICE 100% stronger than 50% on transient excitation", failures);
+            require(metal100Tail > metal50Tail * 1.25,
+                    "METAL 100% stronger than 50% on transient excitation", failures);
 
             for (double noteHz : {220.0, 440.0, 659.255, 880.0})
             {
