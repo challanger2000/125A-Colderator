@@ -330,6 +330,7 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
             // SPACE: three sparse early reflections with deliberately low
             // diffusion. No feedback, so the normal range stays clear and
             // the tail remains short instead of turning into a conventional hall.
+            const float spaceInput = y;
             auto& spaceBuffer = spaceBuffer_[ch];
             if (!spaceBuffer.empty())
             {
@@ -354,7 +355,7 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                 const float spaceMix = smSpace_ * (0.16f + 0.18f * spaceExtreme);
                 y += sparse * spaceMix;
 
-                spaceBuffer[static_cast<size_t>(w)] = y;
+                spaceBuffer[static_cast<size_t>(w)] = spaceInput;
                 spaceWrite_[ch] = (w + 1 >= size) ? 0 : (w + 1);
             }
 
