@@ -2,6 +2,7 @@
 
 #include "public.sdk/source/vst/vstaudioeffect.h"
 #include <array>
+#include <vector>
 
 namespace Colderator {
 
@@ -61,6 +62,8 @@ private:
     std::array<float, kChannels> slowEnv_ {};
     std::array<float, kChannels> frostPrevNoise_ {};
     std::array<unsigned int, kChannels> frostRng_ {{0x125A91u, 0xC01D77u}};
+    std::array<std::vector<float>, kChannels> spaceBuffer_ {};
+    std::array<int, kChannels> spaceWrite_ {};
 
     float shiverPhaseA_ = 0.f;
     float shiverPhaseB_ = 0.f;
@@ -79,6 +82,7 @@ private:
     float smMetal_ = 0.f;
     float smFrost_ = 0.f;
     float smShiver_ = 0.f;
+    float smSpace_ = 0.f;
     float smOutput_ = 0.5f;
 };
 
