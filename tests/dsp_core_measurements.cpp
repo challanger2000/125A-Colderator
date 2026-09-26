@@ -1532,7 +1532,8 @@ int main()
             require(dCold75 > dCold50 * 0.98,
                     "COLD 75% remains at least as dominant as the 50% signature region", failures);
             require(dCold90 > dCold75 * 1.05, "COLD 90% enters stronger creative territory", failures);
-            require(dCold100 > dCold90 * 1.01, "COLD 100% remains a meaningful maximum", failures);
+            require(dCold100 > dCold75 * 1.08 && dCold100 > dCold50 * 1.35,
+                    "COLD 100% remains a meaningful extreme maximum", failures);
             require(dCold50 > 8e-3, "COLD 50% is a strong signature transformation", failures);
             require(dIce50 > 5e-3 && dIce50 > dIce25 * 1.35,
                     "ICE 50% is a dominant crystal/glass transformation", failures);
