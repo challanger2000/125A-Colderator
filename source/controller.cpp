@@ -1,9 +1,13 @@
 #include "controller.h"
 #include "parameters.h"
 #include "state_format.h"
+#include "ColderatorControls.h"
 
 #include "base/source/fstreamer.h"
 #include "public.sdk/source/vst/vstparameters.h"
+#include "vstgui/plugin-bindings/vst3editor.h"
+#include "base/source/fstring.h"
+#include <cstring>
 
 using namespace Steinberg;
 using namespace Steinberg::Vst;
@@ -66,6 +70,52 @@ tresult PLUGIN_API Controller::setComponentState(IBStream* state)
 
     setParamNormalized(kBypass, bypass ? 1.0 : 0.0);
     return kResultOk;
+}
+
+Steinberg::IPlugView* PLUGIN_API Controller::createView(const char* name)
+{
+    Steinberg::ConstString viewName(name);
+    if (viewName == Steinberg::Vst::ViewType::kEditor)
+    {
+        auto* editor = new VSTGUI::VST3Editor(this, "view", "colderator.uidesc");
+        editor->setAllowedZoomFactors({1.0, 1.25, 1.5, 1.75, 2.0});
+        editor->setZoomFactor(1.0);
+        return editor;
+    }
+    return nullptr;
+}
+
+VSTGUI::CView* Controller::createCustomView(
+    VSTGUI::UTF8StringPtr name,
+    const VSTGUI::UIAttributes& attributes,
+    const VSTGUI::IUIDescription*,
+    VSTGUI::VST3Editor* editor)
+{
+    if (!name || !editor)
+        return nullptr;
+
+    VSTGUI::CPoint origin {0, 0};
+    VSTGUI::CPoint size {60, 60};
+    attributes.getPointAttribute("origin", origin);
+    attributes.getPointAttribute("size", size);
+    VSTGUI::CRect r(origin.x, origin.y, origin.x + size.x, origin.y + size.y);
+
+    if (std::strcmp(name, "Faceplate") == 0)
+        return new FrostFaceplate(r);
+
+    auto knob = [&](const char* n, ParamID id, bool primary=false) -> VSTGUI::CView* {
+        return std::strcmp(name, n) == 0 ? new FrostKnob(r, editor, id, primary) : nullptr;
+    };
+
+    if (auto* v = knob("Cold",   kCold, true)) return v;
+    if (auto* v = knob("Ice",    kIce)) return v;
+    if (auto* v = knob("Metal",  kMetal)) return v;
+    if (auto* v = knob("Frost",  kFrost)) return v;
+    if (auto* v = knob("Shiver", kShiver)) return v;
+    if (auto* v = knob("Space",  kSpace)) return v;
+    if (auto* v = knob("Output", kOutput)) return v;
+
+    return nullptr;
 }
 
 } // namespace Colderator
