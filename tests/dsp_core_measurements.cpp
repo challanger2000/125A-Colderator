@@ -33,6 +33,11 @@ struct Settings
     float frost = 0.f;
     float shiver = 0.f;
     float space = 0.f;
+    float iceMaterial = 0.f;
+    float metalMaterial = 0.f;
+    float frostMaterial = 0.f;
+    float shiverMaterial = 0.f;
+    float spaceMaterial = 0.f;
 };
 
 
@@ -56,6 +61,11 @@ std::vector<float> renderChord(double sr, double seconds, const Settings& settin
     p.setTestParameter(Colderator::kFrost, settings.frost);
     p.setTestParameter(Colderator::kShiver, settings.shiver);
     p.setTestParameter(Colderator::kSpace, settings.space);
+    p.setTestParameter(Colderator::kIceMaterial, settings.iceMaterial);
+    p.setTestParameter(Colderator::kMetalMaterial, settings.metalMaterial);
+    p.setTestParameter(Colderator::kFrostMaterial, settings.frostMaterial);
+    p.setTestParameter(Colderator::kShiverMaterial, settings.shiverMaterial);
+    p.setTestParameter(Colderator::kSpaceMaterial, settings.spaceMaterial);
     p.setTestParameter(Colderator::kOutput, 0.5f);
     if (p.setActive(true) != kResultOk)
         throw std::runtime_error("chord active failed");
@@ -130,6 +140,11 @@ std::vector<float> renderSine(double sr, double seconds, double hz, const Settin
     p.setTestParameter(Colderator::kFrost, settings.frost);
     p.setTestParameter(Colderator::kShiver, settings.shiver);
     p.setTestParameter(Colderator::kSpace, settings.space);
+    p.setTestParameter(Colderator::kIceMaterial, settings.iceMaterial);
+    p.setTestParameter(Colderator::kMetalMaterial, settings.metalMaterial);
+    p.setTestParameter(Colderator::kFrostMaterial, settings.frostMaterial);
+    p.setTestParameter(Colderator::kShiverMaterial, settings.shiverMaterial);
+    p.setTestParameter(Colderator::kSpaceMaterial, settings.spaceMaterial);
     p.setTestParameter(Colderator::kOutput, 0.5f);
 
     if (p.setActive(true) != kResultOk)
@@ -215,6 +230,11 @@ std::vector<float> renderImpulseWithBypassWindow(double sr, int block,
     p.setTestParameter(Colderator::kFrost, settings.frost);
     p.setTestParameter(Colderator::kShiver, settings.shiver);
     p.setTestParameter(Colderator::kSpace, settings.space);
+    p.setTestParameter(Colderator::kIceMaterial, settings.iceMaterial);
+    p.setTestParameter(Colderator::kMetalMaterial, settings.metalMaterial);
+    p.setTestParameter(Colderator::kFrostMaterial, settings.frostMaterial);
+    p.setTestParameter(Colderator::kShiverMaterial, settings.shiverMaterial);
+    p.setTestParameter(Colderator::kSpaceMaterial, settings.spaceMaterial);
     p.setTestParameter(Colderator::kOutput, 0.5f);
 
     if (p.setActive(true) != kResultOk)
@@ -296,6 +316,11 @@ std::vector<float> renderImpulse(double sr, double seconds, const Settings& sett
     p.setTestParameter(Colderator::kFrost, settings.frost);
     p.setTestParameter(Colderator::kShiver, settings.shiver);
     p.setTestParameter(Colderator::kSpace, settings.space);
+    p.setTestParameter(Colderator::kIceMaterial, settings.iceMaterial);
+    p.setTestParameter(Colderator::kMetalMaterial, settings.metalMaterial);
+    p.setTestParameter(Colderator::kFrostMaterial, settings.frostMaterial);
+    p.setTestParameter(Colderator::kShiverMaterial, settings.shiverMaterial);
+    p.setTestParameter(Colderator::kSpaceMaterial, settings.spaceMaterial);
     p.setTestParameter(Colderator::kOutput, 0.5f);
 
     if (p.setActive(true) != kResultOk)
@@ -603,6 +628,11 @@ bool stateRoundtripMatches(double sr)
     source.setTestParameter(Colderator::kFrost, 0.32f);
     source.setTestParameter(Colderator::kShiver, 0.27f);
     source.setTestParameter(Colderator::kSpace, 0.58f);
+    source.setTestParameter(Colderator::kIceMaterial, 0.40f);
+    source.setTestParameter(Colderator::kMetalMaterial, 0.80f);
+    source.setTestParameter(Colderator::kFrostMaterial, 0.20f);
+    source.setTestParameter(Colderator::kShiverMaterial, 1.00f);
+    source.setTestParameter(Colderator::kSpaceMaterial, 0.60f);
     source.setTestParameter(Colderator::kOutput, 0.63f);
     source.setTestParameter(Colderator::kBypass, 0.f);
 
@@ -656,6 +686,11 @@ std::vector<float> renderMode(double sr, ProcessModes mode, const Settings& sett
     p.setTestParameter(Colderator::kFrost, settings.frost);
     p.setTestParameter(Colderator::kShiver, settings.shiver);
     p.setTestParameter(Colderator::kSpace, settings.space);
+    p.setTestParameter(Colderator::kIceMaterial, settings.iceMaterial);
+    p.setTestParameter(Colderator::kMetalMaterial, settings.metalMaterial);
+    p.setTestParameter(Colderator::kFrostMaterial, settings.frostMaterial);
+    p.setTestParameter(Colderator::kShiverMaterial, settings.shiverMaterial);
+    p.setTestParameter(Colderator::kSpaceMaterial, settings.spaceMaterial);
     p.setTestParameter(Colderator::kOutput, 0.5f);
     if (p.setActive(true) != kResultOk)
         throw std::runtime_error("mode setActive failed");
@@ -900,6 +935,11 @@ std::vector<float> renderMono(double sr, double seconds, double hz, const Settin
     p.setTestParameter(Colderator::kFrost, settings.frost);
     p.setTestParameter(Colderator::kShiver, settings.shiver);
     p.setTestParameter(Colderator::kSpace, settings.space);
+    p.setTestParameter(Colderator::kIceMaterial, settings.iceMaterial);
+    p.setTestParameter(Colderator::kMetalMaterial, settings.metalMaterial);
+    p.setTestParameter(Colderator::kFrostMaterial, settings.frostMaterial);
+    p.setTestParameter(Colderator::kShiverMaterial, settings.shiverMaterial);
+    p.setTestParameter(Colderator::kSpaceMaterial, settings.spaceMaterial);
     p.setTestParameter(Colderator::kOutput, 0.5f);
     if (p.setActive(true) != kResultOk)
         throw std::runtime_error("mono active failed");
@@ -1159,6 +1199,11 @@ StereoRender renderStereoImpulse(double sr, double seconds, const Settings& sett
     p.setTestParameter(Colderator::kFrost, settings.frost);
     p.setTestParameter(Colderator::kShiver, settings.shiver);
     p.setTestParameter(Colderator::kSpace, settings.space);
+    p.setTestParameter(Colderator::kIceMaterial, settings.iceMaterial);
+    p.setTestParameter(Colderator::kMetalMaterial, settings.metalMaterial);
+    p.setTestParameter(Colderator::kFrostMaterial, settings.frostMaterial);
+    p.setTestParameter(Colderator::kShiverMaterial, settings.shiverMaterial);
+    p.setTestParameter(Colderator::kSpaceMaterial, settings.spaceMaterial);
     p.setTestParameter(Colderator::kOutput, 0.5f);
     if (p.setActive(true) != kResultOk)
         throw std::runtime_error("stereo impulse active failed");
@@ -1474,6 +1519,61 @@ int main()
                     "COLD 100% with every module at 0% is truly neutral", failures);
             require(meanAbsDiff(dry, modulesWithColdOff, skip) < 1e-8,
                     "all modules at 100% with COLD at 0% are truly neutral", failures);
+
+            if (static_cast<int>(sr) == 48000)
+            {
+                auto materialValue = [](int index) {
+                    return static_cast<float>(index) /
+                           static_cast<float>(Colderator::kMaterialCount - 1);
+                };
+
+                auto requireSixDistinct = [&](const std::string& label, auto makeSettings,
+                                              double threshold) {
+                    std::vector<float> previous;
+                    for (int m = 0; m < Colderator::kMaterialCount; ++m)
+                    {
+                        const auto rendered =
+                            renderSine(sr, 0.45, 440.0, makeSettings(materialValue(m)), 128);
+                        if (!previous.empty())
+                        {
+                            require(meanAbsDiff(previous, rendered, skip) > threshold,
+                                    label + " material " + std::to_string(m + 1) +
+                                    " has a distinct DSP fingerprint", failures);
+                        }
+                        previous = rendered;
+                    }
+                };
+
+                requireSixDistinct("ICE", [](float m) {
+                    Settings v {1.f, 0.78f, 0.f, 0.f, 0.f, 0.f};
+                    v.iceMaterial = m;
+                    return v;
+                }, 1e-4);
+
+                requireSixDistinct("METAL", [](float m) {
+                    Settings v {1.f, 0.f, 0.78f, 0.f, 0.f, 0.f};
+                    v.metalMaterial = m;
+                    return v;
+                }, 1e-4);
+
+                requireSixDistinct("FROST", [](float m) {
+                    Settings v {1.f, 0.f, 0.f, 0.78f, 0.f, 0.f};
+                    v.frostMaterial = m;
+                    return v;
+                }, 5e-5);
+
+                requireSixDistinct("SHIVER", [](float m) {
+                    Settings v {1.f, 0.f, 0.f, 0.f, 0.78f, 0.f};
+                    v.shiverMaterial = m;
+                    return v;
+                }, 5e-5);
+
+                requireSixDistinct("SPACE", [](float m) {
+                    Settings v {1.f, 0.f, 0.f, 0.f, 0.f, 0.78f};
+                    v.spaceMaterial = m;
+                    return v;
+                }, 5e-5);
+            }
 
             const auto automation64 = renderAutomationPattern(sr, 64);
             const auto automation257 = renderAutomationPattern(sr, 257);
