@@ -184,12 +184,21 @@ Normal range must not sound like obvious vibrato/chorus unless deliberately desi
 Measure:
 - impulse response;
 - early-reflection times;
-- tail length;
-- spectral decay;
-- inter-channel correlation;
-- effective latency/tail reporting.
+- tail length / decay envelope;
+- spectral decay by band;
+- low-mid build-up versus upper-band persistence;
+- inter-channel correlation / decorrelation;
+- echo density versus time;
+- effective latency/tail reporting;
+- stability and denormal behavior.
 
-The normal range should remain sparse/cold rather than lush.
+Acceptance direction:
+- clearly audible icy reverb is allowed and intended;
+- the tail should remain sparse/clear rather than lush;
+- no warm low-mid bloom;
+- no runaway metallic mode;
+- stereo field may widen/decorrelate but must remain stable;
+- musical pitch identity must remain recognizable in the normal working range.
 
 ## Gain matching
 
