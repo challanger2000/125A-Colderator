@@ -35,6 +35,79 @@ struct Settings
     float space = 0.f;
 };
 
+
+std::vector<float> renderChord(double sr, double seconds, const Settings& settings, int block = 128)
+{
+    Processor p;
+    if (p.initialize(nullptr) != kResultOk)
+        throw std::runtime_error("chord initialize failed");
+
+    ProcessSetup setup {};
+    setup.processMode = kRealtime;
+    setup.symbolicSampleSize = kSample32;
+    setup.maxSamplesPerBlock = block;
+    setup.sampleRate = sr;
+    if (p.setupProcessing(setup) != kResultOk)
+        throw std::runtime_error("chord setup failed");
+
+    p.setTestParameter(Colderator::kCold, settings.cold);
+    p.setTestParameter(Colderator::kIce, settings.ice);
+    p.setTestParameter(Colderator::kMetal, settings.metal);
+    p.setTestParameter(Colderator::kFrost, settings.frost);
+    p.setTestParameter(Colderator::kShiver, settings.shiver);
+    p.setTestParameter(Colderator::kSpace, settings.space);
+    p.setTestParameter(Colderator::kOutput, 0.5f);
+    if (p.setActive(true) != kResultOk)
+        throw std::runtime_error("chord active failed");
+
+    const size_t total = static_cast<size_t>(std::llround(sr * seconds));
+    std::vector<float> result(total, 0.f);
+    std::vector<float> inL(block), inR(block), outL(block), outR(block);
+    float* inPtrs[2] = {inL.data(), inR.data()};
+    float* outPtrs[2] = {outL.data(), outR.data()};
+    AudioBusBuffers inBus {};
+    inBus.numChannels = 2;
+    inBus.channelBuffers32 = inPtrs;
+    AudioBusBuffers outBus {};
+    outBus.numChannels = 2;
+    outBus.channelBuffers32 = outPtrs;
+
+    size_t pos = 0;
+    while (pos < total)
+    {
+        const int n = static_cast<int>(std::min<size_t>(block, total - pos));
+        for (int i = 0; i < n; ++i)
+        {
+            const double t = static_cast<double>(pos + static_cast<size_t>(i)) / sr;
+            const float x = 0.075f * static_cast<float>(
+                std::sin(2.0 * kPi * 220.0 * t) +
+                std::sin(2.0 * kPi * 277.183 * t) +
+                std::sin(2.0 * kPi * 329.628 * t));
+            inL[i] = inR[i] = x;
+            outL[i] = outR[i] = 0.f;
+        }
+
+        ProcessData data {};
+        data.processMode = kRealtime;
+        data.symbolicSampleSize = kSample32;
+        data.numSamples = n;
+        data.numInputs = 1;
+        data.numOutputs = 1;
+        data.inputs = &inBus;
+        data.outputs = &outBus;
+        if (p.process(data) != kResultOk)
+            throw std::runtime_error("chord process failed");
+
+        for (int i = 0; i < n; ++i)
+            result[pos + static_cast<size_t>(i)] = outL[i];
+        pos += static_cast<size_t>(n);
+    }
+
+    p.setActive(false);
+    p.terminate();
+    return result;
+}
+
 std::vector<float> renderSine(double sr, double seconds, double hz, const Settings& settings, int block = 128)
 {
 
@@ -1532,6 +1605,21 @@ int main()
                     "ICE 100% stronger than 50% on transient excitation", failures);
             require(metal100Tail > metal50Tail * 1.25,
                     "METAL 100% stronger than 50% on transient excitation", failures);
+
+            {
+                const auto chordDry = renderChord(sr, 0.8, {});
+                const auto chordCold = renderChord(sr, 0.8, {0.75f, 0.65f, 0.80f, 0.25f, 0.20f, 0.30f});
+                for (double chordHz : {220.0, 277.183, 329.628})
+                {
+                    const double ref = toneAmplitude(chordDry, sr, chordHz, skip);
+                    const double fx = toneAmplitude(chordCold, sr, chordHz, skip);
+                    const double ratio = ref > 1e-12 ? fx / ref : 0.0;
+                    require(ratio > 0.20,
+                            "strong cold processing preserves chord tone identity at " +
+                            std::to_string(static_cast<int>(chordHz)) + " Hz",
+                            failures);
+                }
+            }
 
             for (double noteHz : {220.0, 440.0, 659.255, 880.0})
             {
