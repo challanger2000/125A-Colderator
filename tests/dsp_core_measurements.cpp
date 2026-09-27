@@ -1659,6 +1659,33 @@ int main()
                     return v;
                 }, 5e-5);
 
+                Settings shiverPlayable {};
+                shiverPlayable.cold = 0.25f;
+                shiverPlayable.shiver = 0.50f;
+                shiverPlayable.shiverMaterial = 0.f; // Tremble
+                const auto shiverPlayableRender =
+                    renderSine(sr, 1.2, 220.0, shiverPlayable, 128);
+                const auto dry220Shiver =
+                    renderSine(sr, 1.2, 220.0, {}, 128);
+                const double dry220ShiverFund =
+                    toneAmplitude(dry220Shiver, sr, 220.0, skip);
+                const double shiver220Fund =
+                    toneAmplitude(shiverPlayableRender, sr, 220.0, skip);
+                require(dry220ShiverFund > 1e-12 &&
+                        shiver220Fund / dry220ShiverFund > 0.55,
+                        "SHIVER low-range remains clearly playable and pitch-traceable", failures);
+
+                Settings shiverSpasm {};
+                shiverSpasm.cold = 1.f;
+                shiverSpasm.shiver = 0.50f;
+                shiverSpasm.shiverMaterial = 4.f / 5.f; // Spasm
+                const auto shiverSpasm50 =
+                    renderSine(sr, 1.5, 220.0, shiverSpasm, 128);
+                require(meanAbsDiff(dry220Shiver, shiverSpasm50, skip) > 3e-3,
+                        "SHIVER Spasm 50% creates an obvious physical cold-motion identity", failures);
+                require(maxAbs(shiverSpasm50) < 8.0,
+                        "SHIVER Spasm 50% remains bounded", failures);
+
                 requireSixDistinct("SPACE", [](float m) {
                     Settings v {1.f, 0.f, 0.f, 0.f, 0.f, 0.78f};
                     v.spaceMaterial = m;
