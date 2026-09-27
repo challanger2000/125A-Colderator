@@ -88,6 +88,13 @@ private:
     std::array<float, kChannels> windGustTarget_ {};
     std::array<int, kChannels> windGustCounter_ {};
 
+    // Cinematic depth layer: long background cloud + low impact weight.
+    std::array<std::vector<float>, kChannels> cinematicBuffer_ {};
+    std::array<int, kChannels> cinematicWrite_ {};
+    std::array<float, kChannels> cinematicLowState_ {};
+    std::array<float, kChannels> cinematicBloomState_ {};
+    std::array<float, kChannels> cinematicMotionState_ {};
+
     float shiverPhaseA_ = 0.f;
     float shiverPhaseB_ = 0.f;
     float metalPhaseA_ = 0.f;
