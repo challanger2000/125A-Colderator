@@ -318,3 +318,29 @@ Design target:
 - low settings remain pitch-traceable and playable;
 - around 50% the source should feel covered by a clearly frozen surface;
 - the upper range may become rough, deep-frozen and strongly textural without becoming merely bitcrushed.
+
+
+## SHIVER identity pass
+
+SHIVER no longer represents wind or storm. Those scene-level behaviours belong to ATMOSPHERE.
+
+SHIVER now models physical cold movement in the played material itself:
+
+- Tremble: balanced micro-tremor.
+- Stiff: slow, shallow movement as the source becomes rigid.
+- Chatter: faster irregular tension.
+- Strain: slower deeper bending and stress.
+- Spasm: stronger episodic movement.
+- Numb: minimal, sluggish movement near a frozen/stiff state.
+
+Implementation:
+- short moving delay / micro-Doppler;
+- model-dependent motion rate and depth;
+- irregular deterministic jitter;
+- source-derived stress and rigidity terms;
+- four-stage high-pass protection so the effect does not become a bass enhancer.
+
+Design target:
+- low settings remain clearly playable and pitch-traceable;
+- around 50% SHIVER should feel like the instrument/material is physically reacting to cold;
+- SHIVER must not duplicate WIND/STORM atmosphere.
