@@ -1817,6 +1817,11 @@ int main()
                     "METAL 75% creates deliberate inharmonic FM/ringmod sidebands", failures);
             require(dFrost50 > 5e-3 && dFrost50 > dFrost25 * 1.35,
                     "FROST 50% forms a dominant frozen surface texture", failures);
+            std::cout << "[INFO] FROST EXTREME SR=" << static_cast<int>(sr)
+                      << " d50=" << dFrost50
+                      << " d100=" << dFrost100
+                      << " ratio=" << (dFrost50 > 1e-12 ? dFrost100 / dFrost50 : 0.0)
+                      << "\n";
             require(dFrost100 > dFrost50 * 1.20,
                     "FROST micro-freeze becomes stronger toward the extreme range", failures);
             require(dShiver50 > 3e-3 && dShiver50 > dShiver25 * 1.25,
