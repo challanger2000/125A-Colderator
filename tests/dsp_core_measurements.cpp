@@ -1787,6 +1787,13 @@ int main()
             const double shiverLowFxAmp = toneAmplitude(shiverLowFx, sr, 80.0, skip);
             const double shiverLowRatio =
                 shiverLowDryAmp > 1e-12 ? shiverLowFxAmp / shiverLowDryAmp : 0.0;
+            std::cout << "[INFO] SHIVER 80Hz SR=" << static_cast<int>(sr)
+                      << " dry=" << shiverLowDryAmp
+                      << " fx=" << shiverLowFxAmp
+                      << " ratio=" << shiverLowRatio
+                      << " dB=" << (shiverLowRatio > 1e-12
+                           ? 20.0 * std::log10(shiverLowRatio) : -200.0)
+                      << "\n";
             require(shiverLowRatio < 1.10,
                     "SHIVER does not inflate the protected 80 Hz low band", failures);
 
