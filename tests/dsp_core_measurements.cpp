@@ -38,6 +38,10 @@ struct Settings
     float frostMaterial = 0.f;
     float shiverMaterial = 0.f;
     float spaceMaterial = 0.f;
+    float atmosphereAType = 0.f;
+    float atmosphereAAmount = 0.f;
+    float atmosphereBType = 0.f;
+    float atmosphereBAmount = 0.f;
 };
 
 
@@ -66,6 +70,10 @@ std::vector<float> renderChord(double sr, double seconds, const Settings& settin
     p.setTestParameter(Colderator::kFrostMaterial, settings.frostMaterial);
     p.setTestParameter(Colderator::kShiverMaterial, settings.shiverMaterial);
     p.setTestParameter(Colderator::kSpaceMaterial, settings.spaceMaterial);
+    p.setTestParameter(Colderator::kAtmosAType, settings.atmosphereAType);
+    p.setTestParameter(Colderator::kAtmosAAmount, settings.atmosphereAAmount);
+    p.setTestParameter(Colderator::kAtmosBType, settings.atmosphereBType);
+    p.setTestParameter(Colderator::kAtmosBAmount, settings.atmosphereBAmount);
     p.setTestParameter(Colderator::kOutput, 0.5f);
     if (p.setActive(true) != kResultOk)
         throw std::runtime_error("chord active failed");
@@ -145,6 +153,10 @@ std::vector<float> renderSine(double sr, double seconds, double hz, const Settin
     p.setTestParameter(Colderator::kFrostMaterial, settings.frostMaterial);
     p.setTestParameter(Colderator::kShiverMaterial, settings.shiverMaterial);
     p.setTestParameter(Colderator::kSpaceMaterial, settings.spaceMaterial);
+    p.setTestParameter(Colderator::kAtmosAType, settings.atmosphereAType);
+    p.setTestParameter(Colderator::kAtmosAAmount, settings.atmosphereAAmount);
+    p.setTestParameter(Colderator::kAtmosBType, settings.atmosphereBType);
+    p.setTestParameter(Colderator::kAtmosBAmount, settings.atmosphereBAmount);
     p.setTestParameter(Colderator::kOutput, 0.5f);
 
     if (p.setActive(true) != kResultOk)
@@ -235,6 +247,10 @@ std::vector<float> renderImpulseWithBypassWindow(double sr, int block,
     p.setTestParameter(Colderator::kFrostMaterial, settings.frostMaterial);
     p.setTestParameter(Colderator::kShiverMaterial, settings.shiverMaterial);
     p.setTestParameter(Colderator::kSpaceMaterial, settings.spaceMaterial);
+    p.setTestParameter(Colderator::kAtmosAType, settings.atmosphereAType);
+    p.setTestParameter(Colderator::kAtmosAAmount, settings.atmosphereAAmount);
+    p.setTestParameter(Colderator::kAtmosBType, settings.atmosphereBType);
+    p.setTestParameter(Colderator::kAtmosBAmount, settings.atmosphereBAmount);
     p.setTestParameter(Colderator::kOutput, 0.5f);
 
     if (p.setActive(true) != kResultOk)
@@ -321,6 +337,10 @@ std::vector<float> renderImpulse(double sr, double seconds, const Settings& sett
     p.setTestParameter(Colderator::kFrostMaterial, settings.frostMaterial);
     p.setTestParameter(Colderator::kShiverMaterial, settings.shiverMaterial);
     p.setTestParameter(Colderator::kSpaceMaterial, settings.spaceMaterial);
+    p.setTestParameter(Colderator::kAtmosAType, settings.atmosphereAType);
+    p.setTestParameter(Colderator::kAtmosAAmount, settings.atmosphereAAmount);
+    p.setTestParameter(Colderator::kAtmosBType, settings.atmosphereBType);
+    p.setTestParameter(Colderator::kAtmosBAmount, settings.atmosphereBAmount);
     p.setTestParameter(Colderator::kOutput, 0.5f);
 
     if (p.setActive(true) != kResultOk)
@@ -633,6 +653,10 @@ bool stateRoundtripMatches(double sr)
     source.setTestParameter(Colderator::kFrostMaterial, 0.20f);
     source.setTestParameter(Colderator::kShiverMaterial, 1.00f);
     source.setTestParameter(Colderator::kSpaceMaterial, 0.60f);
+    source.setTestParameter(Colderator::kAtmosAType, 2.f / 9.f);
+    source.setTestParameter(Colderator::kAtmosAAmount, 0.47f);
+    source.setTestParameter(Colderator::kAtmosBType, 1.f / 9.f);
+    source.setTestParameter(Colderator::kAtmosBAmount, 0.31f);
     source.setTestParameter(Colderator::kOutput, 0.63f);
     source.setTestParameter(Colderator::kBypass, 0.f);
 
@@ -691,6 +715,10 @@ std::vector<float> renderMode(double sr, ProcessModes mode, const Settings& sett
     p.setTestParameter(Colderator::kFrostMaterial, settings.frostMaterial);
     p.setTestParameter(Colderator::kShiverMaterial, settings.shiverMaterial);
     p.setTestParameter(Colderator::kSpaceMaterial, settings.spaceMaterial);
+    p.setTestParameter(Colderator::kAtmosAType, settings.atmosphereAType);
+    p.setTestParameter(Colderator::kAtmosAAmount, settings.atmosphereAAmount);
+    p.setTestParameter(Colderator::kAtmosBType, settings.atmosphereBType);
+    p.setTestParameter(Colderator::kAtmosBAmount, settings.atmosphereBAmount);
     p.setTestParameter(Colderator::kOutput, 0.5f);
     if (p.setActive(true) != kResultOk)
         throw std::runtime_error("mode setActive failed");
@@ -940,6 +968,10 @@ std::vector<float> renderMono(double sr, double seconds, double hz, const Settin
     p.setTestParameter(Colderator::kFrostMaterial, settings.frostMaterial);
     p.setTestParameter(Colderator::kShiverMaterial, settings.shiverMaterial);
     p.setTestParameter(Colderator::kSpaceMaterial, settings.spaceMaterial);
+    p.setTestParameter(Colderator::kAtmosAType, settings.atmosphereAType);
+    p.setTestParameter(Colderator::kAtmosAAmount, settings.atmosphereAAmount);
+    p.setTestParameter(Colderator::kAtmosBType, settings.atmosphereBType);
+    p.setTestParameter(Colderator::kAtmosBAmount, settings.atmosphereBAmount);
     p.setTestParameter(Colderator::kOutput, 0.5f);
     if (p.setActive(true) != kResultOk)
         throw std::runtime_error("mono active failed");
@@ -1204,6 +1236,10 @@ StereoRender renderStereoImpulse(double sr, double seconds, const Settings& sett
     p.setTestParameter(Colderator::kFrostMaterial, settings.frostMaterial);
     p.setTestParameter(Colderator::kShiverMaterial, settings.shiverMaterial);
     p.setTestParameter(Colderator::kSpaceMaterial, settings.spaceMaterial);
+    p.setTestParameter(Colderator::kAtmosAType, settings.atmosphereAType);
+    p.setTestParameter(Colderator::kAtmosAAmount, settings.atmosphereAAmount);
+    p.setTestParameter(Colderator::kAtmosBType, settings.atmosphereBType);
+    p.setTestParameter(Colderator::kAtmosBAmount, settings.atmosphereBAmount);
     p.setTestParameter(Colderator::kOutput, 0.5f);
     if (p.setActive(true) != kResultOk)
         throw std::runtime_error("stereo impulse active failed");
