@@ -154,6 +154,8 @@ void Processor::resetDsp()
     frostRng_[0] = 0x125A91u;
     frostRng_[1] = 0xC01D77u;
     spaceLowState_.fill(0.f);
+    spaceFarLowState_.fill(0.f);
+    spaceFarBloomState_.fill(0.f);
     frostHeld_.fill(0.f);
     frostHoldCounter_.fill(0);
     textureRng_[0] = 0x1CE5A11u;
@@ -182,6 +184,8 @@ void Processor::resetDsp()
     {
         spaceBuffer_[ch].assign(static_cast<size_t>(sampleRate_ * 0.18) + 8u, 0.f);
         spaceWrite_[ch] = 0;
+        spaceFarBuffer_[ch].assign(static_cast<size_t>(sampleRate_ * 2.40) + 16u, 0.f);
+        spaceFarWrite_[ch] = 0;
         iceDelayBuffer_[ch].assign(static_cast<size_t>(sampleRate_ * 0.012) + 8u, 0.f);
         iceDelayWrite_[ch] = 0;
         shiverDelayBuffer_[ch].assign(static_cast<size_t>(sampleRate_ * 0.020) + 8u, 0.f);
@@ -822,14 +826,86 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                                        0.10f * spaceExtreme +
                                        spaceFeedbackBias[spaceModel];
 
-                const float roomWet =
-                    early +
+                const float nearWet = early;
+                const float mainWet =
                     icyFeedback * (0.55f + 0.20f * effectiveSpace);
+
+                float farWet = 0.f;
+                auto& farBuffer = spaceFarBuffer_[ch];
+                if (!farBuffer.empty())
+                {
+                    const int farSize = static_cast<int>(farBuffer.size());
+                    const int fw = spaceFarWrite_[ch];
+
+                    const float farScale = 0.80f + 0.45f * static_cast<float>(spaceModel) /
+                                                    static_cast<float>(kMaterialCount - 1);
+                    const int fd1 = std::max(1, static_cast<int>(
+                        sampleRate_ * 0.173f * side * farScale));
+                    const int fd2 = std::max(1, static_cast<int>(
+                        sampleRate_ * 0.389f / side * farScale));
+                    const int fd3 = std::max(1, static_cast<int>(
+                        sampleRate_ * 0.713f * side * farScale));
+                    const int fdf = std::max(1, static_cast<int>(
+                        sampleRate_ * 1.127f / side * farScale));
+
+                    auto readFar = [&](int delay) {
+                        int index = fw - delay;
+                        while (index < 0) index += farSize;
+                        return farBuffer[static_cast<size_t>(index)];
+                    };
+
+                    const float farEarly =
+                        0.41f * readFar(fd1) -
+                        0.27f * readFar(fd2) +
+                        0.19f * readFar(fd3);
+                    const float farFeedbackTap = readFar(fdf);
+
+                    const float farLowA = onePoleCoeff(
+                        sampleRate_, std::max(180.f, spaceHpHz[spaceModel] * 0.72f));
+                    spaceFarLowState_[ch] = zapDenormal(
+                        farLowA * spaceFarLowState_[ch] +
+                        (1.f - farLowA) * farFeedbackTap);
+                    const float coldFarFeedback =
+                        farFeedbackTap - 0.76f * spaceFarLowState_[ch];
+
+                    const float farBloomA = onePoleCoeff(sampleRate_, 5.5f);
+                    spaceFarBloomState_[ch] = zapDenormal(
+                        farBloomA * spaceFarBloomState_[ch] +
+                        (1.f - farBloomA) * farEarly);
+
+                    const float farAmount =
+                        std::pow(clamp01((effectiveSpace - 0.32f) / 0.68f), 1.10f);
+                    farWet =
+                        farAmount *
+                        (0.58f * farEarly +
+                         0.34f * spaceFarBloomState_[ch] +
+                         0.42f * coldFarFeedback);
+
+                    const float farFeedback =
+                        std::min(0.90f,
+                            0.52f + 0.28f * effectiveSpace +
+                            0.06f * spaceExtreme +
+                            0.50f * spaceFeedbackBias[spaceModel]);
+                    const float farWriteValue = zapDenormal(
+                        0.46f * spaceInput +
+                        0.22f * nearWet +
+                        coldFarFeedback * farFeedback);
+                    farBuffer[static_cast<size_t>(fw)] =
+                        std::isfinite(farWriteValue) ? farWriteValue : 0.f;
+                    spaceFarWrite_[ch] = (fw + 1 >= farSize) ? 0 : (fw + 1);
+                }
+
+                const float roomWet =
+                    nearWet +
+                    mainWet +
+                    farWet * (0.72f + 0.38f * effectiveSpace);
                 const float spaceWet = materialWet(effectiveSpace);
                 y = y * (1.f - spaceWet) + roomWet * spaceWet;
 
-                const float writeValue = zapDenormal(spaceInput + icyFeedback * std::min(0.86f, feedback));
-                spaceBuffer[static_cast<size_t>(w)] = std::isfinite(writeValue) ? writeValue : 0.f;
+                const float writeValue = zapDenormal(
+                    spaceInput + icyFeedback * std::min(0.86f, feedback));
+                spaceBuffer[static_cast<size_t>(w)] =
+                    std::isfinite(writeValue) ? writeValue : 0.f;
                 spaceWrite_[ch] = (w + 1 >= size) ? 0 : (w + 1);
             }
 
@@ -1117,10 +1193,10 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
 
 uint32 PLUGIN_API Processor::getTailSamples()
 {
-    // The cold SPACE feedback is intentionally audible but bounded. Report a
-    // conservative two-second host tail so offline rendering and transport
-    // stops do not truncate the designed decay at supported sample rates.
-    const double samples = sampleRate_ * 2.0;
+    // Multi-layer cinematic SPACE includes a long far-field feedback cloud.
+    // Report a conservative twelve-second host tail so offline rendering and
+    // transport stops do not truncate the longest designed decays.
+    const double samples = sampleRate_ * 12.0;
     return static_cast<uint32>(std::min<double>(samples,
                                                 static_cast<double>(std::numeric_limits<uint32>::max())));
 }
