@@ -192,8 +192,11 @@ void Processor::resetDsp()
         shiverJitterTarget_[ch] = 0.f;
         shiverJitterCounter_[ch] = 0;
         shiverShiftedLowState_[ch] = 0.f;
+        shiverShiftedLowState2_[ch] = 0.f;
         shiverDryLowState_[ch] = 0.f;
+        shiverDryLowState2_[ch] = 0.f;
         shiverPreLowState_[ch] = 0.f;
+        shiverPreLowState2_[ch] = 0.f;
     }
     shiverPhaseA_ = 0.f;
     shiverPhaseB_ = 0.f;
@@ -731,32 +734,43 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                 const float shifted = shiverDelay[static_cast<size_t>(i0)] * (1.f - frac) +
                                       shiverDelay[static_cast<size_t>(i1)] * frac;
 
-                const float shiverLowA = onePoleCoeff(sampleRate_, 140.f);
+                const float shiverLowA = onePoleCoeff(sampleRate_, 180.f);
+
                 shiverShiftedLowState_[ch] = zapDenormal(
                     shiverLowA * shiverShiftedLowState_[ch] +
                     (1.f - shiverLowA) * shifted);
+                shiverShiftedLowState2_[ch] = zapDenormal(
+                    shiverLowA * shiverShiftedLowState2_[ch] +
+                    (1.f - shiverLowA) * shiverShiftedLowState_[ch]);
+
                 shiverDryLowState_[ch] = zapDenormal(
                     shiverLowA * shiverDryLowState_[ch] +
                     (1.f - shiverLowA) * x);
+                shiverDryLowState2_[ch] = zapDenormal(
+                    shiverLowA * shiverDryLowState2_[ch] +
+                    (1.f - shiverLowA) * shiverDryLowState_[ch]);
+
                 shiverPreLowState_[ch] = zapDenormal(
                     shiverLowA * shiverPreLowState_[ch] +
                     (1.f - shiverLowA) * y);
+                shiverPreLowState2_[ch] = zapDenormal(
+                    shiverLowA * shiverPreLowState2_[ch] +
+                    (1.f - shiverLowA) * shiverPreLowState_[ch]);
 
-                const float shiftedHigh = shifted - shiverShiftedLowState_[ch];
-                const float preHigh = y - shiverPreLowState_[ch];
+                const float shiftedHigh = shifted - shiverShiftedLowState2_[ch];
+                const float preHigh = y - shiverPreLowState2_[ch];
 
-                // True crossover behaviour: below ~140 Hz SHIVER passes the
-                // original source low band unchanged. Only the upper band is
-                // allowed into moving-delay, jitter and wind processing.
+                // Two-pole crossover behaviour: the true source low band remains
+                // intact, while moving-delay, jitter and wind are pushed upward.
                 const float shiverHigh =
-                    (0.08f - 0.03f * shiverExtreme) * preHigh +
-                    (0.78f + 0.16f * shiverExtreme) * shiftedHigh +
+                    (0.06f - 0.02f * shiverExtreme) * preHigh +
+                    (0.68f + 0.14f * shiverExtreme) * shiftedHigh +
                     highDetail * shiverJitter_[ch] *
-                        (0.20f + 0.34f * shiverExtreme) +
+                        (0.18f + 0.30f * shiverExtreme) +
                     windTexture * shiverWindGain[shiverModel] *
-                        (0.18f + 0.34f * effectiveShiver);
+                        (0.16f + 0.30f * effectiveShiver);
                 const float shiverTexture =
-                    shiverDryLowState_[ch] + shiverHigh;
+                    shiverDryLowState2_[ch] + shiverHigh;
                 const float shiverWet = materialWet(effectiveShiver);
                 y = y * (1.f - shiverWet) + shiverTexture * shiverWet;
                 shiverDelayWrite_[ch] = (w + 1 >= size) ? 0 : (w + 1);
