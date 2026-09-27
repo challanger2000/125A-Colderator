@@ -809,8 +809,9 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                 (0.58f * highDetail + 0.42f * (x - midLowState_[ch])) *
                 frostSurfaceMass[frostModel];
 
-            const float frostTexture =
-                0.12f * x +
+            const float frostExtremeBoost =
+                1.f + 0.16f * frostExtreme;
+            const float frostEffectBody =
                 frostHeld_[ch] * 0.74f * frostHeldGain[frostModel] +
                 microFreeze * frostHeldGain[frostModel] *
                     (0.54f + 0.32f * frostExtreme) +
@@ -824,6 +825,8 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                     (0.16f + 0.40f * effectiveFrost) +
                 surfaceBody *
                     (0.20f + 0.32f * effectiveFrost);
+            const float frostTexture =
+                0.12f * x + frostEffectBody * frostExtremeBoost;
             const float frostWet = materialWet(effectiveFrost);
             y = y * (1.f - frostWet) + frostTexture * frostWet;
 
