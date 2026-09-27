@@ -1004,17 +1004,27 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                         break;
 
                     case 2: // Drone
-                        layer = cinematicLowState_[ch] *
+                    {
+                        const float sourceBody =
+                            0.62f * lowState_[ch] + 0.38f * midLowState_[ch];
+                        layer = sourceBody *
                                 (0.72f + 0.28f * slowMotion) *
-                                (0.65f + 0.35f * atmosphereSwell_[slot][ch]);
+                                (0.65f + 0.35f * atmosphereSwell_[slot][ch]) *
+                                (0.55f + 0.45f * activity);
                         break;
+                    }
 
                     case 3: // Rumble
+                    {
+                        const float sourceBody =
+                            0.45f * std::fabs(lowState_[ch]) +
+                            0.55f * slowEnv_[ch];
                         layer = atmosphereNoiseLow_[slot][ch] *
-                                cinematicLowState_[ch] *
+                                sourceBody *
                                 (0.85f + 0.35f * atmosphereGust_[slot][ch]) *
                                 2.4f;
                         break;
+                    }
 
                     case 4: // Distant Metal
                         layer = atmosphereEventEnv_[slot][ch] *
