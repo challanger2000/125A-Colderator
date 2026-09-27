@@ -45,6 +45,12 @@ inline int materialIndex(float v)
         static_cast<int>(std::lround(clamp01(v) * static_cast<float>(kMaterialCount - 1)))));
 }
 
+inline int atmosphereIndex(float v)
+{
+    return std::max(0, std::min(kAtmosphereTypeCount - 1,
+        static_cast<int>(std::lround(clamp01(v) * static_cast<float>(kAtmosphereTypeCount - 1)))));
+}
+
 inline float materialWet(float v)
 {
     v = clamp01(v);
@@ -162,6 +168,16 @@ void Processor::resetDsp()
     cinematicLowState_.fill(0.f);
     cinematicBloomState_.fill(0.f);
     cinematicMotionState_.fill(0.f);
+    atmosphereRng_[0][0] = 0xA7105A1u;
+    atmosphereRng_[0][1] = 0xA7105B2u;
+    atmosphereRng_[1][0] = 0xB7105C3u;
+    atmosphereRng_[1][1] = 0xB7105D4u;
+    for (auto& slot : atmosphereNoiseLow_) slot.fill(0.f);
+    for (auto& slot : atmosphereNoiseHighPrev_) slot.fill(0.f);
+    for (auto& slot : atmosphereGust_) slot.fill(0.f);
+    for (auto& slot : atmosphereSwell_) slot.fill(0.f);
+    for (auto& slot : atmosphereEventEnv_) slot.fill(0.f);
+    for (auto& slot : atmospherePhase_) slot.fill(0.f);
     for (int ch = 0; ch < kChannels; ++ch)
     {
         spaceBuffer_[ch].assign(static_cast<size_t>(sampleRate_ * 0.18) + 8u, 0.f);
@@ -200,6 +216,8 @@ void Processor::resetDsp()
     smShiver_ = shiver_;
     smSpace_ = space_;
     smOutput_ = output_;
+    smAtmosphereAAmount_ = atmosphereAAmount_;
+    smAtmosphereBAmount_ = atmosphereBAmount_;
 
     const float effectiveIceBlock = clamp01(smCold_ * smIce_);
     const float effectiveMetalBlock = clamp01(smCold_ * smMetal_);
@@ -272,6 +290,10 @@ void Processor::applyParameter(ParamID id, float normalized)
         case kFrostMaterial: frostMaterial_ = materialIndex(v); break;
         case kShiverMaterial: shiverMaterial_ = materialIndex(v); break;
         case kSpaceMaterial: spaceMaterial_ = materialIndex(v); break;
+        case kAtmosAType: atmosphereAType_ = atmosphereIndex(v); break;
+        case kAtmosAAmount: atmosphereAAmount_ = v; break;
+        case kAtmosBType: atmosphereBType_ = atmosphereIndex(v); break;
+        case kAtmosBAmount: atmosphereBAmount_ = v; break;
         default: break;
     }
 }
@@ -372,6 +394,8 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
         smShiver_ += (shiver_ - smShiver_) * smooth;
         smSpace_ += (space_ - smSpace_) * smooth;
         smOutput_ += (output_ - smOutput_) * smooth;
+        smAtmosphereAAmount_ += (atmosphereAAmount_ - smAtmosphereAAmount_) * smooth;
+        smAtmosphereBAmount_ += (atmosphereBAmount_ - smAtmosphereBAmount_) * smooth;
 
         shiverPhaseA_ += 2.f * kPi * 4.7f / static_cast<float>(sampleRate_);
         shiverPhaseB_ += 2.f * kPi * 7.9f / static_cast<float>(sampleRate_);
@@ -894,6 +918,150 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                 cinematicLowState_[ch] *= 0.9995f;
             }
 
+            // ATMOSPHERE SLOTS
+            // Two independent, source-responsive cinematic generators. They are
+            // not ordinary loops: the input envelope and COLD determine when
+            // and how strongly the atmosphere appears.
+            const float atmosphereAmounts[2] = {
+                smAtmosphereAAmount_, smAtmosphereBAmount_
+            };
+            const int atmosphereTypes[2] = {
+                atmosphereAType_, atmosphereBType_
+            };
+
+            for (int slot = 0; slot < 2; ++slot)
+            {
+                const float amount = clamp01(atmosphereAmounts[slot]);
+                if (amount <= 1.0e-5f)
+                    continue;
+
+                const int type = std::max(0, std::min(
+                    kAtmosphereTypeCount - 1, atmosphereTypes[slot]));
+
+                unsigned int ar = atmosphereRng_[slot][ch];
+                ar ^= ar << 13; ar ^= ar >> 17; ar ^= ar << 5;
+                atmosphereRng_[slot][ch] = ar;
+                const float n =
+                    (static_cast<float>(ar & 0x00FFFFFFu) / 8388607.5f) - 1.f;
+
+                const float coldDrive = 0.25f + 0.75f * smCold_;
+                const float activity = clamp01(2.8f * slowEnv_[ch] + 1.2f * transientNorm);
+
+                atmosphereNoiseLow_[slot][ch] = zapDenormal(
+                    0.985f * atmosphereNoiseLow_[slot][ch] + 0.015f * n);
+                const float highNoise =
+                    0.5f * (n - atmosphereNoiseHighPrev_[slot][ch]);
+                atmosphereNoiseHighPrev_[slot][ch] = n;
+
+                atmosphereGust_[slot][ch] = zapDenormal(
+                    0.9992f * atmosphereGust_[slot][ch] +
+                    0.0008f * std::fabs(n));
+                atmosphereSwell_[slot][ch] = zapDenormal(
+                    0.9996f * atmosphereSwell_[slot][ch] +
+                    0.0004f * activity);
+
+                atmospherePhase_[slot][ch] +=
+                    2.f * kPi *
+                    (slot == 0 ? 0.21f : 0.29f) /
+                    static_cast<float>(sampleRate_);
+                if (atmospherePhase_[slot][ch] >= 2.f * kPi)
+                    atmospherePhase_[slot][ch] -= 2.f * kPi;
+
+                const float slowMotion =
+                    0.5f + 0.5f * std::sin(atmospherePhase_[slot][ch] +
+                                           (ch == 0 ? 0.f : 1.7f));
+
+                const float eventProbability =
+                    activity * amount *
+                    ((type == 4 || type == 5) ? 0.00055f : 0.00008f);
+                const float random01 =
+                    static_cast<float>((ar >> 8) & 0x0000FFFFu) / 65535.f;
+                if (random01 < eventProbability)
+                    atmosphereEventEnv_[slot][ch] = 1.f;
+
+                const float eventDecayMs =
+                    type == 4 ? 180.f : (type == 5 ? 28.f : 90.f);
+                const float eventDecay = std::exp(
+                    -1.f / static_cast<float>(sampleRate_ * eventDecayMs * 0.001f));
+                atmosphereEventEnv_[slot][ch] = zapDenormal(
+                    atmosphereEventEnv_[slot][ch] * eventDecay);
+
+                float layer = 0.f;
+                switch (type)
+                {
+                    case 0: // Wind
+                        layer = atmosphereNoiseLow_[slot][ch] *
+                                (0.22f + 0.78f * atmosphereGust_[slot][ch]) *
+                                (0.35f + 0.65f * activity);
+                        break;
+
+                    case 1: // Storm
+                        layer = (0.78f * atmosphereNoiseLow_[slot][ch] +
+                                 0.22f * highNoise) *
+                                (0.25f + 1.15f * atmosphereGust_[slot][ch]) *
+                                (0.45f + 0.55f * slowMotion) *
+                                (0.35f + 0.65f * activity);
+                        break;
+
+                    case 2: // Drone
+                        layer = cinematicLowState_[ch] *
+                                (0.72f + 0.28f * slowMotion) *
+                                (0.65f + 0.35f * atmosphereSwell_[slot][ch]);
+                        break;
+
+                    case 3: // Rumble
+                        layer = atmosphereNoiseLow_[slot][ch] *
+                                cinematicLowState_[ch] *
+                                (0.85f + 0.35f * atmosphereGust_[slot][ch]) *
+                                2.4f;
+                        break;
+
+                    case 4: // Distant Metal
+                        layer = atmosphereEventEnv_[slot][ch] *
+                                (0.58f * std::sin(metalPhaseA_ * 0.37f) +
+                                 0.42f * std::sin(metalPhaseB_ * 0.23f)) *
+                                (0.35f + 0.65f * activity);
+                        break;
+
+                    case 5: // Ice Cracks
+                        layer = atmosphereEventEnv_[slot][ch] *
+                                highNoise *
+                                (0.55f + 0.45f * transientExcitation) * 1.8f;
+                        break;
+
+                    case 6: // Air
+                        layer = highNoise *
+                                (0.18f + 0.82f * atmosphereSwell_[slot][ch]) *
+                                (0.30f + 0.70f * activity);
+                        break;
+
+                    case 7: // Ghost
+                        layer = (0.64f * atmosphereNoiseLow_[slot][ch] +
+                                 0.36f * highNoise) *
+                                (0.25f + 0.75f * slowMotion) *
+                                atmosphereSwell_[slot][ch];
+                        break;
+
+                    case 8: // Swell
+                        layer = highDetail *
+                                atmosphereSwell_[slot][ch] *
+                                (0.35f + 0.65f * slowMotion);
+                        break;
+
+                    case 9: // Machine
+                        layer = (0.55f * atmosphereNoiseLow_[slot][ch] +
+                                 0.45f * highNoise) *
+                                metalCarrier *
+                                (0.35f + 0.65f * activity);
+                        break;
+                }
+
+                const float slotGain =
+                    amount * coldDrive *
+                    (type == 2 || type == 3 ? 0.75f : 0.42f);
+                y += layer * slotGain;
+            }
+
             y *= outputGain;
 
             if (!std::isfinite(y))
@@ -943,6 +1111,11 @@ tresult PLUGIN_API Processor::setState(IBStream* state)
     shiverMaterial_ = std::max(0, std::min(kMaterialCount - 1, static_cast<int>(payload.materials[3])));
     spaceMaterial_ = std::max(0, std::min(kMaterialCount - 1, static_cast<int>(payload.materials[4])));
 
+    atmosphereAType_ = atmosphereIndex(payload.atmosphere[0]);
+    atmosphereAAmount_ = clamp01(payload.atmosphere[1]);
+    atmosphereBType_ = atmosphereIndex(payload.atmosphere[2]);
+    atmosphereBAmount_ = clamp01(payload.atmosphere[3]);
+
     return kResultOk;
 }
 
@@ -966,6 +1139,12 @@ tresult PLUGIN_API Processor::getState(IBStream* state)
     payload.materials[2] = frostMaterial_;
     payload.materials[3] = shiverMaterial_;
     payload.materials[4] = spaceMaterial_;
+    payload.atmosphere[0] = static_cast<float>(atmosphereAType_) /
+                            static_cast<float>(kAtmosphereTypeCount - 1);
+    payload.atmosphere[1] = atmosphereAAmount_;
+    payload.atmosphere[2] = static_cast<float>(atmosphereBType_) /
+                            static_cast<float>(kAtmosphereTypeCount - 1);
+    payload.atmosphere[3] = atmosphereBAmount_;
 
     return writeComponentStatePayload(stream, payload)
         ? kResultOk
