@@ -15,6 +15,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Cache Frozen Sources
+        uses: actions/cache@v4
+        with:
+          path: build/frozen-source-cache
+          key: colderator-frozen-sources-${{ hashFiles('assets/frozen_sources.json') }}
+
       - name: Prepare licensed Frozen Sources
         shell: pwsh
         run: |
