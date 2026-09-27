@@ -1628,6 +1628,31 @@ int main()
                     return v;
                 }, 5e-5);
 
+                Settings frostLow {};
+                frostLow.cold = 0.25f;
+                frostLow.frost = 0.50f;
+                frostLow.frostMaterial = 0.f;
+                const auto frostLowRender =
+                    renderSine(sr, 1.2, 220.0, frostLow, 128);
+                const double frostLowFund =
+                    toneAmplitude(frostLowRender, sr, 220.0, skip);
+                const double dry220 =
+                    toneAmplitude(renderSine(sr, 1.2, 220.0, {}, 128), sr, 220.0, skip);
+                require(dry220 > 1e-12 && frostLowFund / dry220 > 0.45,
+                        "FROST low-range remains clearly playable and pitch-traceable", failures);
+
+                Settings frost50Scene {};
+                frost50Scene.cold = 1.f;
+                frost50Scene.frost = 0.50f;
+                frost50Scene.frostMaterial = 5.f / 5.f; // Deep Freeze
+                const auto frost50SceneRender =
+                    renderSine(sr, 1.5, 220.0, frost50Scene, 128);
+                require(meanAbsDiff(renderSine(sr, 1.5, 220.0, {}, 128),
+                                    frost50SceneRender, skip) > 4e-3,
+                        "FROST 50% creates an obvious frozen-surface transformation", failures);
+                require(maxAbs(frost50SceneRender) < 8.0,
+                        "FROST Deep Freeze 50% remains bounded", failures);
+
                 requireSixDistinct("SHIVER", [](float m) {
                     Settings v {1.f, 0.f, 0.f, 0.f, 0.78f, 0.f};
                     v.shiverMaterial = m;
