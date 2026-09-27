@@ -283,3 +283,21 @@ Current layers:
 - distant roar layer for large-scale mass.
 
 At 50% atmosphere amount STORM is expected to be clearly distinguishable from WIND while remaining bounded.
+
+
+## METAL identity pass
+
+METAL now combines three material layers:
+
+- source-coupled inharmonic resonators and sidebands for musical linkage;
+- embedded real industrial-air material for steel/machine body;
+- embedded real metallic events for large cinematic gestures;
+- a controlled low-body mass layer so METAL can feel heavy rather than merely bright.
+
+The six METAL materials use different balances of air, event and mass:
+Steel / Pipe / Chain / Sheet / Machine / Rust.
+
+Design target:
+- at low settings the played source remains clearly identifiable;
+- around 50% METAL should already feel like a distinct physical material;
+- toward the upper range, large mechanical/industrial character may dominate.
