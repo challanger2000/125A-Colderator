@@ -1613,6 +1613,43 @@ int main()
                     v.spaceMaterial = m;
                     return v;
                 }, 5e-5);
+
+                // Atmosphere types must be real generators, not labels.
+                std::vector<float> previousAtmos;
+                for (int a = 0; a < Colderator::kAtmosphereTypeCount; ++a)
+                {
+                    Settings v {};
+                    v.cold = 1.f;
+                    v.atmosphereAType =
+                        static_cast<float>(a) /
+                        static_cast<float>(Colderator::kAtmosphereTypeCount - 1);
+                    v.atmosphereAAmount = 0.80f;
+                    const auto rendered = renderSine(sr, 1.0, 110.0, v, 128);
+                    require(finiteBuffer(rendered),
+                            "Atmosphere type " + std::to_string(a + 1) +
+                            " remains finite", failures);
+                    if (!previousAtmos.empty())
+                    {
+                        require(meanAbsDiff(previousAtmos, rendered, skip) > 2e-5,
+                                "Atmosphere type " + std::to_string(a + 1) +
+                                " has a distinct generator fingerprint", failures);
+                    }
+                    previousAtmos = rendered;
+                }
+
+                Settings dualAtmos {};
+                dualAtmos.cold = 1.f;
+                dualAtmos.atmosphereAType = 2.f / 9.f; // Drone
+                dualAtmos.atmosphereAAmount = 0.70f;
+                dualAtmos.atmosphereBType = 1.f / 9.f; // Storm
+                dualAtmos.atmosphereBAmount = 0.70f;
+                const auto droneStorm = renderSine(sr, 1.2, 110.0, dualAtmos, 128);
+
+                Settings droneOnly = dualAtmos;
+                droneOnly.atmosphereBAmount = 0.f;
+                const auto drone = renderSine(sr, 1.2, 110.0, droneOnly, 128);
+                require(meanAbsDiff(droneStorm, drone, skip) > 1e-4,
+                        "dual atmosphere slots combine into a new scene", failures);
             }
 
             const auto automation64 = renderAutomationPattern(sr, 64);
