@@ -186,6 +186,8 @@ void Processor::resetDsp()
     textureRng_[1] = 0x57EE1A2u;
     iceShardEnv_.fill(0.f);
     metalParticleEnv_.fill(0.f);
+    metalAirSamplePos_.fill(0.0);
+    metalChimeSamplePos_.fill(0.0);
     frostCrackleEnv_.fill(0.f);
     windNoiseState_.fill(0.f);
     windGust_.fill(0.f);
@@ -590,7 +592,12 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
             const float metalRandom01 =
                 static_cast<float>((tr >> 1) & 0x0000FFFFu) / 65535.f;
             if (metalRandom01 < metalEventProb)
+            {
                 metalParticleEnv_[ch] = 1.f;
+                if (FrozenSources::k_metal_chime_count > 1)
+                    metalChimeSamplePos_[ch] =
+                        static_cast<double>((tr >> 6) % FrozenSources::k_metal_chime_count);
+            }
             const float metalParticleDecay =
                 std::exp(-1.f / static_cast<float>(sampleRate_ * (metalDecayMs[metalModel] * 0.001f)));
             metalParticleEnv_[ch] = zapDenormal(metalParticleEnv_[ch] * metalParticleDecay);
@@ -674,15 +681,56 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
             const float iceWet = materialWet(effectiveIce);
             y = y * (1.f - iceWet) + iceTexture * iceWet;
 
-            // METAL = steel / pipes / machinery.
-            // Inharmonic resonances and sidebands increasingly replace the source.
+            // METAL = steel / pipes / sheet / machinery / rust.
+            // Real industrial air and metallic events provide material realism;
+            // resonators and sidebands keep the result tied to the played source.
+            const double metalSourceStep =
+                static_cast<double>(FrozenSources::kSampleRate) /
+                std::max(1.0, sampleRate_);
+            const float realMetalAir = readEmbeddedSample(
+                FrozenSources::k_cold_metal_air,
+                FrozenSources::k_cold_metal_air_count,
+                metalAirSamplePos_[ch],
+                metalSourceStep,
+                ch == 0 ? 0.0 : 0.29);
+            const float realMetalEvent = readEmbeddedSample(
+                FrozenSources::k_metal_chime,
+                FrozenSources::k_metal_chime_count,
+                metalChimeSamplePos_[ch],
+                metalSourceStep,
+                ch == 0 ? 0.0 : 0.17);
+
+            constexpr float metalAirModelGain[kMaterialCount] =
+                {0.42f, 0.58f, 0.48f, 0.72f, 0.88f, 0.64f};
+            constexpr float metalEventModelGain[kMaterialCount] =
+                {0.45f, 0.72f, 0.92f, 0.66f, 0.78f, 0.56f};
+            constexpr float metalMassModelGain[kMaterialCount] =
+                {0.68f, 0.92f, 0.74f, 1.08f, 1.18f, 0.86f};
+
+            const float realAirLayer =
+                realMetalAir * sourceScale * sourceActivity *
+                metalAirModelGain[metalModel];
+            const float realEventLayer =
+                realMetalEvent * metalParticleEnv_[ch] * sourceScale *
+                metalEventModelGain[metalModel];
+
             const float metalSideband = highDetail * metalCarrier;
-            const float metalTexture = 0.08f * x +
-                                       metalSignal * (1.38f + 0.92f * metalExtreme) +
-                                       metalSideband * metalSidebandGain[metalModel] *
-                                           (0.66f + 0.46f * metalExtreme) +
-                                       metalParticle * metalCarrier * metalParticleGain[metalModel] *
-                                           (0.48f + 0.62f * effectiveMetal);
+            const float metalMass =
+                (0.62f * lowState_[ch] + 0.38f * midLowState_[ch]) *
+                metalMassModelGain[metalModel] *
+                (0.28f + 0.72f * effectiveMetal);
+
+            const float metalTexture =
+                0.06f * x +
+                metalSignal * (1.28f + 0.88f * metalExtreme) +
+                metalSideband * metalSidebandGain[metalModel] *
+                    (0.58f + 0.42f * metalExtreme) +
+                metalParticle * metalCarrier * metalParticleGain[metalModel] *
+                    (0.38f + 0.52f * effectiveMetal) +
+                realAirLayer * (0.24f + 0.36f * effectiveMetal) +
+                realEventLayer * (0.42f + 0.48f * effectiveMetal) +
+                metalMass * (0.16f + 0.26f * effectiveMetal);
+
             const float metalWet = materialWet(effectiveMetal);
             y = y * (1.f - metalWet) + metalTexture * metalWet;
 
