@@ -1856,6 +1856,11 @@ int main()
             require(dSpace50 > 1e-5, "SPACE 50% is measurably active", failures);
 
             require(dFrost100 > dFrost50 * 1.19, "FROST 100% stronger than 50%", failures);
+            std::cout << "[INFO] SHIVER EXTREME SR=" << static_cast<int>(sr)
+                      << " d50=" << dShiver50
+                      << " d100=" << dShiver100
+                      << " ratio=" << (dShiver50 > 1e-12 ? dShiver100 / dShiver50 : 0.0)
+                      << "\n";
             require(dShiver100 > dShiver50 * 1.20, "SHIVER 100% stronger than 50%", failures);
             require(dSpace100 > dSpace50 * 1.20, "SPACE 100% stronger than 50%", failures);
             require(meanAbsDiff(frost100, frost100Repeat, 0) < 1e-8,
