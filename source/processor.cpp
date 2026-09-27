@@ -175,6 +175,7 @@ void Processor::resetDsp()
         shiverJitter_[ch] = 0.f;
         shiverJitterTarget_[ch] = 0.f;
         shiverJitterCounter_[ch] = 0;
+        shiverShiftedLowState_[ch] = 0.f;
     }
     shiverPhaseA_ = 0.f;
     shiverPhaseB_ = 0.f;
@@ -704,12 +705,23 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                 const float shifted = shiverDelay[static_cast<size_t>(i0)] * (1.f - frac) +
                                       shiverDelay[static_cast<size_t>(i1)] * frac;
 
-                const float shiverTexture = (0.16f - 0.08f * shiverExtreme) * x +
-                                            (0.78f + 0.16f * shiverExtreme) * shifted +
-                                            highDetail * shiverJitter_[ch] *
-                                                (0.20f + 0.34f * shiverExtreme) +
-                                            windTexture * shiverWindGain[shiverModel] *
-                                                (0.18f + 0.34f * effectiveShiver);
+                const float shiverLowA = onePoleCoeff(sampleRate_, 140.f);
+                shiverShiftedLowState_[ch] = zapDenormal(
+                    shiverLowA * shiverShiftedLowState_[ch] +
+                    (1.f - shiverLowA) * shifted);
+                const float shiftedHigh = shifted - shiverShiftedLowState_[ch];
+
+                // Preserve the source low band; SHIVER should move the texture,
+                // not act as a bass enhancer.
+                const float protectedLow = midLowState_[ch];
+                const float shiverTexture =
+                    protectedLow +
+                    (0.10f - 0.04f * shiverExtreme) * (x - protectedLow) +
+                    (0.82f + 0.18f * shiverExtreme) * shiftedHigh +
+                    highDetail * shiverJitter_[ch] *
+                        (0.20f + 0.34f * shiverExtreme) +
+                    windTexture * shiverWindGain[shiverModel] *
+                        (0.18f + 0.34f * effectiveShiver);
                 const float shiverWet = materialWet(effectiveShiver);
                 y = y * (1.f - shiverWet) + shiverTexture * shiverWet;
                 shiverDelayWrite_[ch] = (w + 1 >= size) ? 0 : (w + 1);
@@ -752,11 +764,15 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                 const float icyFeedback = feedbackTap - 0.82f * spaceLowState_[ch];
 
                 const float spaceExtreme = clamp01((effectiveSpace - 0.90f) / 0.10f);
-                const float spaceMix = effectiveSpace * (0.18f + 0.24f * spaceExtreme);
                 const float feedback = 0.28f + 0.46f * effectiveSpace +
                                        0.10f * spaceExtreme +
                                        spaceFeedbackBias[spaceModel];
-                y += (early + 0.55f * icyFeedback) * spaceMix;
+
+                const float roomWet =
+                    early +
+                    icyFeedback * (0.55f + 0.20f * effectiveSpace);
+                const float spaceWet = materialWet(effectiveSpace);
+                y = y * (1.f - spaceWet) + roomWet * spaceWet;
 
                 const float writeValue = zapDenormal(spaceInput + icyFeedback * std::min(0.86f, feedback));
                 spaceBuffer[static_cast<size_t>(w)] = std::isfinite(writeValue) ? writeValue : 0.f;
@@ -777,8 +793,14 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                     lowWeightA * cinematicLowState_[ch] +
                     (1.f - lowWeightA) * x);
                 const float impactDrive = clamp01(transientNorm * 1.8f);
+                const float cinematicWeightParticipation = std::max(
+                    {0.35f * effectiveIce,
+                     effectiveMetal,
+                     0.65f * effectiveFrost,
+                     0.85f * effectiveSpace});
                 const float weight =
                     cinematicLowState_[ch] * impactDrive *
+                    cinematicWeightParticipation *
                     (0.22f + 0.38f * cinematicDepth);
 
                 auto& cinBuffer = cinematicBuffer_[ch];
