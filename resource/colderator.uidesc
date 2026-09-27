@@ -11,9 +11,9 @@
     <color name="DisplayFrame" rgba="#B3D2E2FF"/>
   </colors>
 
-  <template background-color="Bg" class="CViewContainer" maxSize="800, 460" minSize="800, 460"
+  <template background-color="Bg" class="CViewContainer" maxSize="800, 560" minSize="800, 560"
             mouse-enabled="true" name="view" opacity="1" origin="0, 0" size="800, 460" transparent="false">
-    <view class="CView" custom-view-name="Faceplate" origin="0, 0" size="800, 460" mouse-enabled="false"/>
+    <view class="CView" custom-view-name="Faceplate" origin="0, 0" size="800, 560" mouse-enabled="false"/>
 
     <view back-color="Bg" class="CTextLabel" font="~ NormalFontVeryBig" font-color="Text"
           frame-width="0" origin="28, 12" size="300, 30" title="125A COLDERATOR"
@@ -124,8 +124,36 @@
           frame-width="0" origin="686, 321" size="80, 40"
           title="HOST BYPASS\nAVAILABLE"
           transparent="true" text-alignment="center"/>
+    <view back-color="Bg" class="CTextLabel" font="~ NormalFontSmall" font-color="PanelTitle"
+          frame-width="0" origin="250, 447" size="300, 18" title="CINEMATIC ATMOSPHERE"
+          transparent="true" text-alignment="center"/>
+
+    <view back-color="Bg" class="CTextLabel" font="~ NormalFontSmall" font-color="Text"
+          frame-width="0" origin="250, 474" size="70, 18" title="ATM A"
+          transparent="true" text-alignment="left"/>
+    <view back-color="Display" class="COptionMenu" control-tag="AtmosAType"
+          font="~ NormalFontSmall" font-color="DisplayText" frame-color="DisplayFrame"
+          frame-width="1" origin="316, 470" round-rect-radius="5" size="150, 24"
+          style-round-rect="true" transparent="false"/>
+    <view back-color="Display" class="CTextEdit" control-tag="AtmosAAmount"
+          font="~ NormalFontSmall" font-color="DisplayText" frame-color="DisplayFrame"
+          frame-width="1" origin="478, 470" round-rect-radius="5" size="72, 24"
+          style-round-rect="true" transparent="false" text-alignment="center"/>
+
+    <view back-color="Bg" class="CTextLabel" font="~ NormalFontSmall" font-color="Text"
+          frame-width="0" origin="250, 510" size="70, 18" title="ATM B"
+          transparent="true" text-alignment="left"/>
+    <view back-color="Display" class="COptionMenu" control-tag="AtmosBType"
+          font="~ NormalFontSmall" font-color="DisplayText" frame-color="DisplayFrame"
+          frame-width="1" origin="316, 506" round-rect-radius="5" size="150, 24"
+          style-round-rect="true" transparent="false"/>
+    <view back-color="Display" class="CTextEdit" control-tag="AtmosBAmount"
+          font="~ NormalFontSmall" font-color="DisplayText" frame-color="DisplayFrame"
+          frame-width="1" origin="478, 506" round-rect-radius="5" size="72, 24"
+          style-round-rect="true" transparent="false" text-alignment="center"/>
+
     <view back-color="Bg" class="CTextLabel" font="~ NormalFontSmall" font-color="Muted"
-          frame-width="0" origin="681, 401" size="90, 18" title="v0.1.0 TEST GUI"
+          frame-width="0" origin="681, 501" size="90, 18" title="v0.1.0 TEST GUI"
           transparent="true" text-alignment="center"/>
   </template>
 
@@ -143,5 +171,9 @@
     <control-tag name="FrostMaterial" tag="110"/>
     <control-tag name="ShiverMaterial" tag="111"/>
     <control-tag name="SpaceMaterial" tag="112"/>
+    <control-tag name="AtmosAType" tag="113"/>
+    <control-tag name="AtmosAAmount" tag="114"/>
+    <control-tag name="AtmosBType" tag="115"/>
+    <control-tag name="AtmosBAmount" tag="116"/>
   </control-tags>
 </vstgui-ui-description>
