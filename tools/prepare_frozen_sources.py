@@ -99,7 +99,7 @@ def main():
         ""
     ]
 
-    active_ids = {"storm_wind", "ice_crackle"}
+    active_ids = {"storm_wind", "ice_crackle", "cold_metal_air", "metal_chime"}
     for src in data["sources"]:
         if src["id"] not in active_ids:
             print(f"SKIP {src['id']} reserved source not embedded yet")
