@@ -847,6 +847,22 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                     cinematicWrite_[ch] = (w + 1 >= size) ? 0 : (w + 1);
                 }
             }
+            else
+            {
+                // Drain the long buffer while the cinematic layer is disabled,
+                // preventing stale clouds from reappearing on later automation.
+                auto& cinBuffer = cinematicBuffer_[ch];
+                if (!cinBuffer.empty())
+                {
+                    const int size = static_cast<int>(cinBuffer.size());
+                    const int w = cinematicWrite_[ch];
+                    cinBuffer[static_cast<size_t>(w)] = 0.f;
+                    cinematicWrite_[ch] = (w + 1 >= size) ? 0 : (w + 1);
+                }
+                cinematicBloomState_[ch] *= 0.9995f;
+                cinematicMotionState_[ch] *= 0.9995f;
+                cinematicLowState_[ch] *= 0.9995f;
+            }
 
             y *= outputGain;
 
