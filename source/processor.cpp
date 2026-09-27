@@ -512,11 +512,12 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
         constexpr float frostNoiseGain[kMaterialCount] = {1.00f, 0.55f, 0.82f, 1.55f, 0.72f, 0.42f};
         constexpr float frostHeldGain[kMaterialCount] = {1.00f, 1.18f, 0.62f, 0.48f, 1.28f, 1.42f};
 
-        constexpr float shiverBaseMs[kMaterialCount] = {1.6f, 2.5f, 3.4f, 4.0f, 5.2f, 1.2f};
-        constexpr float shiverDepthScale[kMaterialCount] = {0.72f, 0.42f, 0.95f, 1.35f, 1.65f, 0.28f};
-        constexpr float shiverWindGain[kMaterialCount] = {0.18f, 0.72f, 0.95f, 1.25f, 1.65f, 0.38f};
-        constexpr float shiverJitterGain[kMaterialCount] = {1.20f, 0.45f, 0.85f, 1.05f, 0.72f, 1.65f};
-        constexpr float shiverGustMinSec[kMaterialCount] = {0.045f, 0.120f, 0.080f, 0.045f, 0.160f, 0.030f};
+        constexpr float shiverBaseMs[kMaterialCount] = {1.4f, 2.8f, 1.8f, 4.6f, 2.2f, 5.4f};
+        constexpr float shiverDepthScale[kMaterialCount] = {0.72f, 0.34f, 1.08f, 1.42f, 1.72f, 0.22f};
+        constexpr float shiverJitterGain[kMaterialCount] = {1.18f, 0.32f, 1.42f, 0.82f, 1.72f, 0.18f};
+        constexpr float shiverRateScale[kMaterialCount] = {1.00f, 0.34f, 1.65f, 0.52f, 2.15f, 0.16f};
+        constexpr float shiverStressGain[kMaterialCount] = {0.42f, 0.20f, 0.72f, 0.58f, 0.88f, 0.16f};
+        constexpr float shiverGustMinSec[kMaterialCount] = {0.045f, 0.150f, 0.055f, 0.095f, 0.038f, 0.220f};
 
         constexpr float spaceD1Ms[kMaterialCount] = {7.3f, 18.0f, 4.8f, 12.5f, 24.0f, 31.0f};
         constexpr float spaceD2Ms[kMaterialCount] = {13.7f, 34.0f, 9.7f, 25.0f, 41.0f, 57.0f};
@@ -858,9 +859,14 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
 
                 shiverJitter_[ch] += (shiverJitterTarget_[ch] - shiverJitter_[ch]) * 0.0025f;
                 const float side = ch == 0 ? 1.f : -1.f;
+                const float rateScale = shiverRateScale[shiverModel];
+                const float physicalMod =
+                    0.62f * std::sin(shiverPhaseA_ * rateScale) +
+                    0.38f * std::sin(shiverPhaseB_ * (0.83f + 0.31f * rateScale));
                 const float motion =
-                    (0.62f * shiverMod +
-                     0.38f * shiverJitter_[ch] * side * shiverJitterGain[shiverModel]);
+                    physicalMod +
+                    0.42f * shiverJitter_[ch] * side *
+                        shiverJitterGain[shiverModel];
                 const float baseMs =
                     shiverBaseMs[shiverModel] + 1.2f * effectiveShiver;
                 const float depthMs =
@@ -881,13 +887,24 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                 // SHIVER is now applied as a high-passed *difference*
                 // relative to the incoming signal. This avoids low-band
                 // reconstruction and the phase-summation boost it caused.
+                const float shiverStress =
+                    highDetail *
+                    (0.35f + 0.65f * transientExcitation) *
+                    shiverJitter_[ch] *
+                    shiverStressGain[shiverModel];
+
+                const float rigidity =
+                    (y - shifted) *
+                    (0.18f + 0.42f * effectiveShiver) *
+                    (0.55f + 0.45f * std::fabs(shiverJitter_[ch]));
+
                 const float shiverTarget =
-                    (0.08f - 0.03f * shiverExtreme) * y +
-                    (0.76f + 0.16f * shiverExtreme) * shifted +
-                    highDetail * shiverJitter_[ch] *
-                        (0.18f + 0.30f * shiverExtreme) +
-                    windTexture * shiverWindGain[shiverModel] *
-                        (0.16f + 0.30f * effectiveShiver);
+                    (0.10f - 0.04f * shiverExtreme) * y +
+                    (0.74f + 0.18f * shiverExtreme) * shifted +
+                    shiverStress *
+                        (0.26f + 0.34f * shiverExtreme) +
+                    rigidity *
+                        (0.18f + 0.30f * effectiveShiver);
 
                 const float shiverDelta = shiverTarget - y;
                 const float shiverProtectA = onePoleCoeff(sampleRate_, 220.f);
