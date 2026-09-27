@@ -197,6 +197,8 @@ void Processor::resetDsp()
         shiverDryLowState2_[ch] = 0.f;
         shiverPreLowState_[ch] = 0.f;
         shiverPreLowState2_[ch] = 0.f;
+        shiverResultLowState_[ch] = 0.f;
+        shiverResultLowState2_[ch] = 0.f;
     }
     shiverPhaseA_ = 0.f;
     shiverPhaseB_ = 0.f;
@@ -772,7 +774,20 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                 const float shiverTexture =
                     shiverDryLowState2_[ch] + shiverHigh;
                 const float shiverWet = materialWet(effectiveShiver);
-                y = y * (1.f - shiverWet) + shiverTexture * shiverWet;
+                float shiverMixed =
+                    y * (1.f - shiverWet) + shiverTexture * shiverWet;
+
+                // Replace, rather than add to, the processed low band. This
+                // prevents phase summation from turning SHIVER into a bass boost.
+                shiverResultLowState_[ch] = zapDenormal(
+                    shiverLowA * shiverResultLowState_[ch] +
+                    (1.f - shiverLowA) * shiverMixed);
+                shiverResultLowState2_[ch] = zapDenormal(
+                    shiverLowA * shiverResultLowState2_[ch] +
+                    (1.f - shiverLowA) * shiverResultLowState_[ch]);
+
+                y = shiverMixed - shiverResultLowState2_[ch] +
+                    shiverDryLowState2_[ch];
                 shiverDelayWrite_[ch] = (w + 1 >= size) ? 0 : (w + 1);
             }
 
