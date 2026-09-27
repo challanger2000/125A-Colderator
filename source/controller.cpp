@@ -60,6 +60,23 @@ tresult PLUGIN_API Controller::initialize(FUnknown* context)
         {STR16("Morgue"), STR16("Church"), STR16("Bunker"),
          STR16("Ice Cave"), STR16("Cold Hall"), STR16("Cemetery")});
 
+    auto addAtmosType = [&](const TChar* title, ParamID id) {
+        auto* p = new StringListParameter(
+            title, id, nullptr, ParameterInfo::kCanAutomate | ParameterInfo::kIsList);
+        const TChar* names[kAtmosphereTypeCount] = {
+            STR16("Wind"), STR16("Storm"), STR16("Drone"), STR16("Rumble"),
+            STR16("Distant Metal"), STR16("Ice Cracks"), STR16("Air"),
+            STR16("Ghost"), STR16("Swell"), STR16("Machine")
+        };
+        for (auto* name : names)
+            p->appendString(name);
+        parameters.addParameter(p);
+    };
+    addAtmosType(STR16("Atmosphere A"), kAtmosAType);
+    addPercent(STR16("Atmosphere A Amount"), kAtmosAAmount);
+    addAtmosType(STR16("Atmosphere B"), kAtmosBType);
+    addPercent(STR16("Atmosphere B Amount"), kAtmosBAmount);
+
     auto* output = new RangeParameter(STR16("Output"), kOutput, STR16("dB"), -12.0, 12.0, 0.0);
     output->setPrecision(1);
     parameters.addParameter(output);
@@ -104,6 +121,14 @@ tresult PLUGIN_API Controller::setComponentState(IBStream* state)
         setParamNormalized(materialIds[i],
             static_cast<ParamValue>(index) / static_cast<ParamValue>(kMaterialCount - 1));
     }
+
+    const ParamID atmosphereIds[kComponentAtmosphereCount] = {
+        kAtmosAType, kAtmosAAmount, kAtmosBType, kAtmosBAmount
+    };
+    setParamNormalized(kAtmosAType, payload.atmosphere[0]);
+    setParamNormalized(kAtmosAAmount, payload.atmosphere[1]);
+    setParamNormalized(kAtmosBType, payload.atmosphere[2]);
+    setParamNormalized(kAtmosBAmount, payload.atmosphere[3]);
 
     setParamNormalized(kBypass, payload.bypass ? 1.0 : 0.0);
     return kResultOk;
