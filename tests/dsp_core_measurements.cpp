@@ -1464,9 +1464,9 @@ int main()
                 require(tailProbe.setupProcessing(tailSetup) == kResultOk,
                         "tail probe setup succeeds", failures);
                 const uint32 reportedTail = tailProbe.getTailSamples();
-                require(reportedTail >= static_cast<uint32>(sr * 1.5) &&
-                        reportedTail <= static_cast<uint32>(sr * 2.1),
-                        "reported tail covers designed cold reverb decay", failures);
+                require(reportedTail >= static_cast<uint32>(sr * 11.5) &&
+                        reportedTail <= static_cast<uint32>(sr * 12.5),
+                        "reported tail covers long cinematic Space decay", failures);
                 tailProbe.terminate();
             }
             const Settings paritySettings {0.78f, 0.52f, 0.63f, 0.35f, 0.28f, 0.67f};
@@ -1541,9 +1541,9 @@ int main()
             const auto impulseMetal100 = renderImpulse(sr, 0.40, {1.f, 0.f, 1.f, 0.f, 0.f, 0.f});
             const auto impulseFrost100 = renderImpulse(sr, 0.40, {1.f, 0.f, 0.f, 1.f, 0.f, 0.f});
             const auto impulseShiver100 = renderImpulse(sr, 0.40, {1.f, 0.f, 0.f, 0.f, 1.f, 0.f});
-            const auto impulseSpace50 = renderImpulse(sr, 1.6, {1.f, 0.f, 0.f, 0.f, 0.f, 0.50f});
-            const auto impulseSpace100 = renderImpulse(sr, 1.6, {1.f, 0.f, 0.f, 0.f, 0.f, 1.f});
-            const auto impulseCold100 = renderImpulse(sr, 1.6, {1.f, 1.f, 1.f, 1.f, 1.f, 1.f});
+            const auto impulseSpace50 = renderImpulse(sr, 4.0, {1.f, 0.f, 0.f, 0.f, 0.f, 0.50f});
+            const auto impulseSpace100 = renderImpulse(sr, 4.0, {1.f, 0.f, 0.f, 0.f, 0.f, 1.f});
+            const auto impulseCold100 = renderImpulse(sr, 4.0, {1.f, 1.f, 1.f, 1.f, 1.f, 1.f});
             const auto impulseCinematicLow = renderImpulse(sr, 1.2, {0.30f, 1.f, 0.f, 0.f, 0.f, 0.f});
             const auto impulseCinematicHigh = renderImpulse(sr, 1.2, {0.92f, 1.f, 0.f, 0.f, 0.f, 0.f});
 
@@ -1867,16 +1867,23 @@ int main()
                     "SPACE 100% stronger than 50% on impulse", failures);
 
             const size_t reverbStart = static_cast<size_t>(sr * 0.080);
-            const size_t reverbLate = static_cast<size_t>(sr * 0.900);
+            const size_t farStart = static_cast<size_t>(sr * 1.000);
+            const size_t veryLate = static_cast<size_t>(sr * 3.000);
             const double spaceTailAfter80 = tailEnergy(impulseSpace100, reverbStart);
-            const double spaceTailAfter900 = tailEnergy(impulseSpace100, reverbLate);
+            const double spaceTailAfter1s = tailEnergy(impulseSpace100, farStart);
+            const double spaceTailAfter3s = tailEnergy(impulseSpace100, veryLate);
+
+            std::cout << "[INFO] SPACE LONG SR=" << static_cast<int>(sr)
+                      << " E80ms=" << spaceTailAfter80
+                      << " E1s=" << spaceTailAfter1s
+                      << " E3s=" << spaceTailAfter3s << "\n";
 
             require(spaceTailAfter80 > 1e-6,
                     "SPACE has a clearly measurable icy reverb tail", failures);
-            require(spaceTailAfter900 < spaceTailAfter80 * 0.25,
-                    "SPACE reverb decays substantially by 900 ms", failures);
+            require(spaceTailAfter1s > 1e-7,
+                    "SPACE has a clearly measurable cinematic far-field tail after 1 second", failures);
 
-            const auto stereoSpace = renderStereoImpulse(sr, 1.2, {1.f, 0.f, 0.f, 0.f, 0.f, 1.f});
+            const auto stereoSpace = renderStereoImpulse(sr, 3.0, {1.f, 0.f, 0.f, 0.f, 0.f, 1.f});
             const size_t stereoTailStart = static_cast<size_t>(sr * 0.080);
             const double tailCorr = correlation(stereoSpace.left, stereoSpace.right, stereoTailStart);
             require(tailCorr < 0.995,
