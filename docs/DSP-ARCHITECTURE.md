@@ -227,3 +227,26 @@ Current implementation differences include:
 Material selectors use stable parameter IDs 108–112.
 Component state version 2 persists all five selections. Version-1 states remain loadable and
 migrate to material index 0, preserving the original v0.1.0 sound as closely as possible.
+
+
+## Cinematic depth layer
+
+Colderator now contains an internal cinematic depth layer beneath the foreground material FX.
+
+Purpose:
+- add scale without turning every module into more reverb;
+- restore controlled low-end weight where aggressive cold processing thins the source;
+- create a distant rear-field cloud behind ICE/METAL/FROST/SHIVER;
+- introduce slow motion over hundreds of milliseconds to seconds rather than only micro-modulation.
+
+Current components:
+- transient-coupled low-frequency weight around the source fundamental/low body;
+- long stereo-skewed taps around 118 / 247 / 463 ms;
+- a slower feedback path around 731 ms;
+- slow bloom filtering;
+- sub-Hz rear-field motion;
+- internal draining when the cinematic layer is disabled so stale clouds cannot reappear.
+
+The layer begins above the subtle COLD region and escalates toward high COLD values.
+It remains dependent on module participation, so COLD with every module at 0% is still neutral.
+SPACE remains a separate scene/room module; the cinematic layer is not a replacement for SPACE.
