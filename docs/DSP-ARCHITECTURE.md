@@ -301,3 +301,20 @@ Design target:
 - at low settings the played source remains clearly identifiable;
 - around 50% METAL should already feel like a distinct physical material;
 - toward the upper range, large mechanical/industrial character may dominate.
+
+
+## FROST identity pass
+
+FROST is treated as a physical frozen surface rather than as generic digital grit.
+
+Current layers:
+- short held source fragments for local freezing/stiffness;
+- deterministic micro-noise and crackle;
+- embedded real ice/crack material chopped into tiny surface events;
+- embedded real wind material high-passed into a cold air/snow skin;
+- source-derived high-band body so the texture stays attached to the instrument.
+
+Design target:
+- low settings remain pitch-traceable and playable;
+- around 50% the source should feel covered by a clearly frozen surface;
+- the upper range may become rough, deep-frozen and strongly textural without becoming merely bitcrushed.
