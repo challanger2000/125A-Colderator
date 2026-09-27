@@ -1646,6 +1646,23 @@ int main()
                     previousAtmos = rendered;
                 }
 
+                Settings wind50 {};
+                wind50.cold = 1.f;
+                wind50.atmosphereAType = 0.f / 9.f; // Wind
+                wind50.atmosphereAAmount = 0.50f;
+                const auto wind50Render = renderSine(sr, 1.5, 110.0, wind50, 128);
+
+                Settings storm50 {};
+                storm50.cold = 1.f;
+                storm50.atmosphereAType = 1.f / 9.f; // Frozen Storm
+                storm50.atmosphereAAmount = 0.50f;
+                const auto storm50Render = renderSine(sr, 1.5, 110.0, storm50, 128);
+
+                require(meanAbsDiff(wind50Render, storm50Render, skip) > 2e-3,
+                        "Frozen Storm 50% has a clearly distinct cinematic identity from Wind", failures);
+                require(maxAbs(storm50Render) < 8.0,
+                        "Frozen Storm 50% remains bounded", failures);
+
                 Settings dualAtmos {};
                 dualAtmos.cold = 1.f;
                 dualAtmos.atmosphereAType = 2.f / 9.f; // Drone
