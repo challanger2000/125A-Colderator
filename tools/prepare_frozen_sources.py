@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import hashlib
 import math
 import pathlib
 import urllib.request
@@ -77,6 +78,8 @@ def main():
     for src in data["sources"]:
         raw = CACHE / src["file"]
         fetch(src["download"], raw)
+        digest = hashlib.sha256(raw.read_bytes()).hexdigest()
+        print(f"SOURCE {src['id']} sha256={digest} bytes={raw.stat().st_size} license={src['license']}")
         audio, sr = sf.read(raw, always_2d=False, dtype="float32")
         audio = mono_resample(audio, sr)
         audio = highest_rms_window(audio, float(src["seconds"]))
