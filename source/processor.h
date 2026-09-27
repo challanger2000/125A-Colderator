@@ -80,6 +80,8 @@ private:
     std::array<float, kChannels> shiverDryLowState2_ {};
     std::array<float, kChannels> shiverPreLowState_ {};
     std::array<float, kChannels> shiverPreLowState2_ {};
+    std::array<float, kChannels> shiverResultLowState_ {};
+    std::array<float, kChannels> shiverResultLowState2_ {};
     std::array<float, kChannels> frostHeld_ {};
     std::array<int, kChannels> frostHoldCounter_ {};
 
