@@ -3,11 +3,11 @@ import json
 import hashlib
 import math
 import pathlib
-import subprocess
 import urllib.request
 
 import numpy as np
 import soundfile as sf
+import av
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "assets" / "frozen_sources.json"
@@ -81,21 +81,27 @@ def main():
         fetch(src["download"], raw)
         digest = hashlib.sha256(raw.read_bytes()).hexdigest()
         print(f"SOURCE {src['id']} sha256={digest} bytes={raw.stat().st_size} license={src['license']}")
-        decode_path = raw
         try:
-            audio, sr = sf.read(decode_path, always_2d=False, dtype="float32")
+            audio, sr = sf.read(raw, always_2d=False, dtype="float32")
         except Exception:
-            wav = raw.with_suffix(".decoded.wav")
-            subprocess.run([
-                "ffmpeg", "-y", "-v", "error",
-                "-i", str(raw),
-                "-ac", "1",
-                "-ar", str(TARGET_SR),
-                "-sample_fmt", "s16",
-                str(wav)
-            ], check=True)
-            decode_path = wav
-            audio, sr = sf.read(decode_path, always_2d=False, dtype="float32")
+            container = av.open(str(raw))
+            stream = next(s for s in container.streams if s.type == "audio")
+            chunks = []
+            sr = int(stream.rate or 48000)
+            for frame in container.decode(stream):
+                arr = frame.to_ndarray()
+                if arr.ndim == 2:
+                    arr = np.mean(arr.astype(np.float32), axis=0)
+                else:
+                    arr = arr.astype(np.float32)
+                if np.issubdtype(arr.dtype, np.integer):
+                    info = np.iinfo(arr.dtype)
+                    arr = arr.astype(np.float32) / float(max(abs(info.min), info.max))
+                chunks.append(np.asarray(arr, dtype=np.float32))
+            container.close()
+            if not chunks:
+                raise RuntimeError(f"No audio frames decoded from {raw}")
+            audio = np.concatenate(chunks)
         audio = mono_resample(audio, sr)
         audio = highest_rms_window(audio, float(src["seconds"]))
         pcm = normalize_int16(audio)
