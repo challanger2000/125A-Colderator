@@ -1,5 +1,6 @@
 #include "processor.h"
 #include "parameters.h"
+#include "frozen_sources.h"
 
 #include "pluginterfaces/vst/ivstaudioprocessor.h"
 #include "public.sdk/source/vst/hosting/parameterchanges.h"
@@ -1564,6 +1565,12 @@ int main()
 
             if (static_cast<int>(sr) == 48000)
             {
+                require(Colderator::FrozenSources::k_storm_wind_count >
+                            static_cast<std::size_t>(Colderator::FrozenSources::kSampleRate * 5),
+                        "CI build embeds a real Frozen Storm source segment", failures);
+                require(Colderator::FrozenSources::k_ice_crackle_count >
+                            static_cast<std::size_t>(Colderator::FrozenSources::kSampleRate),
+                        "CI build embeds a real Ice Crack source segment", failures);
                 auto materialValue = [](int index) {
                     return static_cast<float>(index) /
                            static_cast<float>(Colderator::kMaterialCount - 1);
