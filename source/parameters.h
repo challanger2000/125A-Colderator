@@ -19,9 +19,16 @@ enum ParamIds : Steinberg::Vst::ParamID
     kMetalMaterial,
     kFrostMaterial,
     kShiverMaterial,
-    kSpaceMaterial
+    kSpaceMaterial,
+
+    // Cinematic atmosphere slots.
+    kAtmosAType = 113,
+    kAtmosAAmount,
+    kAtmosBType,
+    kAtmosBAmount
 };
 
 constexpr int kMaterialCount = 6;
+constexpr int kAtmosphereTypeCount = 10;
 
 } // namespace Colderator
