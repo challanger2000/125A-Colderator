@@ -34,6 +34,9 @@ smtg_add_vst3plugin(Colderator
   resource/colderator.uidesc
 )
 
+target_include_directories(Colderator PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/generated
+)
 target_link_libraries(Colderator PRIVATE sdk vstgui_support)
 
 smtg_target_add_plugin_resources(Colderator
@@ -51,7 +54,10 @@ add_executable(ColderatorMeasurements
 )
 
 target_compile_definitions(ColderatorMeasurements PRIVATE COLDERATOR_TESTING=1)
-target_include_directories(ColderatorMeasurements PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
+target_include_directories(ColderatorMeasurements PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/source
+  ${CMAKE_CURRENT_SOURCE_DIR}/generated
+)
 target_link_libraries(ColderatorMeasurements PRIVATE sdk)
 
 enable_testing()
