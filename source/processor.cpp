@@ -737,11 +737,11 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
 
                 // Preserve the source low band; SHIVER should move the texture,
                 // not act as a bass enhancer.
-                const float protectedLow = midLowState_[ch];
+                const float protectedLow = lowState_[ch];
                 const float shiverTexture =
                     protectedLow +
-                    (0.10f - 0.04f * shiverExtreme) * (x - protectedLow) +
-                    (0.82f + 0.18f * shiverExtreme) * shiftedHigh +
+                    (0.08f - 0.03f * shiverExtreme) * (x - protectedLow) +
+                    (0.78f + 0.16f * shiverExtreme) * shiftedHigh +
                     highDetail * shiverJitter_[ch] *
                         (0.20f + 0.34f * shiverExtreme) +
                     windTexture * shiverWindGain[shiverModel] *
