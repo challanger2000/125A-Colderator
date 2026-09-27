@@ -137,6 +137,7 @@ def main():
         blocks.append(c_array("k_" + ident, pcm))
         blocks.append(f"inline constexpr std::size_t k_{ident}_count = sizeof(k_{ident}) / sizeof(k_{ident}[0]);")
         blocks.append("")
+        time.sleep(1.25)
 
     blocks += ["} // namespace Colderator::FrozenSources", ""]
     OUT.write_text("\n".join(blocks), encoding="utf-8")
