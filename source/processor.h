@@ -122,6 +122,8 @@ private:
     std::array<std::array<float, kChannels>, 2> stormPressureState_ {};
     std::array<std::array<float, kChannels>, 2> stormSnowState_ {};
     std::array<std::array<float, kChannels>, 2> stormImpactEnv_ {};
+    std::array<std::array<double, kChannels>, 2> stormSamplePos_ {};
+    std::array<std::array<double, kChannels>, 2> crackSamplePos_ {};
 
     float shiverPhaseA_ = 0.f;
     float shiverPhaseB_ = 0.f;
