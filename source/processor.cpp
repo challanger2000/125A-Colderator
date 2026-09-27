@@ -751,16 +751,22 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                         (0.16f + 0.30f * effectiveShiver);
 
                 const float shiverDelta = shiverTarget - y;
-                const float shiverProtectA = onePoleCoeff(sampleRate_, 260.f);
+                const float shiverProtectA = onePoleCoeff(sampleRate_, 320.f);
                 shiverResultLowState_[ch] = zapDenormal(
                     shiverProtectA * shiverResultLowState_[ch] +
                     (1.f - shiverProtectA) * shiverDelta);
                 shiverResultLowState2_[ch] = zapDenormal(
                     shiverProtectA * shiverResultLowState2_[ch] +
                     (1.f - shiverProtectA) * shiverResultLowState_[ch]);
+                shiverShiftedLowState_[ch] = zapDenormal(
+                    shiverProtectA * shiverShiftedLowState_[ch] +
+                    (1.f - shiverProtectA) * shiverResultLowState2_[ch]);
+                shiverShiftedLowState2_[ch] = zapDenormal(
+                    shiverProtectA * shiverShiftedLowState2_[ch] +
+                    (1.f - shiverProtectA) * shiverShiftedLowState_[ch]);
 
                 const float protectedDelta =
-                    shiverDelta - shiverResultLowState2_[ch];
+                    shiverDelta - shiverShiftedLowState2_[ch];
                 const float shiverWet = materialWet(effectiveShiver);
                 y += protectedDelta * shiverWet;
                 shiverDelayWrite_[ch] = (w + 1 >= size) ? 0 : (w + 1);
