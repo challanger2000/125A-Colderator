@@ -1524,6 +1524,8 @@ int main()
             const auto shiver50 = renderSine(sr, 0.8, 440.0, {1.f, 0.f, 0.f, 0.f, 0.50f, 0.f});
             const auto shiver100 = renderSine(sr, 0.8, 440.0, {1.f, 0.f, 0.f, 0.f, 1.f, 0.f});
             const auto shiverLowDry = renderSine(sr, 0.8, 80.0, {});
+            const auto coldOnly80 = renderSine(sr, 0.8, 80.0, {1.f, 0.f, 0.f, 0.f, 0.f, 0.f});
+            const auto shiverOnlyNoCold80 = renderSine(sr, 0.8, 80.0, {0.f, 0.f, 0.f, 0.f, 1.f, 0.f});
             const auto shiverLowFx = renderSine(sr, 0.8, 80.0, {1.f, 0.f, 0.f, 0.f, 1.f, 0.f});
             const auto space50 = renderSine(sr, 0.8, 440.0, {1.f, 0.f, 0.f, 0.f, 0.f, 0.50f});
             const auto space75 = renderSine(sr, 0.8, 440.0, {1.f, 0.f, 0.f, 0.f, 0.f, 0.75f});
@@ -1787,8 +1789,12 @@ int main()
             const double shiverLowFxAmp = toneAmplitude(shiverLowFx, sr, 80.0, skip);
             const double shiverLowRatio =
                 shiverLowDryAmp > 1e-12 ? shiverLowFxAmp / shiverLowDryAmp : 0.0;
+            const double coldOnly80Amp = toneAmplitude(coldOnly80, sr, 80.0, skip);
+            const double shiverNoCold80Amp = toneAmplitude(shiverOnlyNoCold80, sr, 80.0, skip);
             std::cout << "[INFO] SHIVER 80Hz SR=" << static_cast<int>(sr)
                       << " dry=" << shiverLowDryAmp
+                      << " coldOnly=" << coldOnly80Amp
+                      << " shiverNoCold=" << shiverNoCold80Amp
                       << " fx=" << shiverLowFxAmp
                       << " ratio=" << shiverLowRatio
                       << " dB=" << (shiverLowRatio > 1e-12
