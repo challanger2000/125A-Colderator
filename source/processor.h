@@ -118,6 +118,10 @@ private:
     std::array<std::array<float, kChannels>, 2> atmosphereSwell_ {};
     std::array<std::array<float, kChannels>, 2> atmosphereEventEnv_ {};
     std::array<std::array<float, kChannels>, 2> atmospherePhase_ {};
+    std::array<std::array<float, kChannels>, 2> stormBodyState_ {};
+    std::array<std::array<float, kChannels>, 2> stormPressureState_ {};
+    std::array<std::array<float, kChannels>, 2> stormSnowState_ {};
+    std::array<std::array<float, kChannels>, 2> stormImpactEnv_ {};
 
     float shiverPhaseA_ = 0.f;
     float shiverPhaseB_ = 0.f;
