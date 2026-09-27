@@ -2,6 +2,7 @@
 #include "ids.h"
 #include "parameters.h"
 #include "state_format.h"
+#include "frozen_sources.h"
 
 #include "base/source/fstreamer.h"
 #include "pluginterfaces/vst/ivstparameterchanges.h"
@@ -37,6 +38,29 @@ inline float onePoleCoeff(double sampleRate, float hz)
 inline float zapDenormal(float v)
 {
     return std::fabs(v) < 1.0e-30f ? 0.f : v;
+}
+
+inline float readEmbeddedSample(const std::int16_t* data, std::size_t count,
+                                double& position, double step, double phaseOffset)
+{
+    if (!data || count < 2)
+        return 0.f;
+
+    double p = position + phaseOffset * static_cast<double>(count);
+    while (p >= static_cast<double>(count)) p -= static_cast<double>(count);
+    while (p < 0.0) p += static_cast<double>(count);
+
+    const std::size_t i0 = static_cast<std::size_t>(p);
+    const std::size_t i1 = (i0 + 1u) % count;
+    const float frac = static_cast<float>(p - static_cast<double>(i0));
+    const float a = static_cast<float>(data[i0]) / 32768.f;
+    const float b = static_cast<float>(data[i1]) / 32768.f;
+
+    position += step;
+    while (position >= static_cast<double>(count))
+        position -= static_cast<double>(count);
+
+    return a + (b - a) * frac;
 }
 
 inline int materialIndex(float v)
@@ -180,6 +204,12 @@ void Processor::resetDsp()
     for (auto& slot : atmosphereSwell_) slot.fill(0.f);
     for (auto& slot : atmosphereEventEnv_) slot.fill(0.f);
     for (auto& slot : atmospherePhase_) slot.fill(0.f);
+    for (auto& slot : stormBodyState_) slot.fill(0.f);
+    for (auto& slot : stormPressureState_) slot.fill(0.f);
+    for (auto& slot : stormSnowState_) slot.fill(0.f);
+    for (auto& slot : stormImpactEnv_) slot.fill(0.f);
+    for (auto& slot : stormSamplePos_) slot.fill(0.0);
+    for (auto& slot : crackSamplePos_) slot.fill(0.0);
     for (int ch = 0; ch < kChannels; ++ch)
     {
         spaceBuffer_[ch].assign(static_cast<size_t>(sampleRate_ * 0.18) + 8u, 0.f);
@@ -1083,7 +1113,14 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                 const float random01 =
                     static_cast<float>((ar >> 8) & 0x0000FFFFu) / 65535.f;
                 if (random01 < eventProbability)
+                {
                     atmosphereEventEnv_[slot][ch] = 1.f;
+                    if (type == 5 && FrozenSources::k_ice_crackle_count > 1)
+                    {
+                        crackSamplePos_[slot][ch] =
+                            static_cast<double>((ar >> 4) % FrozenSources::k_ice_crackle_count);
+                    }
+                }
 
                 const float eventDecayMs =
                     type == 4 ? 180.f : (type == 5 ? 28.f : 90.f);
@@ -1101,13 +1138,62 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                                 (0.35f + 0.65f * activity);
                         break;
 
-                    case 1: // Storm
-                        layer = (0.78f * atmosphereNoiseLow_[slot][ch] +
-                                 0.22f * highNoise) *
-                                (0.25f + 1.15f * atmosphereGust_[slot][ch]) *
-                                (0.45f + 0.55f * slowMotion) *
-                                (0.35f + 0.65f * activity);
+                    case 1: // Frozen Storm
+                    {
+                        const double sourceStep =
+                            static_cast<double>(FrozenSources::kSampleRate) /
+                            std::max(1.0, sampleRate_);
+                        const float realWind = readEmbeddedSample(
+                            FrozenSources::k_storm_wind,
+                            FrozenSources::k_storm_wind_count,
+                            stormSamplePos_[slot][ch],
+                            sourceStep,
+                            ch == 0 ? 0.0 : 0.37);
+
+                        const float bodyA = onePoleCoeff(sampleRate_, 520.f);
+                        stormBodyState_[slot][ch] = zapDenormal(
+                            bodyA * stormBodyState_[slot][ch] +
+                            (1.f - bodyA) * realWind);
+
+                        const float pressureA = onePoleCoeff(sampleRate_, 38.f);
+                        stormPressureState_[slot][ch] = zapDenormal(
+                            pressureA * stormPressureState_[slot][ch] +
+                            (1.f - pressureA) * realWind);
+
+                        const float snowTarget =
+                            0.72f * highNoise +
+                            0.28f * (realWind - stormBodyState_[slot][ch]);
+                        const float snowA = onePoleCoeff(sampleRate_, 3900.f);
+                        stormSnowState_[slot][ch] = zapDenormal(
+                            snowA * stormSnowState_[slot][ch] +
+                            (1.f - snowA) * snowTarget);
+
+                        const float gust =
+                            clamp01(0.20f +
+                                    1.45f * atmosphereGust_[slot][ch] +
+                                    0.35f * slowMotion);
+                        const float windBody =
+                            0.64f * realWind +
+                            0.36f * stormBodyState_[slot][ch];
+                        const float pressure =
+                            stormPressureState_[slot][ch] *
+                            (0.45f + 0.55f * gust);
+                        const float snow =
+                            stormSnowState_[slot][ch] *
+                            (0.25f + 0.75f * gust);
+
+                        const float stereoSweep =
+                            (ch == 0 ? 1.f : -1.f) *
+                            (0.35f + 0.65f * slowMotion);
+
+                        layer =
+                            (0.72f * windBody +
+                             0.38f * pressure +
+                             0.26f * snow +
+                             0.10f * stereoSweep * highNoise) *
+                            (0.28f + 0.72f * activity);
                         break;
+                    }
 
                     case 2: // Drone
                     {
@@ -1140,10 +1226,21 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                         break;
 
                     case 5: // Ice Cracks
+                    {
+                        const double sourceStep =
+                            static_cast<double>(FrozenSources::kSampleRate) /
+                            std::max(1.0, sampleRate_);
+                        const float realCrack = readEmbeddedSample(
+                            FrozenSources::k_ice_crackle,
+                            FrozenSources::k_ice_crackle_count,
+                            crackSamplePos_[slot][ch],
+                            sourceStep,
+                            ch == 0 ? 0.0 : 0.11);
                         layer = atmosphereEventEnv_[slot][ch] *
-                                highNoise *
-                                (0.55f + 0.45f * transientExcitation) * 1.8f;
+                                (0.76f * realCrack + 0.24f * highNoise) *
+                                (0.55f + 0.45f * transientExcitation) * 1.45f;
                         break;
+                    }
 
                     case 6: // Air
                         layer = highNoise *
