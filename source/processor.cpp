@@ -782,8 +782,14 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
             // CINEMATIC DEPTH LAYER
             // Fast material FX stay in the foreground; this layer creates
             // low-end weight, distant cloud and slow background motion.
+            const float cinematicSceneParticipation = std::max(
+                {0.35f * effectiveIce,
+                 effectiveMetal,
+                 0.65f * effectiveFrost,
+                 0.15f * effectiveShiver,
+                 0.85f * effectiveSpace});
             const float cinematicDepth =
-                std::pow(clamp01((effectiveCold - 0.32f) / 0.68f), 1.20f);
+                std::pow(clamp01((cinematicSceneParticipation - 0.22f) / 0.78f), 1.20f);
             if (cinematicDepth > 1.0e-5f)
             {
                 // Low transient weight. Keep it controlled so it adds scale
