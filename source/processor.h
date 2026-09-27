@@ -66,6 +66,10 @@ private:
     std::array<std::vector<float>, kChannels> spaceBuffer_ {};
     std::array<int, kChannels> spaceWrite_ {};
     std::array<float, kChannels> spaceLowState_ {};
+    std::array<std::vector<float>, kChannels> spaceFarBuffer_ {};
+    std::array<int, kChannels> spaceFarWrite_ {};
+    std::array<float, kChannels> spaceFarLowState_ {};
+    std::array<float, kChannels> spaceFarBloomState_ {};
 
     std::array<std::vector<float>, kChannels> iceDelayBuffer_ {};
     std::array<int, kChannels> iceDelayWrite_ {};
