@@ -75,8 +75,11 @@ private:
     std::array<float, kChannels> shiverJitterTarget_ {};
     std::array<int, kChannels> shiverJitterCounter_ {};
     std::array<float, kChannels> shiverShiftedLowState_ {};
+    std::array<float, kChannels> shiverShiftedLowState2_ {};
     std::array<float, kChannels> shiverDryLowState_ {};
+    std::array<float, kChannels> shiverDryLowState2_ {};
     std::array<float, kChannels> shiverPreLowState_ {};
+    std::array<float, kChannels> shiverPreLowState2_ {};
     std::array<float, kChannels> frostHeld_ {};
     std::array<int, kChannels> frostHoldCounter_ {};
 
