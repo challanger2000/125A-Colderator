@@ -425,9 +425,12 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
         const float effectiveShiver = clamp01(smCold_ * smShiver_);
         const float effectiveSpace = clamp01(smCold_ * smSpace_);
 
-        const float moduleParticipation = std::max(
-            {smIce_, smMetal_, smFrost_, smShiver_, smSpace_});
-        const float effectiveCold = clamp01(smCold_ * moduleParticipation);
+        // Tonal COLD shaping belongs to the material modules. SHIVER is
+        // motion and SPACE is environment; enabling either alone must not
+        // silently reshape the source low end before their own DSP runs.
+        const float tonalParticipation = std::max(
+            {smIce_, smMetal_, smFrost_});
+        const float effectiveCold = clamp01(smCold_ * tonalParticipation);
 
         if (resonatorUpdateCounter_ <= 0)
         {
