@@ -54,8 +54,8 @@ tresult PLUGIN_API Controller::initialize(FUnknown* context)
         {STR16("Hoarfrost"), STR16("Snow"), STR16("Crunch"),
          STR16("Frozen Dust"), STR16("Rime"), STR16("Deep Freeze")});
     addMaterial(STR16("Shiver Material"), kShiverMaterial,
-        {STR16("Tremble"), STR16("Wind"), STR16("Gust"),
-         STR16("Storm"), STR16("Whiteout"), STR16("Polar")});
+        {STR16("Tremble"), STR16("Stiff"), STR16("Chatter"),
+         STR16("Strain"), STR16("Spasm"), STR16("Numb")});
     addMaterial(STR16("Space Material"), kSpaceMaterial,
         {STR16("Morgue"), STR16("Church"), STR16("Bunker"),
          STR16("Ice Cave"), STR16("Cold Hall"), STR16("Cemetery")});
