@@ -798,9 +798,11 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                      effectiveMetal,
                      0.65f * effectiveFrost,
                      0.85f * effectiveSpace});
+                const float spaceWetForCinematic = materialWet(effectiveSpace);
                 const float weight =
                     cinematicLowState_[ch] * impactDrive *
                     cinematicWeightParticipation *
+                    (1.f - spaceWetForCinematic) *
                     (0.22f + 0.38f * cinematicDepth);
 
                 auto& cinBuffer = cinematicBuffer_[ch];
