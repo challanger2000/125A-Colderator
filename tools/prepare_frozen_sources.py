@@ -4,6 +4,8 @@ import hashlib
 import math
 import pathlib
 import urllib.request
+import urllib.error
+import time
 
 import numpy as np
 import soundfile as sf
@@ -19,9 +21,30 @@ def fetch(url: str, dest: pathlib.Path):
     dest.parent.mkdir(parents=True, exist_ok=True)
     if dest.exists() and dest.stat().st_size > 0:
         return
-    req = urllib.request.Request(url, headers={"User-Agent": "125A-Colderator-source-prep/1.0"})
-    with urllib.request.urlopen(req, timeout=60) as r, open(dest, "wb") as f:
-        f.write(r.read())
+
+    last_error = None
+    for attempt in range(5):
+        try:
+            req = urllib.request.Request(
+                url,
+                headers={
+                    "User-Agent": "125A-Colderator-source-prep/1.0",
+                    "Accept": "*/*"
+                }
+            )
+            with urllib.request.urlopen(req, timeout=60) as r, open(dest, "wb") as f:
+                f.write(r.read())
+            return
+        except urllib.error.HTTPError as exc:
+            last_error = exc
+            if exc.code != 429:
+                raise
+            time.sleep(2.0 * (attempt + 1))
+        except urllib.error.URLError as exc:
+            last_error = exc
+            time.sleep(2.0 * (attempt + 1))
+
+    raise RuntimeError(f"Failed to fetch {url}: {last_error}")
 
 def mono_resample(x, sr):
     x = np.asarray(x, dtype=np.float32)
@@ -76,7 +99,11 @@ def main():
         ""
     ]
 
+    active_ids = {"storm_wind", "ice_crackle"}
     for src in data["sources"]:
+        if src["id"] not in active_ids:
+            print(f"SKIP {src['id']} reserved source not embedded yet")
+            continue
         raw = CACHE / src["file"]
         fetch(src["download"], raw)
         digest = hashlib.sha256(raw.read_bytes()).hexdigest()
