@@ -268,3 +268,18 @@ At effective SPACE=100%, the direct foreground path remains fully removed; the o
 wet Near/Main/Far scene only.
 
 The host tail report is now 12 seconds to cover long cinematic decays and offline rendering safely.
+
+
+## Frozen Storm identity pass
+
+STORM is treated as a dedicated cinematic weather scene rather than a louder WIND mode.
+
+Current layers:
+- embedded CC0 real-wind bed for natural turbulence and irregularity;
+- slow pressure body derived from the real field recording;
+- macro-gust envelope that creates broad pressure surges;
+- high-band snow/sleet texture that intensifies with gusts;
+- slow stereo sweep for lateral weather movement;
+- distant roar layer for large-scale mass.
+
+At 50% atmosphere amount STORM is expected to be clearly distinguishable from WIND while remaining bounded.
