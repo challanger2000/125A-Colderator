@@ -1571,6 +1571,12 @@ int main()
                 require(Colderator::FrozenSources::k_ice_crackle_count >
                             static_cast<std::size_t>(Colderator::FrozenSources::kSampleRate),
                         "CI build embeds a real Ice Crack source segment", failures);
+                require(Colderator::FrozenSources::k_cold_metal_air_count >
+                            static_cast<std::size_t>(Colderator::FrozenSources::kSampleRate * 3),
+                        "CI build embeds a real industrial metal-air segment", failures);
+                require(Colderator::FrozenSources::k_metal_chime_count >
+                            static_cast<std::size_t>(Colderator::FrozenSources::kSampleRate * 2),
+                        "CI build embeds a real metallic-event segment", failures);
                 auto materialValue = [](int index) {
                     return static_cast<float>(index) /
                            static_cast<float>(Colderator::kMaterialCount - 1);
@@ -1604,6 +1610,17 @@ int main()
                     v.metalMaterial = m;
                     return v;
                 }, 1e-4);
+
+                Settings metalCinematic {};
+                metalCinematic.cold = 1.f;
+                metalCinematic.metal = 0.50f;
+                metalCinematic.metalMaterial = 4.f / 5.f; // Machine
+                const auto metalMachine50 =
+                    renderSine(sr, 1.5, 110.0, metalCinematic, 128);
+                require(meanAbsDiff(dry, metalMachine50, skip) > 5e-3,
+                        "METAL Machine 50% creates an obvious cinematic material transformation", failures);
+                require(maxAbs(metalMachine50) < 8.0,
+                        "METAL Machine 50% remains bounded", failures);
 
                 requireSixDistinct("FROST", [](float m) {
                     Settings v {1.f, 0.f, 0.f, 0.78f, 0.f, 0.f};
