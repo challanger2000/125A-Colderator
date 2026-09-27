@@ -192,6 +192,8 @@ void Processor::resetDsp()
         shiverJitterTarget_[ch] = 0.f;
         shiverJitterCounter_[ch] = 0;
         shiverShiftedLowState_[ch] = 0.f;
+        shiverDryLowState_[ch] = 0.f;
+        shiverPreLowState_[ch] = 0.f;
     }
     shiverPhaseA_ = 0.f;
     shiverPhaseB_ = 0.f;
@@ -733,19 +735,28 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                 shiverShiftedLowState_[ch] = zapDenormal(
                     shiverLowA * shiverShiftedLowState_[ch] +
                     (1.f - shiverLowA) * shifted);
-                const float shiftedHigh = shifted - shiverShiftedLowState_[ch];
+                shiverDryLowState_[ch] = zapDenormal(
+                    shiverLowA * shiverDryLowState_[ch] +
+                    (1.f - shiverLowA) * x);
+                shiverPreLowState_[ch] = zapDenormal(
+                    shiverLowA * shiverPreLowState_[ch] +
+                    (1.f - shiverLowA) * y);
 
-                // Preserve the source low band; SHIVER should move the texture,
-                // not act as a bass enhancer.
-                const float protectedLow = lowState_[ch];
-                const float shiverTexture =
-                    protectedLow +
-                    (0.08f - 0.03f * shiverExtreme) * (x - protectedLow) +
+                const float shiftedHigh = shifted - shiverShiftedLowState_[ch];
+                const float preHigh = y - shiverPreLowState_[ch];
+
+                // True crossover behaviour: below ~140 Hz SHIVER passes the
+                // original source low band unchanged. Only the upper band is
+                // allowed into moving-delay, jitter and wind processing.
+                const float shiverHigh =
+                    (0.08f - 0.03f * shiverExtreme) * preHigh +
                     (0.78f + 0.16f * shiverExtreme) * shiftedHigh +
                     highDetail * shiverJitter_[ch] *
                         (0.20f + 0.34f * shiverExtreme) +
                     windTexture * shiverWindGain[shiverModel] *
                         (0.18f + 0.34f * effectiveShiver);
+                const float shiverTexture =
+                    shiverDryLowState_[ch] + shiverHigh;
                 const float shiverWet = materialWet(effectiveShiver);
                 y = y * (1.f - shiverWet) + shiverTexture * shiverWet;
                 shiverDelayWrite_[ch] = (w + 1 >= size) ? 0 : (w + 1);
