@@ -3,6 +3,7 @@ import json
 import hashlib
 import math
 import pathlib
+import subprocess
 import urllib.request
 
 import numpy as np
@@ -80,7 +81,21 @@ def main():
         fetch(src["download"], raw)
         digest = hashlib.sha256(raw.read_bytes()).hexdigest()
         print(f"SOURCE {src['id']} sha256={digest} bytes={raw.stat().st_size} license={src['license']}")
-        audio, sr = sf.read(raw, always_2d=False, dtype="float32")
+        decode_path = raw
+        try:
+            audio, sr = sf.read(decode_path, always_2d=False, dtype="float32")
+        except Exception:
+            wav = raw.with_suffix(".decoded.wav")
+            subprocess.run([
+                "ffmpeg", "-y", "-v", "error",
+                "-i", str(raw),
+                "-ac", "1",
+                "-ar", str(TARGET_SR),
+                "-sample_fmt", "s16",
+                str(wav)
+            ], check=True)
+            decode_path = wav
+            audio, sr = sf.read(decode_path, always_2d=False, dtype="float32")
         audio = mono_resample(audio, sr)
         audio = highest_rms_window(audio, float(src["seconds"]))
         pcm = normalize_int16(audio)
