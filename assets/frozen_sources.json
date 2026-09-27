@@ -1,0 +1,44 @@
+{
+  "sources": [
+    {
+      "id": "storm_wind",
+      "file": "Howling_wind.ogg",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Howling_wind.ogg",
+      "download": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Howling_wind.ogg",
+      "license": "CC0-1.0",
+      "author": "Tvabutzku1234",
+      "use": "STORM/WIND realism bed",
+      "seconds": 10.0
+    },
+    {
+      "id": "ice_crackle",
+      "file": "Bones_breaking_wood_fire_ice_crackling.ogg",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Bones_breaking_wood_fire_ice_crackling.ogg",
+      "download": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Bones_breaking_wood_fire_ice_crackling.ogg",
+      "license": "Public Domain",
+      "author": "stephan / PDSounds",
+      "use": "ICE CRACKS event raw material",
+      "seconds": 3.0
+    },
+    {
+      "id": "cold_metal_air",
+      "file": "Hammerschmiede_Naichen_01.ogg",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Hammerschmiede_Naichen_01.ogg",
+      "download": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Hammerschmiede_Naichen_01.ogg",
+      "license": "CC0-1.0",
+      "author": "Flo Sorg",
+      "use": "MACHINE / industrial air raw material",
+      "seconds": 6.0
+    },
+    {
+      "id": "metal_chime",
+      "file": "Windchimes.ogg",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Windchimes.ogg",
+      "download": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Windchimes.ogg",
+      "license": "Public Domain",
+      "author": "Esc861",
+      "use": "DISTANT METAL event raw material",
+      "seconds": 5.0
+    }
+  ]
+}
