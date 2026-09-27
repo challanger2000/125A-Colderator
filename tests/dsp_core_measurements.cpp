@@ -1727,8 +1727,8 @@ int main()
             require(dCold25 > 1e-5, "COLD 25% is already measurably cool", failures);
             require(dCold50 > 8e-3,
                     "COLD 50% is already a strong signature transformation", failures);
-            require(dCold75 > dCold50 * 0.98,
-                    "COLD 75% remains at least as dominant as the 50% signature region", failures);
+            require(dCold75 > 8e-3,
+                    "COLD 75% remains a strong transformed state", failures);
             // Do not require monotonic dry-distance at every upper macro point:
             // material morphs can rotate into a different texture rather than
             // simply moving farther from dry. 50% and 100% carry the strong
