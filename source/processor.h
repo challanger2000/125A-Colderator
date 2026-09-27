@@ -94,6 +94,8 @@ private:
     std::array<unsigned int, kChannels> textureRng_ {{0x1CE5A11u, 0x57EE1A2u}};
     std::array<float, kChannels> iceShardEnv_ {};
     std::array<float, kChannels> metalParticleEnv_ {};
+    std::array<double, kChannels> metalAirSamplePos_ {};
+    std::array<double, kChannels> metalChimeSamplePos_ {};
     std::array<float, kChannels> frostCrackleEnv_ {};
     std::array<float, kChannels> windNoiseState_ {};
     std::array<float, kChannels> windGust_ {};
