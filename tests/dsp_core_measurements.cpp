@@ -1504,6 +1504,8 @@ int main()
             const auto impulseSpace50 = renderImpulse(sr, 1.6, {1.f, 0.f, 0.f, 0.f, 0.f, 0.50f});
             const auto impulseSpace100 = renderImpulse(sr, 1.6, {1.f, 0.f, 0.f, 0.f, 0.f, 1.f});
             const auto impulseCold100 = renderImpulse(sr, 1.6, {1.f, 1.f, 1.f, 1.f, 1.f, 1.f});
+            const auto impulseCinematicLow = renderImpulse(sr, 1.2, {0.30f, 1.f, 0.f, 0.f, 0.f, 0.f});
+            const auto impulseCinematicHigh = renderImpulse(sr, 1.2, {0.92f, 1.f, 0.f, 0.f, 0.f, 0.f});
 
             require(finiteBuffer(dry) && finiteBuffer(cold100) &&
                     finiteBuffer(ice100) && finiteBuffer(metal100) &&
@@ -1799,6 +1801,14 @@ int main()
             const double coldTailAfter80 = tailEnergy(impulseCold100, reverbStart);
             require(coldTailAfter80 > 1e-6,
                     "COLD 100% engages the cold Space tail as part of the macro", failures);
+
+            const size_t cinematicLate = static_cast<size_t>(sr * 0.180);
+            const double cinematicLowTail = tailEnergy(impulseCinematicLow, cinematicLate);
+            const double cinematicHighTail = tailEnergy(impulseCinematicHigh, cinematicLate);
+            require(cinematicHighTail > 1e-6,
+                    "high COLD creates a measurable cinematic distant cloud without SPACE", failures);
+            require(cinematicHighTail > cinematicLowTail * 4.0,
+                    "cinematic distant layer escalates strongly above the subtle COLD range", failures);
 
             require(ice100Tail > ice50Tail * 1.25,
                     "ICE 100% stronger than 50% on transient excitation", failures);
