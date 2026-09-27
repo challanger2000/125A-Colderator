@@ -88,6 +88,9 @@ private:
     std::array<float, kChannels> shiverResultLowState2_ {};
     std::array<float, kChannels> frostHeld_ {};
     std::array<int, kChannels> frostHoldCounter_ {};
+    std::array<double, kChannels> frostCrackSamplePos_ {};
+    std::array<double, kChannels> frostAirSamplePos_ {};
+    std::array<float, kChannels> frostAirLowState_ {};
 
     // Generative material-texture state. All generators are deterministic,
     // signal-gated and allocation-free on the audio thread.
