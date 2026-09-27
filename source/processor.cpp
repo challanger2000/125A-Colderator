@@ -739,58 +739,30 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                 const float shifted = shiverDelay[static_cast<size_t>(i0)] * (1.f - frac) +
                                       shiverDelay[static_cast<size_t>(i1)] * frac;
 
-                const float shiverLowA = onePoleCoeff(sampleRate_, 180.f);
-
-                shiverShiftedLowState_[ch] = zapDenormal(
-                    shiverLowA * shiverShiftedLowState_[ch] +
-                    (1.f - shiverLowA) * shifted);
-                shiverShiftedLowState2_[ch] = zapDenormal(
-                    shiverLowA * shiverShiftedLowState2_[ch] +
-                    (1.f - shiverLowA) * shiverShiftedLowState_[ch]);
-
-                shiverDryLowState_[ch] = zapDenormal(
-                    shiverLowA * shiverDryLowState_[ch] +
-                    (1.f - shiverLowA) * x);
-                shiverDryLowState2_[ch] = zapDenormal(
-                    shiverLowA * shiverDryLowState2_[ch] +
-                    (1.f - shiverLowA) * shiverDryLowState_[ch]);
-
-                shiverPreLowState_[ch] = zapDenormal(
-                    shiverLowA * shiverPreLowState_[ch] +
-                    (1.f - shiverLowA) * y);
-                shiverPreLowState2_[ch] = zapDenormal(
-                    shiverLowA * shiverPreLowState2_[ch] +
-                    (1.f - shiverLowA) * shiverPreLowState_[ch]);
-
-                const float shiftedHigh = shifted - shiverShiftedLowState2_[ch];
-                const float preHigh = y - shiverPreLowState2_[ch];
-
-                // Two-pole crossover behaviour: the true source low band remains
-                // intact, while moving-delay, jitter and wind are pushed upward.
-                const float shiverHigh =
-                    (0.06f - 0.02f * shiverExtreme) * preHigh +
-                    (0.68f + 0.14f * shiverExtreme) * shiftedHigh +
+                // SHIVER is now applied as a high-passed *difference*
+                // relative to the incoming signal. This avoids low-band
+                // reconstruction and the phase-summation boost it caused.
+                const float shiverTarget =
+                    (0.08f - 0.03f * shiverExtreme) * y +
+                    (0.76f + 0.16f * shiverExtreme) * shifted +
                     highDetail * shiverJitter_[ch] *
                         (0.18f + 0.30f * shiverExtreme) +
                     windTexture * shiverWindGain[shiverModel] *
                         (0.16f + 0.30f * effectiveShiver);
-                const float shiverTexture =
-                    shiverDryLowState2_[ch] + shiverHigh;
-                const float shiverWet = materialWet(effectiveShiver);
-                float shiverMixed =
-                    y * (1.f - shiverWet) + shiverTexture * shiverWet;
 
-                // Replace, rather than add to, the processed low band. This
-                // prevents phase summation from turning SHIVER into a bass boost.
+                const float shiverDelta = shiverTarget - y;
+                const float shiverProtectA = onePoleCoeff(sampleRate_, 260.f);
                 shiverResultLowState_[ch] = zapDenormal(
-                    shiverLowA * shiverResultLowState_[ch] +
-                    (1.f - shiverLowA) * shiverMixed);
+                    shiverProtectA * shiverResultLowState_[ch] +
+                    (1.f - shiverProtectA) * shiverDelta);
                 shiverResultLowState2_[ch] = zapDenormal(
-                    shiverLowA * shiverResultLowState2_[ch] +
-                    (1.f - shiverLowA) * shiverResultLowState_[ch]);
+                    shiverProtectA * shiverResultLowState2_[ch] +
+                    (1.f - shiverProtectA) * shiverResultLowState_[ch]);
 
-                y = shiverMixed - shiverResultLowState2_[ch] +
-                    shiverDryLowState2_[ch];
+                const float protectedDelta =
+                    shiverDelta - shiverResultLowState2_[ch];
+                const float shiverWet = materialWet(effectiveShiver);
+                y += protectedDelta * shiverWet;
                 shiverDelayWrite_[ch] = (w + 1 >= size) ? 0 : (w + 1);
             }
 
