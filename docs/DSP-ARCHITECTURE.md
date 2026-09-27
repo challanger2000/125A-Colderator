@@ -250,3 +250,21 @@ Current components:
 The layer begins above the subtle COLD region and escalates toward high COLD values.
 It remains dependent on module participation, so COLD with every module at 0% is still neutral.
 SPACE remains a separate scene/room module; the cinematic layer is not a replacement for SPACE.
+
+
+## Cinematic SPACE v2
+
+SPACE now uses three perceptual depth layers instead of one short cold room:
+
+- Near: sparse hard early reflections for walls, stone, metal and immediate location cues.
+- Main: the existing cold low-diffusion feedback field.
+- Far: a dedicated long field with approximately 173 / 389 / 713 ms taps and a ~1.127 s feedback path,
+  stereo-skewed and scaled by the selected SPACE material.
+
+The far layer has its own low-frequency rejection and slow bloom state. It fades in above the subtle
+SPACE range and becomes increasingly important toward 100%.
+
+At effective SPACE=100%, the direct foreground path remains fully removed; the output consists of the
+wet Near/Main/Far scene only.
+
+The host tail report is now 12 seconds to cover long cinematic decays and offline rendering safely.
