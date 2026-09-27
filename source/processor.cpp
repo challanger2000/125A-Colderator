@@ -751,22 +751,31 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                         (0.16f + 0.30f * effectiveShiver);
 
                 const float shiverDelta = shiverTarget - y;
-                const float shiverProtectA = onePoleCoeff(sampleRate_, 320.f);
+                const float shiverProtectA = onePoleCoeff(sampleRate_, 220.f);
+
+                // Four actual cascaded one-pole high-pass stages. Each stage
+                // removes the low-passed component from the previous stage,
+                // instead of subtracting a cascaded low-pass only once.
                 shiverResultLowState_[ch] = zapDenormal(
                     shiverProtectA * shiverResultLowState_[ch] +
                     (1.f - shiverProtectA) * shiverDelta);
+                const float hp1 = shiverDelta - shiverResultLowState_[ch];
+
                 shiverResultLowState2_[ch] = zapDenormal(
                     shiverProtectA * shiverResultLowState2_[ch] +
-                    (1.f - shiverProtectA) * shiverResultLowState_[ch]);
+                    (1.f - shiverProtectA) * hp1);
+                const float hp2 = hp1 - shiverResultLowState2_[ch];
+
                 shiverShiftedLowState_[ch] = zapDenormal(
                     shiverProtectA * shiverShiftedLowState_[ch] +
-                    (1.f - shiverProtectA) * shiverResultLowState2_[ch]);
+                    (1.f - shiverProtectA) * hp2);
+                const float hp3 = hp2 - shiverShiftedLowState_[ch];
+
                 shiverShiftedLowState2_[ch] = zapDenormal(
                     shiverProtectA * shiverShiftedLowState2_[ch] +
-                    (1.f - shiverProtectA) * shiverShiftedLowState_[ch]);
-
+                    (1.f - shiverProtectA) * hp3);
                 const float protectedDelta =
-                    shiverDelta - shiverShiftedLowState2_[ch];
+                    hp3 - shiverShiftedLowState2_[ch];
                 const float shiverWet = materialWet(effectiveShiver);
                 y += protectedDelta * shiverWet;
                 shiverDelayWrite_[ch] = (w + 1 >= size) ? 0 : (w + 1);
