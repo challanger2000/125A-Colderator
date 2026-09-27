@@ -159,6 +159,9 @@ void Processor::resetDsp()
     windGust_.fill(0.f);
     windGustTarget_.fill(0.f);
     windGustCounter_.fill(0);
+    cinematicLowState_.fill(0.f);
+    cinematicBloomState_.fill(0.f);
+    cinematicMotionState_.fill(0.f);
     for (int ch = 0; ch < kChannels; ++ch)
     {
         spaceBuffer_[ch].assign(static_cast<size_t>(sampleRate_ * 0.18) + 8u, 0.f);
@@ -167,6 +170,8 @@ void Processor::resetDsp()
         iceDelayWrite_[ch] = 0;
         shiverDelayBuffer_[ch].assign(static_cast<size_t>(sampleRate_ * 0.020) + 8u, 0.f);
         shiverDelayWrite_[ch] = 0;
+        cinematicBuffer_[ch].assign(static_cast<size_t>(sampleRate_ * 1.35) + 16u, 0.f);
+        cinematicWrite_[ch] = 0;
         shiverJitter_[ch] = 0.f;
         shiverJitterTarget_[ch] = 0.f;
         shiverJitterCounter_[ch] = 0;
@@ -756,6 +761,91 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                 const float writeValue = zapDenormal(spaceInput + icyFeedback * std::min(0.86f, feedback));
                 spaceBuffer[static_cast<size_t>(w)] = std::isfinite(writeValue) ? writeValue : 0.f;
                 spaceWrite_[ch] = (w + 1 >= size) ? 0 : (w + 1);
+            }
+
+            // CINEMATIC DEPTH LAYER
+            // Fast material FX stay in the foreground; this layer creates
+            // low-end weight, distant cloud and slow background motion.
+            const float cinematicDepth =
+                std::pow(clamp01((effectiveCold - 0.32f) / 0.68f), 1.20f);
+            if (cinematicDepth > 1.0e-5f)
+            {
+                // Low transient weight. Keep it controlled so it adds scale
+                // without turning into a permanent bass boost.
+                const float lowWeightA = onePoleCoeff(sampleRate_, 115.f);
+                cinematicLowState_[ch] = zapDenormal(
+                    lowWeightA * cinematicLowState_[ch] +
+                    (1.f - lowWeightA) * x);
+                const float impactDrive = clamp01(transientNorm * 1.8f);
+                const float weight =
+                    cinematicLowState_[ch] * impactDrive *
+                    (0.22f + 0.38f * cinematicDepth);
+
+                auto& cinBuffer = cinematicBuffer_[ch];
+                if (!cinBuffer.empty())
+                {
+                    const int size = static_cast<int>(cinBuffer.size());
+                    const int w = cinematicWrite_[ch];
+                    const float side = ch == 0 ? 0.94f : 1.06f;
+
+                    const int d1 = std::max(1, static_cast<int>(
+                        sampleRate_ * 0.118f * side));
+                    const int d2 = std::max(1, static_cast<int>(
+                        sampleRate_ * 0.247f / side));
+                    const int d3 = std::max(1, static_cast<int>(
+                        sampleRate_ * 0.463f * side));
+                    const int df = std::max(1, static_cast<int>(
+                        sampleRate_ * 0.731f / side));
+
+                    auto readCin = [&](int delay) {
+                        int index = w - delay;
+                        while (index < 0) index += size;
+                        return cinBuffer[static_cast<size_t>(index)];
+                    };
+
+                    const float distant =
+                        0.46f * readCin(d1) -
+                        0.31f * readCin(d2) +
+                        0.24f * readCin(d3);
+                    const float feedbackTap = readCin(df);
+
+                    // Slow bloom and motion are intentionally much slower than
+                    // SHIVER so the rear field feels cinematic, not glitchy.
+                    const float bloomA = onePoleCoeff(sampleRate_, 7.5f);
+                    cinematicBloomState_[ch] = zapDenormal(
+                        bloomA * cinematicBloomState_[ch] +
+                        (1.f - bloomA) * distant);
+
+                    const float motionA = onePoleCoeff(sampleRate_, 0.55f);
+                    const float motionTarget =
+                        (ch == 0 ? 1.f : -1.f) *
+                        (0.65f * shiverMod + 0.35f * windGust_[ch]);
+                    cinematicMotionState_[ch] = zapDenormal(
+                        motionA * cinematicMotionState_[ch] +
+                        (1.f - motionA) * motionTarget);
+
+                    const float cloud =
+                        distant * (0.42f + 0.24f * cinematicDepth) +
+                        cinematicBloomState_[ch] *
+                            (0.34f + 0.28f * cinematicDepth) +
+                        feedbackTap * cinematicMotionState_[ch] *
+                            (0.10f + 0.16f * cinematicDepth);
+
+                    y += weight * cinematicDepth;
+                    y += cloud * cinematicDepth;
+
+                    const float cinInput =
+                        0.52f * y +
+                        0.28f * highDetail +
+                        0.20f * cinematicLowState_[ch];
+                    const float cinFeedback =
+                        feedbackTap * (0.36f + 0.30f * cinematicDepth);
+                    const float writeValue =
+                        zapDenormal(cinInput + cinFeedback);
+                    cinBuffer[static_cast<size_t>(w)] =
+                        std::isfinite(writeValue) ? writeValue : 0.f;
+                    cinematicWrite_[ch] = (w + 1 >= size) ? 0 : (w + 1);
+                }
             }
 
             y *= outputGain;
