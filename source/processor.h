@@ -96,6 +96,18 @@ private:
     std::array<float, kChannels> cinematicBloomState_ {};
     std::array<float, kChannels> cinematicMotionState_ {};
 
+    // Two independent generative cinematic atmosphere slots.
+    std::array<std::array<unsigned int, kChannels>, 2> atmosphereRng_ {{
+        {{0xA7105A1u, 0xA7105B2u}},
+        {{0xB7105C3u, 0xB7105D4u}}
+    }};
+    std::array<std::array<float, kChannels>, 2> atmosphereNoiseLow_ {};
+    std::array<std::array<float, kChannels>, 2> atmosphereNoiseHighPrev_ {};
+    std::array<std::array<float, kChannels>, 2> atmosphereGust_ {};
+    std::array<std::array<float, kChannels>, 2> atmosphereSwell_ {};
+    std::array<std::array<float, kChannels>, 2> atmosphereEventEnv_ {};
+    std::array<std::array<float, kChannels>, 2> atmospherePhase_ {};
+
     float shiverPhaseA_ = 0.f;
     float shiverPhaseB_ = 0.f;
     float metalPhaseA_ = 0.f;
@@ -121,6 +133,11 @@ private:
     int shiverMaterial_ = 0;
     int spaceMaterial_ = 0;
 
+    int atmosphereAType_ = 0;
+    int atmosphereBType_ = 0;
+    float atmosphereAAmount_ = 0.f;
+    float atmosphereBAmount_ = 0.f;
+
     float smCold_ = 0.f;
     float smIce_ = 0.f;
     float smMetal_ = 0.f;
@@ -128,6 +145,8 @@ private:
     float smShiver_ = 0.f;
     float smSpace_ = 0.f;
     float smOutput_ = 0.5f;
+    float smAtmosphereAAmount_ = 0.f;
+    float smAtmosphereBAmount_ = 0.f;
 };
 
 } // namespace Colderator
