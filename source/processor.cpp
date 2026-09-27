@@ -1168,30 +1168,50 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                             snowA * stormSnowState_[slot][ch] +
                             (1.f - snowA) * snowTarget);
 
-                        const float gust =
-                            clamp01(0.20f +
-                                    1.45f * atmosphereGust_[slot][ch] +
-                                    0.35f * slowMotion);
+                        // Large-scale storm dramaturgy. The real field recording
+                        // provides irregular motion; the slow states turn that motion into
+                        // pressure waves and broad cinematic gusts instead of constant noise.
+                        const float realWindAbs = std::fabs(realWind);
+                        const float pressureFollowA = onePoleCoeff(sampleRate_, 0.85f);
+                        stormImpactEnv_[slot][ch] = zapDenormal(
+                            pressureFollowA * stormImpactEnv_[slot][ch] +
+                            (1.f - pressureFollowA) * realWindAbs);
+
+                        const float macroGust =
+                            clamp01(0.18f +
+                                    1.75f * stormImpactEnv_[slot][ch] +
+                                    0.55f * atmosphereGust_[slot][ch] +
+                                    0.38f * slowMotion);
+                        const float stormSurge =
+                            macroGust * macroGust *
+                            (0.55f + 0.45f * slowMotion);
+
                         const float windBody =
-                            0.64f * realWind +
-                            0.36f * stormBodyState_[slot][ch];
+                            0.58f * realWind +
+                            0.42f * stormBodyState_[slot][ch];
                         const float pressure =
                             stormPressureState_[slot][ch] *
-                            (0.45f + 0.55f * gust);
+                            (0.35f + 0.95f * stormSurge);
                         const float snow =
                             stormSnowState_[slot][ch] *
-                            (0.25f + 0.75f * gust);
+                            (0.22f + 1.10f * macroGust);
 
                         const float stereoSweep =
                             (ch == 0 ? 1.f : -1.f) *
-                            (0.35f + 0.65f * slowMotion);
+                            (0.20f + 0.80f * slowMotion) *
+                            (0.45f + 0.55f * macroGust);
+
+                        const float distantRoar =
+                            atmosphereNoiseLow_[slot][ch] *
+                            (0.18f + 0.82f * stormSurge);
 
                         layer =
-                            (0.72f * windBody +
-                             0.38f * pressure +
-                             0.26f * snow +
-                             0.10f * stereoSweep * highNoise) *
-                            (0.28f + 0.72f * activity);
+                            (0.82f * windBody +
+                             0.62f * pressure +
+                             0.38f * snow +
+                             0.24f * distantRoar +
+                             0.16f * stereoSweep * highNoise) *
+                            (0.34f + 0.66f * activity);
                         break;
                     }
 
@@ -1269,9 +1289,11 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                         break;
                 }
 
-                const float slotGain =
-                    amount * coldDrive *
+                const float typeGain =
+                    type == 1 ? 0.72f :
                     (type == 2 || type == 3 ? 0.75f : 0.42f);
+                const float slotGain =
+                    amount * coldDrive * typeGain;
                 y += layer * slotGain;
             }
 
