@@ -15,7 +15,7 @@ jobs:
       - name: Prepare licensed Frozen Sources
         shell: pwsh
         run: |
-          python -m pip install --disable-pip-version-check --quiet numpy soundfile
+          python -m pip install --disable-pip-version-check --quiet numpy soundfile av
           python tools/prepare_frozen_sources.py
 
       - name: Configure
