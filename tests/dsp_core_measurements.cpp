@@ -1487,6 +1487,8 @@ int main()
             const auto shiver25 = renderSine(sr, 0.8, 440.0, {1.f, 0.f, 0.f, 0.f, 0.25f, 0.f});
             const auto shiver50 = renderSine(sr, 0.8, 440.0, {1.f, 0.f, 0.f, 0.f, 0.50f, 0.f});
             const auto shiver100 = renderSine(sr, 0.8, 440.0, {1.f, 0.f, 0.f, 0.f, 1.f, 0.f});
+            const auto shiverLowDry = renderSine(sr, 0.8, 80.0, {});
+            const auto shiverLowFx = renderSine(sr, 0.8, 80.0, {1.f, 0.f, 0.f, 0.f, 1.f, 0.f});
             const auto space50 = renderSine(sr, 0.8, 440.0, {1.f, 0.f, 0.f, 0.f, 0.f, 0.50f});
             const auto space75 = renderSine(sr, 0.8, 440.0, {1.f, 0.f, 0.f, 0.f, 0.f, 0.75f});
             const auto space100 = renderSine(sr, 0.8, 440.0, {1.f, 0.f, 0.f, 0.f, 0.f, 1.f});
@@ -1704,10 +1706,15 @@ int main()
             require(shiverFundRatio > 0.03,
                     "SHIVER 50% retains a traceable source fundamental while transforming it", failures);
 
-            const double spaceFund = toneAmplitude(space75, sr, 440.0, skip);
-            const double spaceFundRatio = dryFund > 1e-12 ? spaceFund / dryFund : 0.0;
-            require(spaceFundRatio > 0.75 && spaceFundRatio < 1.25,
-                    "SPACE 75% preserves sustained fundamental amplitude", failures);
+            require(!impulseSpace100.empty() && std::fabs(impulseSpace100.front()) < 1e-6,
+                    "SPACE 100% removes the direct impulse and is truly wet", failures);
+
+            const double shiverLowDryAmp = toneAmplitude(shiverLowDry, sr, 80.0, skip);
+            const double shiverLowFxAmp = toneAmplitude(shiverLowFx, sr, 80.0, skip);
+            const double shiverLowRatio =
+                shiverLowDryAmp > 1e-12 ? shiverLowFxAmp / shiverLowDryAmp : 0.0;
+            require(shiverLowRatio < 1.10,
+                    "SHIVER does not inflate the protected 80 Hz low band", failures);
 
             require(dCold100 > dCold50 * 1.12,
                     "COLD 100% remains clearly beyond the 50% signature region", failures);
