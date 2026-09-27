@@ -610,7 +610,12 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
             const float frostRandom01 =
                 static_cast<float>((tr >> 16) & 0x0000FFFFu) / 65535.f;
             if (frostRandom01 < frostEventProb)
+            {
                 frostCrackleEnv_[ch] = 1.f;
+                if (FrozenSources::k_ice_crackle_count > 1)
+                    frostCrackSamplePos_[ch] =
+                        static_cast<double>((tr >> 5) % FrozenSources::k_ice_crackle_count);
+            }
             const float frostCrackleDecay =
                 std::exp(-1.f / static_cast<float>(sampleRate_ * 0.0018));
             frostCrackleEnv_[ch] = zapDenormal(frostCrackleEnv_[ch] * frostCrackleDecay);
@@ -762,14 +767,63 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                 --frostHoldCounter_[ch];
             }
             const float microFreeze = frostHeld_[ch] - highDetail;
-            const float frostTexture = 0.15f * x +
-                                       frostHeld_[ch] * 0.82f * frostHeldGain[frostModel] +
-                                       microFreeze * frostHeldGain[frostModel] *
-                                           (0.64f + 0.34f * frostExtreme) +
-                                       frostNoise * frostCarrier * frostNoiseGain[frostModel] *
-                                           (0.34f + 0.42f * frostExtreme) +
-                                       frostCrackle * frostCrackleScale[frostModel] *
-                                           (0.52f + 0.58f * effectiveFrost);
+
+            const double frostSourceStep =
+                static_cast<double>(FrozenSources::kSampleRate) /
+                std::max(1.0, sampleRate_);
+
+            const float realFrostCrack = readEmbeddedSample(
+                FrozenSources::k_ice_crackle,
+                FrozenSources::k_ice_crackle_count,
+                frostCrackSamplePos_[ch],
+                frostSourceStep * (0.92 + 0.11 * static_cast<double>(frostModel)),
+                ch == 0 ? 0.0 : 0.07);
+
+            const float realFrostAir = readEmbeddedSample(
+                FrozenSources::k_storm_wind,
+                FrozenSources::k_storm_wind_count,
+                frostAirSamplePos_[ch],
+                frostSourceStep * 0.71,
+                ch == 0 ? 0.0 : 0.43);
+
+            const float frostAirA = onePoleCoeff(sampleRate_, 820.f);
+            frostAirLowState_[ch] = zapDenormal(
+                frostAirA * frostAirLowState_[ch] +
+                (1.f - frostAirA) * realFrostAir);
+            const float frostAirHigh =
+                realFrostAir - frostAirLowState_[ch];
+
+            constexpr float frostRealCrackGain[kMaterialCount] =
+                {0.28f, 0.42f, 0.64f, 0.50f, 0.36f, 0.76f};
+            constexpr float frostAirGain[kMaterialCount] =
+                {0.18f, 0.34f, 0.22f, 0.48f, 0.30f, 0.58f};
+            constexpr float frostSurfaceMass[kMaterialCount] =
+                {0.16f, 0.10f, 0.22f, 0.18f, 0.26f, 0.34f};
+
+            const float realSurfaceCrack =
+                realFrostCrack * frostCrackleEnv_[ch] * sourceScale *
+                frostRealCrackGain[frostModel];
+            const float realAirSurface =
+                frostAirHigh * sourceActivity * frostAirGain[frostModel];
+            const float surfaceBody =
+                (0.58f * highDetail + 0.42f * (x - midLowState_[ch])) *
+                frostSurfaceMass[frostModel];
+
+            const float frostTexture =
+                0.12f * x +
+                frostHeld_[ch] * 0.74f * frostHeldGain[frostModel] +
+                microFreeze * frostHeldGain[frostModel] *
+                    (0.54f + 0.32f * frostExtreme) +
+                frostNoise * frostCarrier * frostNoiseGain[frostModel] *
+                    (0.24f + 0.34f * frostExtreme) +
+                frostCrackle * frostCrackleScale[frostModel] *
+                    (0.34f + 0.42f * effectiveFrost) +
+                realSurfaceCrack *
+                    (0.34f + 0.52f * effectiveFrost) +
+                realAirSurface *
+                    (0.16f + 0.40f * effectiveFrost) +
+                surfaceBody *
+                    (0.20f + 0.32f * effectiveFrost);
             const float frostWet = materialWet(effectiveFrost);
             y = y * (1.f - frostWet) + frostTexture * frostWet;
 
