@@ -1810,6 +1810,22 @@ int main()
                 const auto distantMetal50Render =
                     renderSine(sr, 1.8, 110.0, distantMetal50, 128);
 
+                require(maxAbs(distantMetal50Render) < 8.0,
+                        "Distant Metal 50% remains bounded", failures);
+
+                Settings distantMetalSilence {};
+                distantMetalSilence.cold = 1.f;
+                distantMetalSilence.atmosphereAType = 4.f / 9.f;
+                distantMetalSilence.atmosphereAAmount = 1.f;
+                const auto distantMetalSilenceRender =
+                    renderSine(sr, 1.2, 0.0, distantMetalSilence, 128);
+                double distantMetalSilencePeak = 0.0;
+                for (float v : distantMetalSilenceRender)
+                    distantMetalSilencePeak = std::max(
+                        distantMetalSilencePeak, std::fabs(static_cast<double>(v)));
+                require(distantMetalSilencePeak < 1e-12,
+                        "Distant Metal produces no autonomous output on fresh silence", failures);
+
                 require(meanAbsDiff(distantMetal50Render, machine50Render, skip) > 2e-3,
                         "Machine 50% has a distinct mechanical-room identity from Distant Metal", failures);
                 require(meanAbsDiff(landscape50Render, machine50Render, skip) > 2e-3,

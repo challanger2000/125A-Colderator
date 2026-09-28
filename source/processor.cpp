@@ -230,6 +230,8 @@ void Processor::resetDsp()
     for (auto& slot : landscapeMetalSamplePos_) slot.fill(0.0);
     for (auto& slot : machineAirSamplePos_) slot.fill(0.0);
     for (auto& slot : machineChimeSamplePos_) slot.fill(0.0);
+    for (auto& slot : distantMetalSamplePos_) slot.fill(0.0);
+    for (auto& slot : distantMetalBodyState_) slot.fill(0.f);
     for (auto& slot : machineLoadState_) slot.fill(0.f);
     for (int slot = 0; slot < 2; ++slot)
     {
@@ -1292,6 +1294,12 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                         crackSamplePos_[slot][ch] =
                             static_cast<double>((ar >> 4) % FrozenSources::k_ice_crackle_count);
                     }
+                    if (type == 4 &&
+                        FrozenSources::k_metal_chime_count > 1)
+                    {
+                        distantMetalSamplePos_[slot][ch] =
+                            static_cast<double>((ar >> 5) % FrozenSources::k_metal_chime_count);
+                    }
                     if (type == 9 &&
                         FrozenSources::k_metal_chime_count > 1)
                     {
@@ -1420,11 +1428,51 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                     }
 
                     case 4: // Distant Metal
-                        layer = atmosphereEventEnv_[slot][ch] *
-                                (0.58f * std::sin(metalPhaseA_ * 0.37f) +
-                                 0.42f * std::sin(metalPhaseB_ * 0.23f)) *
-                                (0.35f + 0.65f * activity);
+                    {
+                        const double sourceStep =
+                            static_cast<double>(FrozenSources::kSampleRate) /
+                            std::max(1.0, sampleRate_);
+
+                        const float realMetal = readEmbeddedSample(
+                            FrozenSources::k_metal_chime,
+                            FrozenSources::k_metal_chime_count,
+                            distantMetalSamplePos_[slot][ch],
+                            sourceStep * 0.74,
+                            ch == 0 ? 0.0 : 0.21);
+
+                        // Distance is created by damping the close metallic recording
+                        // into a slower body, while keeping just enough direct edge to
+                        // preserve the identity of a real strike.
+                        const float bodyA = onePoleCoeff(sampleRate_, 1180.f);
+                        distantMetalBodyState_[slot][ch] = zapDenormal(
+                            bodyA * distantMetalBodyState_[slot][ch] +
+                            (1.f - bodyA) * realMetal);
+
+                        const float distantBody =
+                            0.78f * distantMetalBodyState_[slot][ch] +
+                            0.22f * realMetal;
+
+                        const float sourceExcitation =
+                            clamp01(
+                                0.45f * transientExcitation +
+                                0.35f * activity +
+                                0.20f * atmosphereSwell_[slot][ch]);
+
+                        const float ghostResonance =
+                            0.60f * std::sin(metalPhaseA_ * 0.31f) +
+                            0.40f * std::sin(metalPhaseB_ * 0.19f);
+
+                        const float distanceMotion =
+                            0.72f + 0.28f * slowMotion;
+
+                        layer =
+                            atmosphereEventEnv_[slot][ch] *
+                            (0.76f * distantBody +
+                             0.24f * ghostResonance) *
+                            sourceExcitation *
+                            distanceMotion;
                         break;
+                    }
 
                     case 5: // Ice Cracks
                     {

@@ -430,6 +430,20 @@ int main(int argc, char** argv)
         writeWav(out / "MiniMix_Machine50.wav", render(miniMix, machineSettings(0.50f)));
         writeWav(out / "MiniMix_Machine80.wav", render(miniMix, machineSettings(0.80f)));
 
+        auto distantMetalSettings = [](float amount) {
+            Settings m {};
+            m.cold = 1.f;
+            m.space = 0.24f;
+            m.atmosAType = 4.f / 9.f; // Distant Metal
+            m.atmosAAmount = amount;
+            return m;
+        };
+
+        writeWav(out / "Keys_DistantMetal50.wav", render(keys, distantMetalSettings(0.50f)));
+        writeWav(out / "Keys_DistantMetal80.wav", render(keys, distantMetalSettings(0.80f)));
+        writeWav(out / "MiniMix_DistantMetal50.wav", render(miniMix, distantMetalSettings(0.50f)));
+        writeWav(out / "MiniMix_DistantMetal80.wav", render(miniMix, distantMetalSettings(0.80f)));
+
         std::ofstream notes(out / "README.txt");
         notes <<
             "125A Colderator Listening Pack\n"
@@ -451,7 +465,10 @@ int main(int argc, char** argv)
             "Keys_FrozenBloom50/80: transient/harmonic bloom checks\n\n"
             "Targeted Machine renders:\n"
             "Drums_Machine50/80: mechanical load and impact checks\n"
-            "MiniMix_Machine50/80: source-linked cinematic machine-room checks\n";
+            "MiniMix_Machine50/80: source-linked cinematic machine-room checks\n\n"
+            "Targeted Distant Metal renders:\n"
+            "Keys_DistantMetal50/80: sparse distant-strike checks\n"
+            "MiniMix_DistantMetal50/80: cinematic distant-metal scene checks\n";
 
         return 0;
     }

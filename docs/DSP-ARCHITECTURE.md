@@ -404,3 +404,23 @@ Current layers:
 - slight channel-asymmetric load movement for width without detached random panning.
 
 Machine is a scene/bed generator. The METAL module remains the direct material transformation stage.
+
+
+## Distant Metal atmosphere identity pass
+
+Distant Metal is a sparse scene element, not a continuous machine bed and not a second METAL material mode.
+
+Purpose:
+- place occasional real metallic events far behind the source;
+- preserve the impression of distance through damping and slower body energy;
+- remain source-triggered and fully silent on fresh silence;
+- stay clearly distinct from Machine, which is a continuous mechanical-room atmosphere.
+
+Current layers:
+- embedded real metallic-event recording as the strike source;
+- low-pass body state to push the event away from the listener;
+- a restrained synthetic ghost-resonance tail for scale without replacing the real strike;
+- source transient/activity/swell coupling so events belong to the played material;
+- slow scene motion for slight depth variation.
+
+Distant Metal should feel like isolated metal activity somewhere in the frozen environment, while Machine should feel like the listener is inside an operating cold machine room.
