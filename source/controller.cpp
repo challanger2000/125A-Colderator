@@ -176,6 +176,8 @@ VSTGUI::CView* Controller::createCustomView(
     if (auto* v = knob("Shiver", kShiver)) return v;
     if (auto* v = knob("Space",  kSpace)) return v;
     if (auto* v = knob("Output", kOutput)) return v;
+    if (auto* v = knob("AtmosAAmount", kAtmosAAmount)) return v;
+    if (auto* v = knob("AtmosBAmount", kAtmosBAmount)) return v;
 
     return nullptr;
 }

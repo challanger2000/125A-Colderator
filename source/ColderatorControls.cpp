@@ -48,28 +48,104 @@ FrostFaceplate::FrostFaceplate(const VSTGUI::CRect& r) : VSTGUI::CView(r)
 void FrostFaceplate::draw(VSTGUI::CDrawContext* c)
 {
     const auto r = getViewSize();
+    const double ox = r.left;
+    const double oy = r.top;
     c->setDrawMode(VSTGUI::kAntiAliasing | VSTGUI::kNonIntegralMode);
 
-    c->setFillColor({236, 244, 248, 255});
-    c->drawRect(r, VSTGUI::kDrawFilled);
+    const auto rect = [&](double x, double y, double w, double h) {
+        return VSTGUI::CRect(ox + x, oy + y, ox + x + w, oy + y + h);
+    };
+    const auto line = [&](double x1, double y1, double x2, double y2,
+                          const VSTGUI::CColor& color, double width = 1.0) {
+        c->setFrameColor(color);
+        c->setLineWidth(width);
+        c->drawLine({ox + x1, oy + y1}, {ox + x2, oy + y2});
+    };
+    const auto panel = [&](double x, double y, double w, double h, double radius) {
+        const auto shadow = rect(x + 1.5, y + 3.0, w, h);
+        fillRound(c, shadow, radius, {96, 127, 146, 28}, {96, 127, 146, 0});
+        const auto rr = rect(x, y, w, h);
+        gradientRound(c, rr, radius,
+                      {250, 253, 254, 255}, {232, 242, 248, 255},
+                      {178, 207, 223, 255});
+        auto inner = rr;
+        inner.inset(2.0, 2.0);
+        fillRound(c, inner, std::max(2.0, radius - 2.0),
+                  {247, 251, 253, 38}, {255, 255, 255, 150});
+    };
+    const auto well = [&](double cx, double cy, double radius) {
+        VSTGUI::CRect shadow(ox + cx - radius, oy + cy - radius + 3.0,
+                            ox + cx + radius, oy + cy + radius + 3.0);
+        c->setFillColor({70, 105, 126, 24});
+        c->drawEllipse(shadow, VSTGUI::kDrawFilled);
 
-    VSTGUI::CRect header(r.left, r.top, r.right, r.top + 72.0);
-    gradientRound(c, header, 0.0,
-                  {250,253,255,255}, {218,232,241,255}, {178,204,220,255});
+        VSTGUI::CRect rr(ox + cx - radius, oy + cy - radius,
+                         ox + cx + radius, oy + cy + radius);
+        c->setFillColor({226, 238, 245, 255});
+        c->drawEllipse(rr, VSTGUI::kDrawFilled);
+        c->setFrameColor({145, 202, 230, 235});
+        c->setLineWidth(1.5);
+        c->drawEllipse(rr, VSTGUI::kDrawStroked);
 
-    fillRound(c, {18,88,244,438}, 14.0, {247,251,253,255}, {181,207,222,255});
-    fillRound(c, {260,88,654,438}, 14.0, {242,249,252,255}, {173,202,220,255});
-    fillRound(c, {670,88,782,438}, 14.0, {247,251,253,255}, {181,207,222,255});
+        rr.inset(2.5, 2.5);
+        c->setFrameColor({255, 255, 255, 210});
+        c->setLineWidth(1.0);
+        c->drawEllipse(rr, VSTGUI::kDrawStroked);
+    };
+    const auto selectorWell = [&](double x, double y, double w, double h) {
+        const auto rr = rect(x, y, w, h);
+        fillRound(c, rr, 7.0, {232, 242, 248, 255}, {164, 207, 228, 255});
+        auto hi = rr;
+        hi.inset(1.5, 1.5);
+        fillRound(c, hi, 5.5, {247, 251, 253, 22}, {255, 255, 255, 165});
+    };
+    const auto screw = [&](double x, double y) {
+        const auto sr = rect(x - 5.0, y - 5.0, 10.0, 10.0);
+        c->setFillColor({220, 232, 239, 255});
+        c->drawEllipse(sr, VSTGUI::kDrawFilled);
+        c->setFrameColor({103, 142, 163, 230});
+        c->setLineWidth(1.0);
+        c->drawEllipse(sr, VSTGUI::kDrawStroked);
+        line(x - 2.0, y, x + 2.0, y, {118, 151, 169, 230}, 1.0);
+    };
 
-    c->setFrameColor({255,255,255,180});
-    c->setLineWidth(2.0);
-    for (int y=102; y<430; y+=42)
-        c->drawLine({278.0, static_cast<double>(y)}, {636.0, static_cast<double>(y)});
+    // Continuous snow-white chassis. All labels, logo and controls are separate views.
+    gradientRound(c, r, 0.0,
+                  {252, 254, 255, 255}, {229, 240, 247, 255},
+                  {145, 188, 212, 255});
 
-    c->setFrameColor({145,190,216,120});
-    c->setLineWidth(1.0);
-    c->drawLine({28,421},{232,421});
-    c->drawLine({274,421},{640,421});
+    panel(12, 10, 776, 67, 14.0);    // header
+    panel(12, 87, 776, 219, 13.0);   // main control field
+    panel(12, 316, 776, 64, 11.0);   // five material selectors
+    panel(12, 390, 776, 158, 13.0);  // atmosphere / output field
+
+    // Main row: COLD is deliberately dominant, followed by five equal character controls.
+    well(85, 185, 61);
+    for (double x : {225.0, 345.0, 465.0, 585.0, 705.0})
+        well(x, 185, 45);
+
+    // Quiet separators: enough hierarchy without turning the GUI into six boxed modules.
+    for (double x : {165.0, 285.0, 405.0, 525.0, 645.0})
+        line(x, 110, x, 284, {179, 207, 222, 115}, 1.0);
+
+    // Exact five material controls; COLD intentionally has no material selector.
+    for (double x : {179.0, 299.0, 419.0, 539.0, 659.0})
+        selectorWell(x, 337, 92, 25);
+
+    // Bottom field: Atmosphere A, Atmosphere B and master output.
+    line(280, 410, 280, 528, {179, 207, 222, 130}, 1.0);
+    line(560, 410, 560, 528, {179, 207, 222, 130}, 1.0);
+
+    selectorWell(32, 437, 132, 31);
+    well(225, 456, 36);
+    selectorWell(312, 437, 132, 31);
+    well(505, 456, 36);
+    well(664, 455, 44);
+
+    // Minimal physical fasteners only at the chassis corners.
+    for (const auto& p : std::array<VSTGUI::CPoint, 4> {{
+            {17.0, 17.0}, {783.0, 17.0}, {17.0, 543.0}, {783.0, 543.0}}})
+        screw(p.x, p.y);
 
     setDirty(false);
 }
