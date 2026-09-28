@@ -108,10 +108,6 @@ private:
     // Cinematic depth layer: long background cloud + low impact weight.
     std::array<std::vector<float>, kChannels> cinematicBuffer_ {};
     std::array<int, kChannels> cinematicWrite_ {};
-
-    std::array<std::vector<float>, kChannels> frozenCloudBuffer_ {};
-    std::array<int, kChannels> frozenCloudWrite_ {};
-    std::array<double, kChannels> frozenCloudReadPos_ {};
     std::array<float, kChannels> cinematicLowState_ {};
     std::array<float, kChannels> cinematicBloomState_ {};
     std::array<float, kChannels> cinematicMotionState_ {};
