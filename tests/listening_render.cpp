@@ -458,6 +458,20 @@ int main(int argc, char** argv)
         writeWav(out / "Drums_Air50.wav", render(drums, airSettings(0.50f)));
         writeWav(out / "Drums_Air80.wav", render(drums, airSettings(0.80f)));
 
+        auto rumbleSettings = [](float amount) {
+            Settings r {};
+            r.cold = 1.f;
+            r.space = 0.18f;
+            r.atmosAType = 3.f / 9.f; // Rumble
+            r.atmosAAmount = amount;
+            return r;
+        };
+
+        writeWav(out / "Drums_Rumble50.wav", render(drums, rumbleSettings(0.50f)));
+        writeWav(out / "Drums_Rumble80.wav", render(drums, rumbleSettings(0.80f)));
+        writeWav(out / "MiniMix_Rumble50.wav", render(miniMix, rumbleSettings(0.50f)));
+        writeWav(out / "MiniMix_Rumble80.wav", render(miniMix, rumbleSettings(0.80f)));
+
         std::ofstream notes(out / "README.txt");
         notes <<
             "125A Colderator Listening Pack\n"
@@ -485,7 +499,10 @@ int main(int argc, char** argv)
             "MiniMix_DistantMetal50/80: cinematic distant-metal scene checks\n\n"
             "Targeted Air renders:\n"
             "WarmPad_Air50/80: thin frozen-air coating checks\n"
-            "Drums_Air50/80: transient-linked cold-air checks\n";
+            "Drums_Air50/80: transient-linked cold-air checks\n\n"
+            "Targeted Rumble renders:\n"
+            "Drums_Rumble50/80: structural-impact and low-body checks\n"
+            "MiniMix_Rumble50/80: source-linked cinematic rumble checks\n";
 
         return 0;
     }

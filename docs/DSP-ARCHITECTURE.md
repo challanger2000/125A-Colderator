@@ -444,3 +444,24 @@ Current layers:
 - source-activity gate and swell so AIR follows the played material rather than running independently.
 
 AIR should feel thin, close and freezing. WIND remains the broader weather texture.
+
+
+## Rumble atmosphere identity pass
+
+Rumble is now a source-coupled structural vibration rather than filtered low noise.
+
+Purpose:
+- add the feeling of heavy structural movement beneath the source;
+- react to both sustained low-body energy and transients;
+- remain distinct from Drone, which is sustained tonal body rather than mechanical/structural heave;
+- remain silent on fresh silence.
+
+Current layers:
+- slowly tracked low-frequency source body;
+- a separate transient/impact follower;
+- low structural noise whose depth follows the tracked source body;
+- direct low/mid source weight so the scene remains attached to the instrument;
+- slow heave modulation from the atmosphere motion/gust states;
+- source gate so no independent low-frequency bed appears from silence.
+
+Rumble should feel like the floor, chassis or distant structure is moving with the sound, not like a continuous synthesized sub-noise layer.

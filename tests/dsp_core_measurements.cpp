@@ -1750,6 +1750,31 @@ int main()
                 require(maxAbs(air50Render) < 8.0,
                         "Air 50% remains bounded", failures);
 
+                Settings rumble50 {};
+                rumble50.cold = 1.f;
+                rumble50.atmosphereAType = 3.f / 9.f; // Rumble
+                rumble50.atmosphereAAmount = 0.50f;
+                const auto rumble50Render =
+                    renderSine(sr, 1.5, 110.0, rumble50, 128);
+
+                require(meanAbsDiff(drone50Render, rumble50Render, skip) > 2e-3,
+                        "Rumble 50% has a distinct structural identity from Drone", failures);
+                require(maxAbs(rumble50Render) < 8.0,
+                        "Rumble 50% remains bounded", failures);
+
+                Settings rumbleSilence {};
+                rumbleSilence.cold = 1.f;
+                rumbleSilence.atmosphereAType = 3.f / 9.f;
+                rumbleSilence.atmosphereAAmount = 1.f;
+                const auto rumbleSilenceRender =
+                    renderSine(sr, 1.2, 0.0, rumbleSilence, 128);
+                double rumbleSilencePeak = 0.0;
+                for (float v : rumbleSilenceRender)
+                    rumbleSilencePeak = std::max(
+                        rumbleSilencePeak, std::fabs(static_cast<double>(v)));
+                require(rumbleSilencePeak < 1e-12,
+                        "Rumble produces no autonomous output on fresh silence", failures);
+
                 Settings airSilence {};
                 airSilence.cold = 1.f;
                 airSilence.atmosphereAType = 6.f / 9.f;

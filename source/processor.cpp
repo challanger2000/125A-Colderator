@@ -234,6 +234,8 @@ void Processor::resetDsp()
     for (auto& slot : airWindSamplePos_) slot.fill(0.0);
     for (auto& slot : distantMetalBodyState_) slot.fill(0.f);
     for (auto& slot : airLowState_) slot.fill(0.f);
+    for (auto& slot : rumbleBodyState_) slot.fill(0.f);
+    for (auto& slot : rumbleImpactState_) slot.fill(0.f);
     for (auto& slot : machineLoadState_) slot.fill(0.f);
     for (int slot = 0; slot < 2; ++slot)
     {
@@ -1419,13 +1421,46 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
 
                     case 3: // Rumble
                     {
-                        const float sourceBody =
-                            0.45f * std::fabs(lowState_[ch]) +
-                            0.55f * slowEnv_[ch];
-                        layer = atmosphereNoiseLow_[slot][ch] *
-                                sourceBody *
-                                (0.85f + 0.35f * atmosphereGust_[slot][ch]) *
-                                2.4f;
+                        // Rumble is a source-coupled structural vibration, not just
+                        // filtered noise. Follow the low body slowly, then let
+                        // transients excite a second heavier moving component.
+                        const float bodyTarget =
+                            0.64f * std::fabs(lowState_[ch]) +
+                            0.36f * slowEnv_[ch];
+                        const float bodyA = onePoleCoeff(sampleRate_, 1.8f);
+                        rumbleBodyState_[slot][ch] = zapDenormal(
+                            bodyA * rumbleBodyState_[slot][ch] +
+                            (1.f - bodyA) * bodyTarget);
+
+                        const float impactTarget =
+                            clamp01(0.72f * transientExcitation +
+                                    0.28f * activity);
+                        const float impactA = onePoleCoeff(sampleRate_, 3.8f);
+                        rumbleImpactState_[slot][ch] = zapDenormal(
+                            impactA * rumbleImpactState_[slot][ch] +
+                            (1.f - impactA) * impactTarget);
+
+                        const float structuralNoise =
+                            atmosphereNoiseLow_[slot][ch] *
+                            (0.38f + 0.62f * rumbleBodyState_[slot][ch]);
+
+                        const float sourceWeight =
+                            0.70f * lowState_[ch] +
+                            0.30f * midLowState_[ch];
+
+                        const float heave =
+                            (0.58f + 0.42f * slowMotion) *
+                            (0.55f + 0.45f * atmosphereGust_[slot][ch]);
+
+                        const float sourceGate =
+                            clamp01(activity * 2.2f);
+
+                        layer =
+                            (0.58f * structuralNoise +
+                             0.28f * sourceWeight * heave +
+                             0.14f * structuralNoise *
+                                 rumbleImpactState_[slot][ch] * 2.0f) *
+                            sourceGate;
                         break;
                     }
 

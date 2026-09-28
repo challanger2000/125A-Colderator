@@ -52,7 +52,7 @@ jobs:
           & $renderer.FullName "listening-pack"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $wavCount = (Get-ChildItem -Path listening-pack -File -Filter "*.wav").Count
-          if ($wavCount -ne 36) { Write-Error "Expected 36 WAV files, got $wavCount"; exit 1 }
+          if ($wavCount -ne 40) { Write-Error "Expected 40 WAV files, got $wavCount"; exit 1 }
 
       - name: Locate VST3
         shell: pwsh
