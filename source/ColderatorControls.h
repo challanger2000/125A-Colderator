@@ -1,6 +1,7 @@
 #pragma once
 #include "vstgui/lib/controls/cknob.h"
 #include "vstgui/lib/cview.h"
+#include "vstgui/lib/cbitmap.h"
 
 namespace Colderator {
 
@@ -16,12 +17,16 @@ public:
 class FrostKnob final : public VSTGUI::CKnobBase
 {
 public:
-    FrostKnob(const VSTGUI::CRect& r, VSTGUI::IControlListener* l, int32_t tag, bool primary=false);
+    enum class Style { Main, Character, Utility };
+
+    FrostKnob(const VSTGUI::CRect& r, VSTGUI::IControlListener* l, int32_t tag,
+              Style style=Style::Character);
     FrostKnob(const FrostKnob& o);
     VSTGUI::CBaseObject* newCopy() const override { return new FrostKnob(*this); }
     void draw(VSTGUI::CDrawContext* c) override;
 private:
-    bool primary_ {false};
+    Style style_ {Style::Character};
+    VSTGUI::SharedPointer<VSTGUI::CMultiFrameBitmap> filmstrip_;
 };
 
 } // namespace Colderator

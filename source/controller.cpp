@@ -165,19 +165,20 @@ VSTGUI::CView* Controller::createCustomView(
     if (std::strcmp(name, "Faceplate") == 0)
         return new FrostFaceplate(r);
 
-    auto knob = [&](const char* n, ParamID id, bool primary=false) -> VSTGUI::CView* {
-        return std::strcmp(name, n) == 0 ? new FrostKnob(r, editor, id, primary) : nullptr;
+    auto knob = [&](const char* n, ParamID id,
+                    FrostKnob::Style style=FrostKnob::Style::Character) -> VSTGUI::CView* {
+        return std::strcmp(name, n) == 0 ? new FrostKnob(r, editor, id, style) : nullptr;
     };
 
-    if (auto* v = knob("Cold",   kCold, true)) return v;
+    if (auto* v = knob("Cold",   kCold, FrostKnob::Style::Main)) return v;
     if (auto* v = knob("Ice",    kIce)) return v;
     if (auto* v = knob("Metal",  kMetal)) return v;
     if (auto* v = knob("Frost",  kFrost)) return v;
     if (auto* v = knob("Shiver", kShiver)) return v;
     if (auto* v = knob("Space",  kSpace)) return v;
     if (auto* v = knob("Output", kOutput)) return v;
-    if (auto* v = knob("AtmosAAmount", kAtmosAAmount)) return v;
-    if (auto* v = knob("AtmosBAmount", kAtmosBAmount)) return v;
+    if (auto* v = knob("AtmosAAmount", kAtmosAAmount, FrostKnob::Style::Utility)) return v;
+    if (auto* v = knob("AtmosBAmount", kAtmosBAmount, FrostKnob::Style::Utility)) return v;
 
     return nullptr;
 }

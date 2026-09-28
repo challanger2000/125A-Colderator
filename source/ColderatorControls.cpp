@@ -40,6 +40,70 @@ void gradientRound(VSTGUI::CDrawContext* c, const VSTGUI::CRect& r, double radiu
 }
 }
 
+struct FilmstripSpec
+{
+    const char* oneX;
+    const char* one25X;
+    const char* one5X;
+    const char* twoX;
+    double frameSize;
+};
+
+VSTGUI::SharedPointer<VSTGUI::CMultiFrameBitmap> loadFilmstrip(const FilmstripSpec& spec)
+{
+    VSTGUI::CMultiFrameBitmapDescription desc;
+    desc.frameSize = {spec.frameSize, spec.frameSize};
+    desc.numFrames = 128;
+    desc.framesPerRow = 1;
+
+    auto strip = VSTGUI::makeOwned<VSTGUI::CMultiFrameBitmap>(
+        VSTGUI::CResourceDescription(spec.oneX), desc);
+    if (!strip || !strip->isLoaded())
+        return {};
+
+    const auto addScale = [&](const char* name, double scale) {
+        VSTGUI::CBitmap source(VSTGUI::CResourceDescription(name));
+        auto bitmap = source.getPlatformBitmap();
+        if (!bitmap)
+            return;
+        bitmap->setScaleFactor(scale);
+        strip->addBitmap(bitmap);
+    };
+
+    addScale(spec.one25X, 1.25);
+    addScale(spec.one5X, 1.5);
+    addScale(spec.twoX, 2.0);
+    return strip;
+}
+
+const VSTGUI::SharedPointer<VSTGUI::CMultiFrameBitmap>& filmstripFor(FrostKnob::Style style)
+{
+    static const FilmstripSpec mainSpec {
+        "colderator_main_120.png","colderator_main_150.png",
+        "colderator_main_180.png","colderator_main_240.png",120.0
+    };
+    static const FilmstripSpec characterSpec {
+        "colderator_character_88.png","colderator_character_110.png",
+        "colderator_character_132.png","colderator_character_176.png",88.0
+    };
+    static const FilmstripSpec utilitySpec {
+        "colderator_utility_72.png","colderator_utility_90.png",
+        "colderator_utility_108.png","colderator_utility_144.png",72.0
+    };
+
+    static const auto mainStrip = loadFilmstrip(mainSpec);
+    static const auto characterStrip = loadFilmstrip(characterSpec);
+    static const auto utilityStrip = loadFilmstrip(utilitySpec);
+
+    switch (style)
+    {
+        case FrostKnob::Style::Main: return mainStrip;
+        case FrostKnob::Style::Utility: return utilityStrip;
+        case FrostKnob::Style::Character:
+        default: return characterStrip;
+    }
+}
+
 FrostFaceplate::FrostFaceplate(const VSTGUI::CRect& r) : VSTGUI::CView(r)
 {
     setMouseEnabled(false);
@@ -151,15 +215,15 @@ void FrostFaceplate::draw(VSTGUI::CDrawContext* c)
 }
 
 FrostKnob::FrostKnob(const VSTGUI::CRect& r, VSTGUI::IControlListener* l,
-                     int32_t tag, bool primary)
-: VSTGUI::CKnobBase(r,l,tag,nullptr), primary_(primary)
+                     int32_t tag, Style style)
+: VSTGUI::CKnobBase(r,l,tag,nullptr), style_(style), filmstrip_(filmstripFor(style))
 {
     setTransparency(true);
     setWantsFocus(true);
 }
 
 FrostKnob::FrostKnob(const FrostKnob& o)
-: VSTGUI::CKnobBase(o), primary_(o.primary_)
+: VSTGUI::CKnobBase(o), style_(o.style_), filmstrip_(o.filmstrip_)
 {
     setTransparency(true);
     setWantsFocus(true);
@@ -167,11 +231,21 @@ FrostKnob::FrostKnob(const FrostKnob& o)
 
 void FrostKnob::draw(VSTGUI::CDrawContext* c)
 {
-    const auto r = getViewSize();
     c->setDrawMode(VSTGUI::kAntiAliasing | VSTGUI::kNonIntegralMode);
 
+    if (filmstrip_ && filmstrip_->isLoaded())
+    {
+        const auto frameIndex = filmstrip_->normalizedValueToFrameIndex(
+            static_cast<float>(getValueNormalized()));
+        filmstrip_->drawFrame(c, frameIndex, getViewSize().getTopLeft());
+        setDirty(false);
+        return;
+    }
+
+    const auto r = getViewSize();
     const double d = std::min(r.getWidth(), r.getHeight());
-    const double pad = primary_ ? 8.0 : 5.0;
+    const bool primary = style_ == Style::Main;
+    const double pad = primary ? 8.0 : 5.0;
     VSTGUI::CRect ring(r.left+pad, r.top+pad, r.left+d-pad, r.top+d-pad);
 
     VSTGUI::CRect shadow = ring;
@@ -188,43 +262,23 @@ void FrostKnob::draw(VSTGUI::CDrawContext* c)
             c->fillLinearGradient(path,*g,ring.getTopLeft(),ring.getBottomLeft(),false);
             g->forget();
         }
-        c->setFrameColor(primary_ ? VSTGUI::CColor{91,164,205,255}
-                                  : VSTGUI::CColor{132,174,197,255});
-        c->setLineWidth(primary_ ? 3.0 : 2.0);
+        c->setFrameColor(primary ? VSTGUI::CColor{91,164,205,255}
+                                 : VSTGUI::CColor{132,174,197,255});
+        c->setLineWidth(primary ? 3.0 : 2.0);
         c->drawGraphicsPath(path,VSTGUI::CDrawContext::kPathStroked);
         path->forget();
-    }
-
-    VSTGUI::CRect inner = ring;
-    inner.inset(primary_ ? 17.0 : 12.0, primary_ ? 17.0 : 12.0);
-    if (auto* p = c->createRoundRectGraphicsPath(inner, inner.getWidth()*0.5))
-    {
-        if (auto* g = VSTGUI::CGradient::create(0.0,1.0,
-                VSTGUI::CColor{231,242,248,255},
-                VSTGUI::CColor{151,180,197,255}))
-        {
-            c->fillLinearGradient(p,*g,inner.getTopLeft(),inner.getBottomLeft(),false);
-            g->forget();
-        }
-        c->setFrameColor({91,126,146,255});
-        c->setLineWidth(1.2);
-        c->drawGraphicsPath(p,VSTGUI::CDrawContext::kPathStroked);
-        p->forget();
     }
 
     const double start = 0.75 * kPi;
     const double sweep = 1.5 * kPi;
     const double angle = start + sweep * getValueNormalized();
-    const auto center = inner.getCenter();
-    const double radius = inner.getWidth() * 0.34;
-
-    c->setFrameColor(primary_ ? VSTGUI::CColor{20,132,193,255}
-                              : VSTGUI::CColor{49,112,149,255});
-    c->setLineWidth(primary_ ? 4.0 : 3.0);
-    c->drawLine(center,
-                {center.x + std::cos(angle)*radius,
-                 center.y + std::sin(angle)*radius});
-
+    const auto center = ring.getCenter();
+    const double radius = ring.getWidth() * 0.31;
+    c->setFrameColor(primary ? VSTGUI::CColor{20,132,193,255}
+                             : VSTGUI::CColor{49,112,149,255});
+    c->setLineWidth(primary ? 4.0 : 3.0);
+    c->drawLine(center,{center.x + std::cos(angle)*radius,
+                        center.y + std::sin(angle)*radius});
     setDirty(false);
 }
 
