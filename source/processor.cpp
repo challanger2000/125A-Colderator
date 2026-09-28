@@ -1471,12 +1471,14 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                             std::sin(atmospherePhase_[slot][ch] +
                                      (ch == 0 ? -0.55f : 0.55f));
 
+                        const float landscapeGate =
+                            clamp01(activity * 2.4f);
                         layer =
                             (0.52f * distantAir *
                                  (0.55f + 0.45f * horizonMotion) +
                              0.30f * sourceDrone +
                              0.18f * crackEvent) *
-                            (0.22f + 0.78f * activity);
+                            landscapeGate;
                         break;
                     }
 
