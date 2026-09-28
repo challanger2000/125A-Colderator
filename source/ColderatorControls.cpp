@@ -300,7 +300,8 @@ void FrostIcicle::draw(VSTGUI::CDrawContext* c)
     c->fillRectWithBitmap(
         bitmap_,
         VSTGUI::CRect(0.0, 0.0, source.x, source.y),
-        VSTGUI::CRect(x, y, x + w, y + h));
+        VSTGUI::CRect(x, y, x + w, y + h),
+        1.0f);
 
     setDirty(false);
 }
