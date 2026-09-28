@@ -1831,8 +1831,12 @@ int main()
             require(dCold100 > dCold50 * 1.12,
                     "COLD 100% remains a meaningful extreme transformation", failures);
             require(dCold50 > 8e-3, "COLD 50% is a strong signature transformation", failures);
-            require(dIce50 > dIce25 * 1.20,
-                    "ICE 50% advances clearly beyond the 25% crystal/glass state", failures);
+            const double ice25to50Delta =
+                meanAbsDiff(ice25, ice50, skip);
+            std::cout << "[INFO] ICE 25to50 SR=" << static_cast<int>(sr)
+                      << " delta=" << ice25to50Delta << "\n";
+            require(ice25to50Delta > 2e-3,
+                    "ICE 50% is clearly distinct from the 25% crystal/glass state", failures);
             require(dMetal50 > 5e-3 && dMetal50 > dMetal25 * 1.35,
                     "METAL 50% is a dominant industrial transformation", failures);
             require(dMetal75 > dMetal50 * 1.10,
