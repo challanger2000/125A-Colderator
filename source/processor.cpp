@@ -228,6 +228,9 @@ void Processor::resetDsp()
     for (auto& slot : crackSamplePos_) slot.fill(0.0);
     for (auto& slot : landscapeWindSamplePos_) slot.fill(0.0);
     for (auto& slot : landscapeMetalSamplePos_) slot.fill(0.0);
+    for (auto& slot : machineAirSamplePos_) slot.fill(0.0);
+    for (auto& slot : machineChimeSamplePos_) slot.fill(0.0);
+    for (auto& slot : machineLoadState_) slot.fill(0.f);
     for (int slot = 0; slot < 2; ++slot)
     {
         for (int ch = 0; ch < kChannels; ++ch)
@@ -1276,7 +1279,8 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                 const float eventProbability =
                     activity * amount *
                     ((type == 4 || type == 5) ? 0.00055f :
-                     (type == 7 ? 0.00010f : 0.00008f));
+                     (type == 7 ? 0.00010f :
+                      (type == 9 ? 0.00016f : 0.00008f)));
                 const float random01 =
                     static_cast<float>((ar >> 8) & 0x0000FFFFu) / 65535.f;
                 if (random01 < eventProbability)
@@ -1288,12 +1292,19 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                         crackSamplePos_[slot][ch] =
                             static_cast<double>((ar >> 4) % FrozenSources::k_ice_crackle_count);
                     }
+                    if (type == 9 &&
+                        FrozenSources::k_metal_chime_count > 1)
+                    {
+                        machineChimeSamplePos_[slot][ch] =
+                            static_cast<double>((ar >> 5) % FrozenSources::k_metal_chime_count);
+                    }
                 }
 
                 const float eventDecayMs =
                     type == 4 ? 180.f :
                     (type == 5 ? 28.f :
-                     (type == 7 ? 54.f : 90.f));
+                     (type == 7 ? 54.f :
+                      (type == 9 ? 140.f : 90.f)));
                 const float eventDecay = std::exp(
                     -1.f / static_cast<float>(sampleRate_ * eventDecayMs * 0.001f));
                 atmosphereEventEnv_[slot][ch] = zapDenormal(
@@ -1593,11 +1604,73 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                     }
 
                     case 9: // Machine
-                        layer = (0.55f * atmosphereNoiseLow_[slot][ch] +
-                                 0.45f * highNoise) *
-                                metalCarrier *
-                                (0.35f + 0.65f * activity);
+                    {
+                        const double sourceStep =
+                            static_cast<double>(FrozenSources::kSampleRate) /
+                            std::max(1.0, sampleRate_);
+
+                        const float machineAir = readEmbeddedSample(
+                            FrozenSources::k_cold_metal_air,
+                            FrozenSources::k_cold_metal_air_count,
+                            machineAirSamplePos_[slot][ch],
+                            sourceStep * 0.88,
+                            ch == 0 ? 0.0 : 0.29);
+
+                        const float machineChime = readEmbeddedSample(
+                            FrozenSources::k_metal_chime,
+                            FrozenSources::k_metal_chime_count,
+                            machineChimeSamplePos_[slot][ch],
+                            sourceStep * 0.93,
+                            ch == 0 ? 0.0 : 0.17);
+
+                        // Integer phase multiplication keeps the cycle continuous
+                        // across atmospherePhase_ wrap while moving much faster
+                        // than the broad scene-motion LFO.
+                        const float cyclePhase =
+                            7.f * atmospherePhase_[slot][ch] +
+                            (slot == 0 ? 0.f : 0.73f);
+                        const float cycle =
+                            0.5f + 0.5f * std::sin(cyclePhase);
+                        const float loadPulse =
+                            cycle * cycle * (0.45f + 0.55f * cycle);
+
+                        const float loadTarget =
+                            clamp01(activity * (0.28f + 0.72f * loadPulse));
+                        const float loadA = onePoleCoeff(sampleRate_, 3.2f);
+                        machineLoadState_[slot][ch] = zapDenormal(
+                            loadA * machineLoadState_[slot][ch] +
+                            (1.f - loadA) * loadTarget);
+
+                        const float sourceBody =
+                            0.58f * lowState_[ch] +
+                            0.42f * midLowState_[ch];
+                        const float sourceStress =
+                            0.62f * highDetail +
+                            0.38f * (x - midLowState_[ch]);
+
+                        const float clank =
+                            machineChime *
+                            atmosphereEventEnv_[slot][ch] *
+                            (0.35f + 0.65f * transientExcitation);
+
+                        const float stereoLoad =
+                            ch == 0
+                                ? (0.92f + 0.08f * loadPulse)
+                                : (0.84f + 0.16f * (1.f - loadPulse));
+
+                        const float machineGate =
+                            clamp01(activity * 2.2f);
+
+                        layer =
+                            (0.46f * machineAir *
+                                 (0.42f + 0.58f * machineLoadState_[slot][ch]) +
+                             0.30f * sourceBody *
+                                 (0.36f + 0.64f * loadPulse) +
+                             0.14f * sourceStress * stereoLoad +
+                             0.10f * clank) *
+                            machineGate;
                         break;
+                    }
                 }
 
                 const float typeGain =

@@ -135,6 +135,9 @@ private:
     std::array<std::array<double, kChannels>, 2> crackSamplePos_ {};
     std::array<std::array<double, kChannels>, 2> landscapeWindSamplePos_ {};
     std::array<std::array<double, kChannels>, 2> landscapeMetalSamplePos_ {};
+    std::array<std::array<double, kChannels>, 2> machineAirSamplePos_ {};
+    std::array<std::array<double, kChannels>, 2> machineChimeSamplePos_ {};
+    std::array<std::array<float, kChannels>, 2> machineLoadState_ {};
 
     float shiverPhaseA_ = 0.f;
     float shiverPhaseB_ = 0.f;

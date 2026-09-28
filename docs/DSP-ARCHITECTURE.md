@@ -383,3 +383,24 @@ Mechanism:
 - additive mix behind the original signal rather than a crossfade.
 
 Frozen Bloom is intended as a complementary large-scale texture, not a substitute for SPACE or STORM.
+
+
+## Machine atmosphere identity pass
+
+Machine is no longer a generic noise/carrier texture.
+
+Purpose:
+- create the impression of a large cold machine room reacting to the played source;
+- remain distinct from the METAL module and from the sparse Distant Metal atmosphere;
+- use real industrial source material for physical scale while keeping the scene dependent on input activity;
+- remain silent on fresh silence.
+
+Current layers:
+- embedded real industrial-air recording as the continuous mechanical body;
+- a source-derived low/mid load component so the machine follows the instrument rather than floating independently;
+- a faster multi-cycle load pulse derived from the existing slow atmosphere phase;
+- source-derived high-band stress;
+- sparse embedded real metallic events for clanks/impacts;
+- slight channel-asymmetric load movement for width without detached random panning.
+
+Machine is a scene/bed generator. The METAL module remains the direct material transformation stage.

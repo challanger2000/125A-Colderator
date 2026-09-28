@@ -413,6 +413,23 @@ int main(int argc, char** argv)
         writeWav(out / "Keys_FrozenBloom50.wav", render(keys, bloomSettings(0.50f)));
         writeWav(out / "Keys_FrozenBloom80.wav", render(keys, bloomSettings(0.80f)));
 
+        auto machineSettings = [](float amount) {
+            Settings m {};
+            m.cold = 1.f;
+            m.metal = 0.28f;
+            m.space = 0.22f;
+            m.atmosAType = 9.f / 9.f; // Machine
+            m.atmosAAmount = amount;
+            return m;
+        };
+
+        const auto drums = makeDrums();
+        const auto miniMix = makeMiniMix();
+        writeWav(out / "Drums_Machine50.wav", render(drums, machineSettings(0.50f)));
+        writeWav(out / "Drums_Machine80.wav", render(drums, machineSettings(0.80f)));
+        writeWav(out / "MiniMix_Machine50.wav", render(miniMix, machineSettings(0.50f)));
+        writeWav(out / "MiniMix_Machine80.wav", render(miniMix, machineSettings(0.80f)));
+
         std::ofstream notes(out / "README.txt");
         notes <<
             "125A Colderator Listening Pack\n"
@@ -431,7 +448,10 @@ int main(int argc, char** argv)
             "MiniMix: pad + keys + drums + bass\n\n"
             "Targeted Frozen Bloom renders:\n"
             "WarmPad_FrozenBloom50/80: additive source-derived bloom checks\n"
-            "Keys_FrozenBloom50/80: transient/harmonic bloom checks\n";
+            "Keys_FrozenBloom50/80: transient/harmonic bloom checks\n\n"
+            "Targeted Machine renders:\n"
+            "Drums_Machine50/80: mechanical load and impact checks\n"
+            "MiniMix_Machine50/80: source-linked cinematic machine-room checks\n";
 
         return 0;
     }

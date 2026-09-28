@@ -1795,6 +1795,41 @@ int main()
                 require(bloomSilencePeak < 1e-12,
                         "Frozen Bloom produces no autonomous output on fresh silence", failures);
 
+
+                Settings machine50 {};
+                machine50.cold = 1.f;
+                machine50.atmosphereAType = 9.f / 9.f; // Machine
+                machine50.atmosphereAAmount = 0.50f;
+                const auto machine50Render =
+                    renderSine(sr, 1.8, 110.0, machine50, 128);
+
+                Settings distantMetal50 {};
+                distantMetal50.cold = 1.f;
+                distantMetal50.atmosphereAType = 4.f / 9.f; // Distant Metal
+                distantMetal50.atmosphereAAmount = 0.50f;
+                const auto distantMetal50Render =
+                    renderSine(sr, 1.8, 110.0, distantMetal50, 128);
+
+                require(meanAbsDiff(distantMetal50Render, machine50Render, skip) > 2e-3,
+                        "Machine 50% has a distinct mechanical-room identity from Distant Metal", failures);
+                require(meanAbsDiff(landscape50Render, machine50Render, skip) > 2e-3,
+                        "Machine 50% has a distinct identity from Frozen Landscape", failures);
+                require(maxAbs(machine50Render) < 8.0,
+                        "Machine 50% remains bounded", failures);
+
+                Settings machineSilence {};
+                machineSilence.cold = 1.f;
+                machineSilence.atmosphereAType = 9.f / 9.f;
+                machineSilence.atmosphereAAmount = 1.f;
+                const auto machineSilenceRender =
+                    renderSine(sr, 1.2, 0.0, machineSilence, 128);
+                double machineSilencePeak = 0.0;
+                for (float v : machineSilenceRender)
+                    machineSilencePeak = std::max(
+                        machineSilencePeak, std::fabs(static_cast<double>(v)));
+                require(machineSilencePeak < 1e-12,
+                        "Machine produces no autonomous output on fresh silence", failures);
+
                 Settings dualAtmos {};
                 dualAtmos.cold = 1.f;
                 dualAtmos.atmosphereAType = 2.f / 9.f; // Drone
