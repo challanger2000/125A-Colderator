@@ -5,6 +5,15 @@
 
 namespace Colderator {
 
+class FrostLogo final : public VSTGUI::CView
+{
+public:
+    explicit FrostLogo(const VSTGUI::CRect& r);
+    FrostLogo(const FrostLogo& o) : VSTGUI::CView(o) {}
+    VSTGUI::CBaseObject* newCopy() const override { return new FrostLogo(*this); }
+    void draw(VSTGUI::CDrawContext* c) override;
+};
+
 class FrostFaceplate final : public VSTGUI::CView
 {
 public:

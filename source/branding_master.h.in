@@ -1,0 +1,17 @@
+#pragma once
+
+#include <cstddef>
+
+namespace Colderator::Branding {
+
+struct MasterPathSource {
+    const char* d;
+    bool red;
+};
+
+inline constexpr MasterPathSource kMasterPaths[] = {
+@COLDERATOR_BRANDING_PATHS@};
+
+inline constexpr std::size_t kMasterPathCount = @COLDERATOR_BRANDING_PATH_COUNT@;
+
+} // namespace Colderator::Branding

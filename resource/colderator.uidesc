@@ -14,12 +14,12 @@
             mouse-enabled="true" name="view" opacity="1" origin="0, 0" size="800, 560" transparent="false">
     <view class="CView" custom-view-name="Faceplate" origin="0, 0" size="800, 560" mouse-enabled="false"/>
 
-    <!-- Branding remains separate. The authoritative 125A master logo will be added later. -->
+    <view class="CView" custom-view-name="BrandLogo" origin="28, 17" size="116, 54" mouse-enabled="false"/>
     <view back-color="Bg" class="CTextLabel" font="~ NormalFontVeryBig" font-color="Text"
-          frame-width="0" origin="470, 20" size="292, 28" title="COLDERATOR"
+          frame-width="0" origin="186, 18" size="576, 28" title="COLDERATOR"
           transparent="true" text-alignment="right"/>
     <view back-color="Bg" class="CTextLabel" font="~ NormalFontSmall" font-color="Muted"
-          frame-width="0" origin="500, 48" size="262, 16" title="The Frozen Machine"
+          frame-width="0" origin="186, 47" size="576, 16" title="The Frozen Machine"
           transparent="true" text-alignment="right"/>
 
     <view back-color="Bg" class="CTextLabel" font="~ NormalFontSmall" font-color="Text"
@@ -96,9 +96,6 @@
           transparent="true" text-alignment="center"/>
     <view class="CView" custom-view-name="Output" origin="620, 411" size="88, 88"/>
 
-    <view back-color="Bg" class="CTextLabel" font="~ NormalFontSmall" font-color="Muted"
-          frame-width="0" origin="716, 516" size="56, 16" title="v0.1.0"
-          transparent="true" text-alignment="right"/>
   </template>
 
   <control-tags>
