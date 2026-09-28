@@ -377,7 +377,8 @@ Purpose:
 Mechanism:
 - three delayed source-derived taps with channel-skewed timings;
 - subtractive low-band filtering to keep the bloom cold rather than warm;
-- slow source-activity envelope using the existing atmosphere swell state;
+- dedicated source-activity envelope with sample-rate-invariant slow attack and long release;
+- a small source-transient seed so short excitation can still feed the delayed bloom without generating sound from fresh silence;
 - restrained feedback for a lingering bloom tail;
 - additive mix behind the original signal rather than a crossfade.
 

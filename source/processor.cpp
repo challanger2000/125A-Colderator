@@ -219,6 +219,7 @@ void Processor::resetDsp()
     for (auto& slot : atmosphereSwell_) slot.fill(0.f);
     for (auto& slot : atmosphereEventEnv_) slot.fill(0.f);
     for (auto& slot : atmospherePhase_) slot.fill(0.f);
+    for (auto& slot : bloomEnvelopeState_) slot.fill(0.f);
     for (auto& slot : stormBodyState_) slot.fill(0.f);
     for (auto& slot : stormPressureState_) slot.fill(0.f);
     for (auto& slot : stormSnowState_) slot.fill(0.f);
@@ -1532,10 +1533,34 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                                 diffuse -
                                 0.72f * bloomLowState_[slot][ch];
 
+                            // Frozen Bloom needs a genuinely slow source-dependent build,
+                            // but also a small transient seed so short excitation can
+                            // leave an audible source-derived tail. Attack/release are
+                            // expressed in seconds so behaviour is sample-rate invariant.
+                            const float bloomAttack =
+                                std::exp(-1.f / static_cast<float>(sampleRate_ * 0.70));
+                            const float bloomRelease =
+                                std::exp(-1.f / static_cast<float>(sampleRate_ * 1.80));
+                            float& bloomEnv = bloomEnvelopeState_[slot][ch];
+
+                            // A transient may be over before the first ~94 ms tap appears.
+                            // Seed only from the actual source transient; fresh silence
+                            // therefore remains exactly silent.
+                            bloomEnv = std::max(
+                                bloomEnv,
+                                0.22f * clamp01(transientNorm));
+
+                            const float bloomTarget = activity;
+                            const float bloomCoeff =
+                                bloomTarget > bloomEnv ? bloomAttack : bloomRelease;
+                            bloomEnv = zapDenormal(
+                                bloomCoeff * bloomEnv +
+                                (1.f - bloomCoeff) * bloomTarget);
+
                             const float bloomEnvelope =
                                 clamp01(
-                                    atmosphereSwell_[slot][ch] *
-                                    (0.45f + 0.55f * slowMotion));
+                                    bloomEnv *
+                                    (0.68f + 0.32f * slowMotion));
 
                             const float sourceBloom =
                                 0.52f * highDetail +

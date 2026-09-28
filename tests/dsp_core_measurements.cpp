@@ -2034,6 +2034,8 @@ int main()
                 static_cast<size_t>(sr * 1.20));
             const double bloomLate =
                 windowEnergy(impulseFrozenBloom, bloomLateStart, bloomLateEnd);
+            std::cout << "[INFO] BLOOM LATE SR=" << static_cast<int>(sr)
+                      << " E180ms-1.2s=" << bloomLate << "\n";
             require(bloomLate > 1e-7,
                     "Frozen Bloom creates measurable delayed source-derived bloom energy", failures);
 
