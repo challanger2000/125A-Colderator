@@ -62,7 +62,7 @@ VSTGUI::SharedPointer<VSTGUI::CMultiFrameBitmap> loadFilmstrip(const FilmstripSp
         return {};
 
     const auto addScale = [&](const char* name, double scale) {
-        VSTGUI::CBitmap source(VSTGUI::CResourceDescription(name));
+        VSTGUI::CBitmap source{VSTGUI::CResourceDescription(name)};
         auto bitmap = source.getPlatformBitmap();
         if (!bitmap)
             return;
