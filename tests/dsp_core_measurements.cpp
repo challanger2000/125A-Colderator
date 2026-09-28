@@ -2119,15 +2119,11 @@ int main()
             const double dCold25 = meanAbsDiff(dry, cold25, skip);
             const double dCold50 = meanAbsDiff(dry, cold50, skip);
             const double dCold75 = meanAbsDiff(dry, cold75Stage, skip);
-            const double dCold90 = meanAbsDiff(dry, cold90, skip);
             const double dCold100 = meanAbsDiff(dry, cold100, skip);
-            const double dIce25 = meanAbsDiff(dry, ice25, skip);
             const double dIce50 = meanAbsDiff(dry, ice50, skip);
-            const double dIce100 = meanAbsDiff(dry, ice100, skip);
             const double dMetal25 = meanAbsDiff(dry, metal25, skip);
             const double dMetal50 = meanAbsDiff(dry, metal50, skip);
             const double dMetal75 = meanAbsDiff(dry, metal75, skip);
-            const double dMetal100 = meanAbsDiff(dry, metal100, skip);
             const double dFrost25 = meanAbsDiff(dry, frost25, skip);
             const double dFrost50 = meanAbsDiff(dry, frost50, skip);
             const double dFrost100 = meanAbsDiff(dry, frost100, skip);

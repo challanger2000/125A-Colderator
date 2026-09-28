@@ -516,3 +516,20 @@ A post-identity-pass core audit found three correctness issues and defines the r
 - Probabilistic ICE, METAL, FROST and Atmosphere events are authored against a 48 kHz reference density. Per-sample probabilities are normalized by 48000/sampleRate so event density remains approximately constant per second across supported sample rates.
 
 These are correctness constraints rather than new sound-design features.
+
+
+## Core audit: sample-rate-invariant temporal states
+
+Several smoothing states were historically expressed as fixed per-sample coefficients. Those values were authored at 48 kHz, so their physical time constants shortened as sample rate increased.
+
+The affected states are now expressed through `onePoleCoeff(sampleRate, hz)` using the exact 48 kHz equivalent pole frequencies:
+- SHIVER jitter smoothing;
+- SHIVER wind-gust smoothing and filtered noise;
+- Cinematic-depth disabled-state drain;
+- Atmosphere low-noise smoothing;
+- Atmosphere gust smoothing;
+- Atmosphere swell smoothing.
+
+This preserves the existing 48 kHz timing while making the intended temporal behaviour stable across sample rates.
+
+The same audit removed confirmed unused local variables only; no user-facing parameter or state semantics changed.

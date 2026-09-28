@@ -546,8 +546,6 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
 
         const float iceExtreme = clamp01((effectiveIce - 0.90f) / 0.10f);
         const float metalExtreme = clamp01((effectiveMetal - 0.90f) / 0.10f);
-        const float iceMix = effectiveIce * (0.48f + 0.92f * iceExtreme);
-        const float metalMix = effectiveMetal * (0.58f + 1.32f * metalExtreme);
         const float outputGain = std::pow(10.f, normalizedOutputToDb(smOutput_) / 20.f);
 
         const int iceModel = std::max(0, std::min(kMaterialCount - 1, iceMaterial_));
@@ -719,13 +717,16 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
             {
                 --windGustCounter_[ch];
             }
-            windGust_[ch] +=
-                (windGustTarget_[ch] - windGust_[ch]) * 0.00085f;
+            // 48 kHz reference equivalents:
+            // 0.99915 -> ~6.4963 Hz, 0.965 -> ~272.1716 Hz.
+            const float windGustA = onePoleCoeff(sampleRate_, 6.496283f);
+            windGust_[ch] = zapDenormal(
+                windGustA * windGust_[ch] +
+                (1.f - windGustA) * windGustTarget_[ch]);
+            const float windNoiseA = onePoleCoeff(sampleRate_, 272.17159f);
             windNoiseState_[ch] = zapDenormal(
-                0.965f * windNoiseState_[ch] + 0.035f * textureWhite);
-            const float windTexture =
-                windNoiseState_[ch] * windGust_[ch] * sourceScale;
-
+                windNoiseA * windNoiseState_[ch] +
+                (1.f - windNoiseA) * textureWhite);
             float iceSignal = 0.f;
             for (auto& mode : iceModes_[ch])
                 iceSignal += mode.process(iceInput);
@@ -842,7 +843,6 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
             frostPrevNoise_[ch] = white;
 
             const float frostExtreme = clamp01((effectiveFrost - 0.90f) / 0.10f);
-            const float frostDrive = effectiveFrost * (0.18f + 0.34f * frostExtreme);
             const float frostCarrier = 1.35f * std::fabs(highDetail) + 0.55f * slowEnv_[ch];
 
             const int holdSamples = std::max(1, static_cast<int>(
@@ -947,7 +947,11 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                     --shiverJitterCounter_[ch];
                 }
 
-                shiverJitter_[ch] += (shiverJitterTarget_[ch] - shiverJitter_[ch]) * 0.0025f;
+                // 0.9975 at 48 kHz -> ~19.1225 Hz.
+                const float shiverJitterA = onePoleCoeff(sampleRate_, 19.122506f);
+                shiverJitter_[ch] = zapDenormal(
+                    shiverJitterA * shiverJitter_[ch] +
+                    (1.f - shiverJitterA) * shiverJitterTarget_[ch]);
                 const float side = ch == 0 ? 1.f : -1.f;
                 const float physicalMod =
                     0.62f * std::sin(shiverPhaseA_) +
@@ -1260,9 +1264,15 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                     cinBuffer[static_cast<size_t>(w)] = 0.f;
                     cinematicWrite_[ch] = (w + 1 >= size) ? 0 : (w + 1);
                 }
-                cinematicBloomState_[ch] *= 0.9995f;
-                cinematicMotionState_[ch] *= 0.9995f;
-                cinematicLowState_[ch] *= 0.9995f;
+                // 0.9995 at 48 kHz -> ~3.82067 Hz drain rate.
+                const float cinematicDrainA =
+                    onePoleCoeff(sampleRate_, 3.820674f);
+                cinematicBloomState_[ch] = zapDenormal(
+                    cinematicBloomState_[ch] * cinematicDrainA);
+                cinematicMotionState_[ch] = zapDenormal(
+                    cinematicMotionState_[ch] * cinematicDrainA);
+                cinematicLowState_[ch] = zapDenormal(
+                    cinematicLowState_[ch] * cinematicDrainA);
             }
 
             // ATMOSPHERE SLOTS
@@ -1296,18 +1306,27 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                 const float coldDrive = smCold_;
                 const float activity = clamp01(2.8f * slowEnv_[ch] + 1.2f * transientNorm);
 
+                // Preserve the authored 48 kHz temporal character at every
+                // supported sample rate.
+                const float atmosphereNoiseA =
+                    onePoleCoeff(sampleRate_, 115.45969f); // 0.985 @ 48 kHz
                 atmosphereNoiseLow_[slot][ch] = zapDenormal(
-                    0.985f * atmosphereNoiseLow_[slot][ch] + 0.015f * n);
+                    atmosphereNoiseA * atmosphereNoiseLow_[slot][ch] +
+                    (1.f - atmosphereNoiseA) * n);
                 const float highNoise =
                     0.5f * (n - atmosphereNoiseHighPrev_[slot][ch]);
                 atmosphereNoiseHighPrev_[slot][ch] = n;
 
+                const float atmosphereGustA =
+                    onePoleCoeff(sampleRate_, 6.113996f); // 0.9992 @ 48 kHz
                 atmosphereGust_[slot][ch] = zapDenormal(
-                    0.9992f * atmosphereGust_[slot][ch] +
-                    0.0008f * std::fabs(n));
+                    atmosphereGustA * atmosphereGust_[slot][ch] +
+                    (1.f - atmosphereGustA) * std::fabs(n));
+                const float atmosphereSwellA =
+                    onePoleCoeff(sampleRate_, 3.056386f); // 0.9996 @ 48 kHz
                 atmosphereSwell_[slot][ch] = zapDenormal(
-                    0.9996f * atmosphereSwell_[slot][ch] +
-                    0.0004f * activity);
+                    atmosphereSwellA * atmosphereSwell_[slot][ch] +
+                    (1.f - atmosphereSwellA) * activity);
 
                 atmospherePhase_[slot][ch] +=
                     2.f * kPi *
