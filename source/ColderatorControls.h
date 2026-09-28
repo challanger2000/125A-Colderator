@@ -18,9 +18,11 @@ class FrostFaceplate final : public VSTGUI::CView
 {
 public:
     explicit FrostFaceplate(const VSTGUI::CRect& r);
-    FrostFaceplate(const FrostFaceplate& o) : VSTGUI::CView(o) {}
+    FrostFaceplate(const FrostFaceplate& o);
     VSTGUI::CBaseObject* newCopy() const override { return new FrostFaceplate(*this); }
     void draw(VSTGUI::CDrawContext* c) override;
+private:
+    VSTGUI::SharedPointer<VSTGUI::CBitmap> faceplate_;
 };
 
 class FrostKnob final : public VSTGUI::CKnobBase
@@ -35,7 +37,7 @@ public:
     void draw(VSTGUI::CDrawContext* c) override;
 private:
     Style style_ {Style::Character};
-    VSTGUI::SharedPointer<VSTGUI::CMultiFrameBitmap> filmstrip_;
+    VSTGUI::SharedPointer<VSTGUI::CBitmap> body_;
 };
 
 } // namespace Colderator

@@ -130,67 +130,59 @@ void gradientRound(VSTGUI::CDrawContext* c, const VSTGUI::CRect& r, double radiu
 }
 }
 
-struct FilmstripSpec
+struct BitmapSpec
 {
     const char* oneX;
-    const char* one25X;
     const char* one5X;
-    const char* twoX;
-    double frameSize;
 };
 
-VSTGUI::SharedPointer<VSTGUI::CMultiFrameBitmap> loadFilmstrip(const FilmstripSpec& spec)
+VSTGUI::SharedPointer<VSTGUI::CBitmap> loadBitmapPair(const BitmapSpec& spec)
 {
-    VSTGUI::CMultiFrameBitmapDescription desc;
-    desc.frameSize = {spec.frameSize, spec.frameSize};
-    desc.numFrames = 128;
-    desc.framesPerRow = 1;
-
-    auto strip = VSTGUI::makeOwned<VSTGUI::CMultiFrameBitmap>(
-        VSTGUI::CResourceDescription(spec.oneX), desc);
-    if (!strip || !strip->isLoaded())
+    auto bitmap = VSTGUI::makeOwned<VSTGUI::CBitmap>(
+        VSTGUI::CResourceDescription(spec.oneX));
+    if (!bitmap || !bitmap->isLoaded())
         return {};
 
-    const auto addScale = [&](const char* name, double scale) {
-        VSTGUI::CBitmap source{VSTGUI::CResourceDescription(name)};
-        auto bitmap = source.getPlatformBitmap();
-        if (!bitmap)
-            return;
-        bitmap->setScaleFactor(scale);
-        strip->addBitmap(bitmap);
-    };
-
-    addScale(spec.one25X, 1.25);
-    addScale(spec.one5X, 1.5);
-    addScale(spec.twoX, 2.0);
-    return strip;
+    VSTGUI::CBitmap hiDpi {VSTGUI::CResourceDescription(spec.one5X)};
+    if (auto platform = hiDpi.getPlatformBitmap())
+    {
+        platform->setScaleFactor(1.5);
+        bitmap->addBitmap(platform);
+    }
+    return bitmap;
 }
 
-const VSTGUI::SharedPointer<VSTGUI::CMultiFrameBitmap>& filmstripFor(FrostKnob::Style style)
+const VSTGUI::SharedPointer<VSTGUI::CBitmap>& faceplateBitmap()
 {
-    static const FilmstripSpec mainSpec {
-        "colderator_main_120.png","colderator_main_150.png",
-        "colderator_main_180.png","colderator_main_240.png",120.0
+    static const BitmapSpec spec {
+        "colderator_faceplate_100.png", "colderator_faceplate_150.png"
     };
-    static const FilmstripSpec characterSpec {
-        "colderator_character_88.png","colderator_character_110.png",
-        "colderator_character_132.png","colderator_character_176.png",88.0
+    static const auto bitmap = loadBitmapPair(spec);
+    return bitmap;
+}
+
+const VSTGUI::SharedPointer<VSTGUI::CBitmap>& bodyFor(FrostKnob::Style style)
+{
+    static const BitmapSpec mainSpec {
+        "colderator_knob_main_100.png", "colderator_knob_main_150.png"
     };
-    static const FilmstripSpec utilitySpec {
-        "colderator_utility_72.png","colderator_utility_90.png",
-        "colderator_utility_108.png","colderator_utility_144.png",72.0
+    static const BitmapSpec characterSpec {
+        "colderator_knob_character_100.png", "colderator_knob_character_150.png"
+    };
+    static const BitmapSpec utilitySpec {
+        "colderator_knob_utility_100.png", "colderator_knob_utility_150.png"
     };
 
-    static const auto mainStrip = loadFilmstrip(mainSpec);
-    static const auto characterStrip = loadFilmstrip(characterSpec);
-    static const auto utilityStrip = loadFilmstrip(utilitySpec);
+    static const auto mainBody = loadBitmapPair(mainSpec);
+    static const auto characterBody = loadBitmapPair(characterSpec);
+    static const auto utilityBody = loadBitmapPair(utilitySpec);
 
     switch (style)
     {
-        case FrostKnob::Style::Main: return mainStrip;
-        case FrostKnob::Style::Utility: return utilityStrip;
+        case FrostKnob::Style::Main: return mainBody;
+        case FrostKnob::Style::Utility: return utilityBody;
         case FrostKnob::Style::Character:
-        default: return characterStrip;
+        default: return characterBody;
     }
 }
 
@@ -239,91 +231,45 @@ void FrostLogo::draw(VSTGUI::CDrawContext* c)
     setDirty(false);
 }
 
-FrostFaceplate::FrostFaceplate(const VSTGUI::CRect& r) : VSTGUI::CView(r)
+FrostFaceplate::FrostFaceplate(const VSTGUI::CRect& r)
+: VSTGUI::CView(r), faceplate_(faceplateBitmap())
+{
+    setMouseEnabled(false);
+}
+
+FrostFaceplate::FrostFaceplate(const FrostFaceplate& o)
+: VSTGUI::CView(o), faceplate_(o.faceplate_)
 {
     setMouseEnabled(false);
 }
 
 void FrostFaceplate::draw(VSTGUI::CDrawContext* c)
 {
-    const auto r = getViewSize();
-    const double ox = r.left;
-    const double oy = r.top;
     c->setDrawMode(VSTGUI::kAntiAliasing | VSTGUI::kNonIntegralMode);
 
-    const auto rect = [&](double x, double y, double w, double h) {
-        return VSTGUI::CRect(ox + x, oy + y, ox + x + w, oy + y + h);
-    };
-    const auto line = [&](double x1, double y1, double x2, double y2,
-                          const VSTGUI::CColor& color, double width = 1.0) {
-        c->setFrameColor(color);
-        c->setLineWidth(width);
-        c->drawLine({ox + x1, oy + y1}, {ox + x2, oy + y2});
-    };
-    const auto softBand = [&](double x, double y, double w, double h, double radius) {
-        const auto rr = rect(x, y, w, h);
-        gradientRound(c, rr, radius,
-                      {252, 254, 255, 210}, {236, 245, 250, 210},
-                      {178, 209, 226, 85});
-    };
-    const auto selectorBed = [&](double x, double y, double w, double h) {
-        const auto rr = rect(x, y, w, h);
-        fillRound(c, rr, 8.0, {238, 247, 251, 190}, {160, 204, 227, 105});
-        auto hi = rr;
-        hi.inset(1.0, 1.0);
-        fillRound(c, hi, 7.0, {255, 255, 255, 14}, {255, 255, 255, 120});
-    };
-    const auto screw = [&](double x, double y) {
-        const auto sr = rect(x - 3.8, y - 3.8, 7.6, 7.6);
-        c->setFillColor({226, 236, 241, 235});
-        c->drawEllipse(sr, VSTGUI::kDrawFilled);
-        c->setFrameColor({120, 151, 169, 150});
-        c->setLineWidth(0.8);
-        c->drawEllipse(sr, VSTGUI::kDrawStroked);
-    };
+    if (faceplate_ && faceplate_->isLoaded())
+    {
+        faceplate_->draw(c, getViewSize());
+        setDirty(false);
+        return;
+    }
 
-    // Snow-white chassis: nearly flat, cold and premium. No decorative knob wells.
-    gradientRound(c, r, 0.0,
-                  {253, 254, 255, 255}, {233, 243, 248, 255},
-                  {164, 198, 216, 165});
-
-    // Very restrained top plate and a single frost datum line.
-    softBand(10, 9, 780, 66, 13.0);
-    line(22, 83, 778, 83, {137, 190, 218, 90}, 1.0);
-
-    // Main control field is intentionally open. Only a faint lower shelf anchors the row.
-    line(26, 257, 774, 257, {153, 200, 224, 70}, 1.0);
-
-    // Five material controls sit directly beneath their matching character controls.
-    for (double x : {177.0, 297.0, 417.0, 537.0, 657.0})
-        selectorBed(x, 274, 96, 28);
-
-    // Bottom section is one continuous cold deck rather than three framed boxes.
-    softBand(18, 343, 764, 190, 15.0);
-    line(292, 365, 292, 515, {149, 198, 223, 70}, 1.0);
-    line(574, 365, 574, 515, {149, 198, 223, 70}, 1.0);
-
-    selectorBed(132, 427, 138, 30);
-    selectorBed(414, 427, 138, 30);
-
-    // Minimal corner hardware only.
-    for (const auto& p : std::array<VSTGUI::CPoint, 4> {{
-            {16.0, 16.0}, {784.0, 16.0}, {16.0, 544.0}, {784.0, 544.0}}})
-        screw(p.x, p.y);
-
+    // Safe fallback only if a packaged bitmap cannot be loaded.
+    c->setFillColor({238, 246, 250, 255});
+    c->drawRect(getViewSize(), VSTGUI::kDrawFilled);
     setDirty(false);
 }
 
 FrostKnob::FrostKnob(const VSTGUI::CRect& r, VSTGUI::IControlListener* l,
                      int32_t tag, Style style)
-: VSTGUI::CKnobBase(r,l,tag,nullptr), style_(style), filmstrip_(filmstripFor(style))
+: VSTGUI::CKnobBase(r,l,tag,nullptr), style_(style), body_(bodyFor(style))
 {
     setTransparency(true);
     setWantsFocus(true);
 }
 
 FrostKnob::FrostKnob(const FrostKnob& o)
-: VSTGUI::CKnobBase(o), style_(o.style_), filmstrip_(o.filmstrip_)
+: VSTGUI::CKnobBase(o), style_(o.style_), body_(o.body_)
 {
     setTransparency(true);
     setWantsFocus(true);
@@ -333,52 +279,44 @@ void FrostKnob::draw(VSTGUI::CDrawContext* c)
 {
     c->setDrawMode(VSTGUI::kAntiAliasing | VSTGUI::kNonIntegralMode);
 
-    if (filmstrip_ && filmstrip_->isLoaded())
-    {
-        const auto frameIndex = filmstrip_->normalizedValueToFrameIndex(
-            static_cast<float>(getValueNormalized()));
-        filmstrip_->drawFrame(c, frameIndex, getViewSize().getTopLeft());
-        setDirty(false);
-        return;
-    }
-
     const auto r = getViewSize();
-    const double d = std::min(r.getWidth(), r.getHeight());
-    const bool primary = style_ == Style::Main;
-    const double pad = primary ? 8.0 : 5.0;
-    VSTGUI::CRect ring(r.left+pad, r.top+pad, r.left+d-pad, r.top+d-pad);
-
-    VSTGUI::CRect shadow = ring;
-    shadow.offset(2.0, 3.0);
-    c->setFillColor({94,127,146,55});
-    c->drawEllipse(shadow, VSTGUI::kDrawFilled);
-
-    if (auto* path = c->createRoundRectGraphicsPath(ring, ring.getWidth()*0.5))
+    if (body_ && body_->isLoaded())
+        body_->draw(c, r);
+    else
     {
-        if (auto* g = VSTGUI::CGradient::create(0.0,1.0,
-                VSTGUI::CColor{255,255,255,255},
-                VSTGUI::CColor{184,205,217,255}))
-        {
-            c->fillLinearGradient(path,*g,ring.getTopLeft(),ring.getBottomLeft(),false);
-            g->forget();
-        }
-        c->setFrameColor(primary ? VSTGUI::CColor{91,164,205,255}
-                                 : VSTGUI::CColor{132,174,197,255});
-        c->setLineWidth(primary ? 3.0 : 2.0);
-        c->drawGraphicsPath(path,VSTGUI::CDrawContext::kPathStroked);
-        path->forget();
+        c->setFillColor({235, 243, 247, 255});
+        c->drawEllipse(r, VSTGUI::kDrawFilled);
+        c->setFrameColor({118, 174, 204, 255});
+        c->setLineWidth(2.0);
+        c->drawEllipse(r, VSTGUI::kDrawStroked);
     }
 
+    // The approved knob artwork is static. Only this indicator moves.
+    const double d = std::min(r.getWidth(), r.getHeight());
+    const auto center = r.getCenter();
     const double start = 0.75 * kPi;
     const double sweep = 1.5 * kPi;
     const double angle = start + sweep * getValueNormalized();
-    const auto center = ring.getCenter();
-    const double radius = ring.getWidth() * 0.31;
-    c->setFrameColor(primary ? VSTGUI::CColor{20,132,193,255}
-                             : VSTGUI::CColor{49,112,149,255});
-    c->setLineWidth(primary ? 4.0 : 3.0);
-    c->drawLine(center,{center.x + std::cos(angle)*radius,
-                        center.y + std::sin(angle)*radius});
+
+    const double innerRadius = d * 0.20;
+    const double outerRadius = d * 0.34;
+    const auto p1 = VSTGUI::CPoint {
+        center.x + std::cos(angle) * innerRadius,
+        center.y + std::sin(angle) * innerRadius
+    };
+    const auto p2 = VSTGUI::CPoint {
+        center.x + std::cos(angle) * outerRadius,
+        center.y + std::sin(angle) * outerRadius
+    };
+
+    const double width = style_ == Style::Main ? 3.2 :
+                         style_ == Style::Utility ? 1.9 : 2.4;
+    c->setFrameColor(style_ == Style::Main
+        ? VSTGUI::CColor{31, 157, 220, 255}
+        : VSTGUI::CColor{46, 132, 181, 255});
+    c->setLineWidth(width);
+    c->drawLine(p1, p2);
+
     setDirty(false);
 }
 

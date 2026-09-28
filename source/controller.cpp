@@ -140,7 +140,7 @@ Steinberg::IPlugView* PLUGIN_API Controller::createView(const char* name)
     if (viewName == Steinberg::Vst::ViewType::kEditor)
     {
         auto* editor = new VSTGUI::VST3Editor(this, "view", "colderator.uidesc");
-        editor->setAllowedZoomFactors({1.0, 1.25, 1.5, 1.75, 2.0});
+        editor->setAllowedZoomFactors({1.0, 1.5});
         editor->setZoomFactor(1.0);
         return editor;
     }
