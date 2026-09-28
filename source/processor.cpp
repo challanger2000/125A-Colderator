@@ -440,8 +440,19 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
         smAtmosphereAAmount_ += (atmosphereAAmount_ - smAtmosphereAAmount_) * smooth;
         smAtmosphereBAmount_ += (atmosphereBAmount_ - smAtmosphereBAmount_) * smooth;
 
-        shiverPhaseA_ += 2.f * kPi * 4.7f / static_cast<float>(sampleRate_);
-        shiverPhaseB_ += 2.f * kPi * 7.9f / static_cast<float>(sampleRate_);
+        const int currentShiverModel =
+            std::max(0, std::min(kMaterialCount - 1, shiverMaterial_));
+        constexpr float kShiverPhaseRateScale[kMaterialCount] =
+            {1.00f, 0.34f, 1.65f, 0.52f, 2.15f, 0.16f};
+        const float currentShiverRate =
+            kShiverPhaseRateScale[currentShiverModel];
+
+        shiverPhaseA_ +=
+            2.f * kPi * 4.7f * currentShiverRate /
+            static_cast<float>(sampleRate_);
+        shiverPhaseB_ +=
+            2.f * kPi * 7.9f * (0.83f + 0.31f * currentShiverRate) /
+            static_cast<float>(sampleRate_);
         metalPhaseA_ += 2.f * kPi * 1133.f / static_cast<float>(sampleRate_);
         metalPhaseB_ += 2.f * kPi * 1777.f / static_cast<float>(sampleRate_);
         if (shiverPhaseA_ >= 2.f * kPi) shiverPhaseA_ -= 2.f * kPi;
@@ -515,7 +526,6 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
         constexpr float shiverBaseMs[kMaterialCount] = {1.4f, 2.8f, 1.8f, 4.6f, 2.2f, 5.4f};
         constexpr float shiverDepthScale[kMaterialCount] = {0.72f, 0.34f, 1.08f, 1.42f, 1.72f, 0.22f};
         constexpr float shiverJitterGain[kMaterialCount] = {1.18f, 0.32f, 1.42f, 0.82f, 1.72f, 0.18f};
-        constexpr float shiverRateScale[kMaterialCount] = {1.00f, 0.34f, 1.65f, 0.52f, 2.15f, 0.16f};
         constexpr float shiverStressGain[kMaterialCount] = {0.42f, 0.20f, 0.72f, 0.58f, 0.88f, 0.16f};
         constexpr float shiverGustMinSec[kMaterialCount] = {0.045f, 0.150f, 0.055f, 0.095f, 0.038f, 0.220f};
 
@@ -859,10 +869,9 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
 
                 shiverJitter_[ch] += (shiverJitterTarget_[ch] - shiverJitter_[ch]) * 0.0025f;
                 const float side = ch == 0 ? 1.f : -1.f;
-                const float rateScale = shiverRateScale[shiverModel];
                 const float physicalMod =
-                    0.62f * std::sin(shiverPhaseA_ * rateScale) +
-                    0.38f * std::sin(shiverPhaseB_ * (0.83f + 0.31f * rateScale));
+                    0.62f * std::sin(shiverPhaseA_) +
+                    0.38f * std::sin(shiverPhaseB_);
                 const float motion =
                     physicalMod +
                     0.42f * shiverJitter_[ch] * side *
