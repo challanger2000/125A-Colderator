@@ -1133,7 +1133,7 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                     cinematicLowState_[ch] *
                     cinematicWeightParticipation *
                     cinematicDepth *
-                    (0.10f + 0.22f * cinematicDepth);
+                    (0.15f + 0.25f * cinematicDepth);
 
                 auto& cinBuffer = cinematicBuffer_[ch];
                 if (!cinBuffer.empty())
@@ -1186,13 +1186,14 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                             (0.10f + 0.16f * cinematicDepth);
 
                     y += weight * cinematicDepth;
-                    y += glacierMass;
+                    y += glacierMass * (1.f - spaceWetForCinematic);
                     y += cloud * cinematicDepth;
 
                     const float cinInput =
-                        0.52f * y +
-                        0.28f * highDetail +
-                        0.20f * cinematicLowState_[ch];
+                        0.48f * y +
+                        0.24f * highDetail +
+                        0.18f * cinematicLowState_[ch] +
+                        0.10f * glacierMass;
                     const float cinFeedback =
                         feedbackTap * (0.36f + 0.30f * cinematicDepth);
                     const float writeValue =
