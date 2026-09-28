@@ -1,0 +1,65 @@
+{
+  "status": "approved-design-source-set",
+  "editor": {
+    "logical_base": [800, 560],
+    "zoom_percent": [100, 150]
+  },
+  "faceplate": {
+    "master": {
+      "file": "Colderator_Faceplate_master.png",
+      "size": [1600, 1120],
+      "sha256": "b49f937034771f6e327bfd695cbd81175646a29cfc28c98fee4f8b9ef66feeac"
+    },
+    "100": {
+      "file": "Colderator_Faceplate_100.png",
+      "size": [800, 560],
+      "sha256": "e2b34b856beb20a7954b2f7ef84e4cc350d45aba1c4665e9158b267902ecf982"
+    },
+    "150": {
+      "file": "Colderator_Faceplate_150.png",
+      "size": [1200, 840],
+      "sha256": "d2691c91f80d3ae7627fc4c52d99cdd3ab6cf702e7405c1e94f800f09d3f52a4"
+    }
+  },
+  "knobs": {
+    "master": {
+      "file": "Colderator_Knob_Master.png",
+      "size": [1220, 1220],
+      "sha256": "43a5adc72511c101b5c8b91e0ee29edd291709d7857c737d6ecab444d18e7a88"
+    },
+    "main_100": {
+      "file": "Colderator_Knob_main_100_120px.png",
+      "size": [120, 120],
+      "sha256": "7f013dde16dab2545d0219803f26c04e1860bdf3f52eb799033c1c5cf12c0fa0"
+    },
+    "main_150": {
+      "file": "Colderator_Knob_main_150_180px.png",
+      "size": [180, 180],
+      "sha256": "cc8915595bfb03cf9ceb5f1de380700a430564c466d051083a946e528b415970"
+    },
+    "character_100": {
+      "file": "Colderator_Knob_character_100_88px.png",
+      "size": [88, 88],
+      "sha256": "0307b94bc95a58821d341177ca4a263bad25172bf4fa6cdee6669252f83845f3"
+    },
+    "character_150": {
+      "file": "Colderator_Knob_character_150_132px.png",
+      "size": [132, 132],
+      "sha256": "84e6433f56d92a6288ef2c0cfa829a90e9a8fec8fa4a405b4b4464ec947229d2"
+    },
+    "utility_100": {
+      "file": "Colderator_Knob_utility_100_72px.png",
+      "size": [72, 72],
+      "sha256": "41795ea4c47907df4a55cde7ffd25c009bb68825fbb415cb40d71a3b6a2fd24f"
+    },
+    "utility_150": {
+      "file": "Colderator_Knob_utility_150_108px.png",
+      "size": [108, 108],
+      "sha256": "6aec7bf136123825d87e7ce7feb707a69912336b56957bfce8b2a08ec74e7f8b"
+    }
+  },
+  "package": {
+    "file": "Colderator_Approved_Design_Assets.zip",
+    "sha256": "1bef1b7b94ed4b443f4b5b7dfe362ec2875a8c52c597b76672fc77b631cbd627"
+  }
+}
