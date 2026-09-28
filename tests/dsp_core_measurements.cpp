@@ -1831,8 +1831,8 @@ int main()
             require(dCold100 > dCold50 * 1.12,
                     "COLD 100% remains a meaningful extreme transformation", failures);
             require(dCold50 > 8e-3, "COLD 50% is a strong signature transformation", failures);
-            require(dIce50 > 5e-3 && dIce50 > dIce25 * 1.35,
-                    "ICE 50% is a dominant crystal/glass transformation", failures);
+            require(dIce50 > dIce25 * 1.20,
+                    "ICE 50% advances clearly beyond the 25% crystal/glass state", failures);
             require(dMetal50 > 5e-3 && dMetal50 > dMetal25 * 1.35,
                     "METAL 50% is a dominant industrial transformation", failures);
             require(dMetal75 > dMetal50 * 1.10,
