@@ -3,7 +3,6 @@
 #include "vstgui/lib/cdrawcontext.h"
 #include "vstgui/lib/cgradient.h"
 #include "vstgui/lib/cgraphicspath.h"
-#include "vstgui/lib/cgraphicstransform.h"
 #include <algorithm>
 #include <cctype>
 #include <cmath>
@@ -297,12 +296,11 @@ void FrostIcicle::draw(VSTGUI::CDrawContext* c)
     const double x = r.left + (r.getWidth() - w) * 0.5;
     const double y = r.top + (r.getHeight() - h) * 0.5;
 
-    const VSTGUI::CGraphicsTransform transform {
-        scale, 0.0, 0.0, scale, x, y
-    };
-    c->pushTransform(transform);
-    bitmap_->draw(c, VSTGUI::CRect(0.0, 0.0, source.x, source.y));
-    c->popTransform();
+    c->setBitmapInterpolationQuality(VSTGUI::BitmapInterpolationQuality::kHigh);
+    c->fillRectWithBitmap(
+        bitmap_,
+        VSTGUI::CRect(0.0, 0.0, source.x, source.y),
+        VSTGUI::CRect(x, y, x + w, y + h));
 
     setDirty(false);
 }
