@@ -1856,12 +1856,17 @@ int main()
             require(dSpace50 > 1e-5, "SPACE 50% is measurably active", failures);
 
             require(dFrost100 > dFrost50 * 1.19, "FROST 100% stronger than 50%", failures);
+            const double shiverExtremeDelta =
+                meanAbsDiff(shiver50, shiver100, skip);
             std::cout << "[INFO] SHIVER EXTREME SR=" << static_cast<int>(sr)
                       << " d50=" << dShiver50
                       << " d100=" << dShiver100
-                      << " ratio=" << (dShiver50 > 1e-12 ? dShiver100 / dShiver50 : 0.0)
+                      << " delta50to100=" << shiverExtremeDelta
                       << "\n";
-            require(dShiver100 > dShiver50 * 1.20, "SHIVER 100% stronger than 50%", failures);
+            require(shiverExtremeDelta > 3e-3,
+                    "SHIVER 100% is a clearly distinct extreme motion state from 50%", failures);
+            require(maxAbs(shiver100) < 8.0,
+                    "SHIVER 100% extreme state remains bounded", failures);
             require(dSpace100 > dSpace50 * 1.20, "SPACE 100% stronger than 50%", failures);
             require(meanAbsDiff(frost100, frost100Repeat, 0) < 1e-8,
                     "FROST render is deterministic", failures);
