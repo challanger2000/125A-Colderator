@@ -1545,6 +1545,12 @@ int main()
             const auto impulseSpace50 = renderImpulse(sr, 4.0, {1.f, 0.f, 0.f, 0.f, 0.f, 0.50f});
             const auto impulseSpace100 = renderImpulse(sr, 4.0, {1.f, 0.f, 0.f, 0.f, 0.f, 1.f});
             const auto impulseCold100 = renderImpulse(sr, 4.0, {1.f, 1.f, 1.f, 1.f, 1.f, 1.f});
+            Settings bloomImpulseSettings {};
+            bloomImpulseSettings.cold = 1.f;
+            bloomImpulseSettings.atmosphereAType = 8.f / 9.f;
+            bloomImpulseSettings.atmosphereAAmount = 1.f;
+            const auto impulseFrozenBloom =
+                renderImpulse(sr, 2.0, bloomImpulseSettings, 128);
             const auto impulseCinematicLow = renderImpulse(sr, 1.2, {0.30f, 1.f, 0.f, 0.f, 0.f, 0.f});
             const auto impulseCinematicHigh = renderImpulse(sr, 1.2, {0.92f, 1.f, 0.f, 0.f, 0.f, 0.f});
 
@@ -1756,6 +1762,38 @@ int main()
                         landscapeSilencePeak, std::fabs(static_cast<double>(v)));
                 require(landscapeSilencePeak < 1e-12,
                         "Frozen Landscape produces no autonomous output on silence", failures);
+
+                Settings bloom50 {};
+                bloom50.cold = 1.f;
+                bloom50.atmosphereAType = 8.f / 9.f; // Frozen Bloom
+                bloom50.atmosphereAAmount = 0.50f;
+                const auto bloom50Render =
+                    renderSine(sr, 1.8, 220.0, bloom50, 128);
+
+                Settings drone50 {};
+                drone50.cold = 1.f;
+                drone50.atmosphereAType = 2.f / 9.f; // Drone
+                drone50.atmosphereAAmount = 0.50f;
+                const auto drone50Render =
+                    renderSine(sr, 1.8, 220.0, drone50, 128);
+
+                require(meanAbsDiff(drone50Render, bloom50Render, skip) > 2e-3,
+                        "Frozen Bloom 50% has a distinct identity from Drone", failures);
+                require(maxAbs(bloom50Render) < 8.0,
+                        "Frozen Bloom 50% remains bounded", failures);
+
+                Settings bloomSilence {};
+                bloomSilence.cold = 1.f;
+                bloomSilence.atmosphereAType = 8.f / 9.f;
+                bloomSilence.atmosphereAAmount = 1.f;
+                const auto bloomSilenceRender =
+                    renderSine(sr, 1.2, 0.0, bloomSilence, 128);
+                double bloomSilencePeak = 0.0;
+                for (float v : bloomSilenceRender)
+                    bloomSilencePeak = std::max(
+                        bloomSilencePeak, std::fabs(static_cast<double>(v)));
+                require(bloomSilencePeak < 1e-12,
+                        "Frozen Bloom produces no autonomous output on fresh silence", failures);
 
                 Settings dualAtmos {};
                 dualAtmos.cold = 1.f;
@@ -1989,6 +2027,15 @@ int main()
                     "SHIVER spike produces a distinct moving-delay fingerprint", failures);
             require(spaceLateFingerprint > 1e-7,
                     "SPACE spike produces a distinct cold-room reflection fingerprint", failures);
+
+            const size_t bloomLateStart = static_cast<size_t>(sr * 0.18);
+            const size_t bloomLateEnd = std::min(
+                impulseFrozenBloom.size(),
+                static_cast<size_t>(sr * 1.20));
+            const double bloomLate =
+                windowEnergy(impulseFrozenBloom, bloomLateStart, bloomLateEnd);
+            require(bloomLate > 1e-7,
+                    "Frozen Bloom creates measurable delayed source-derived bloom energy", failures);
 
             const size_t tailStart = static_cast<size_t>(sr * 0.002);
             const double dryTail = tailEnergy(impulseDry, tailStart);
