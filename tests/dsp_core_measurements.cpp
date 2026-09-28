@@ -952,6 +952,7 @@ struct CpuStats
     double p99Us = 0.0;
     double maxUs = 0.0;
     double deadlineUs = 0.0;
+    std::size_t overrunCount = 0;
 };
 
 CpuStats measureCpu(double sr, int block)
@@ -973,10 +974,11 @@ CpuStats measureCpu(double sr, int block)
     p.setTestParameter(Colderator::kMetal, 1.f);
     p.setTestParameter(Colderator::kFrost, 1.f);
     p.setTestParameter(Colderator::kShiver, 1.f);
-    p.setTestParameter(Colderator::kCold, 1.f);
-    p.setTestParameter(Colderator::kCold, 1.f);
-    p.setTestParameter(Colderator::kCold, 1.f);
     p.setTestParameter(Colderator::kSpace, 1.f);
+    p.setTestParameter(Colderator::kAtmosAType, 1.f / 9.f); // Storm
+    p.setTestParameter(Colderator::kAtmosAAmount, 1.f);
+    p.setTestParameter(Colderator::kAtmosBType, 9.f / 9.f); // Machine
+    p.setTestParameter(Colderator::kAtmosBAmount, 1.f);
     p.setTestParameter(Colderator::kOutput, 0.5f);
     p.setActive(true);
 
@@ -1028,10 +1030,139 @@ CpuStats measureCpu(double sr, int block)
     stats.p99Us = pct(0.99);
     stats.maxUs = us.back();
     stats.deadlineUs = 1.0e6 * static_cast<double>(block) / sr;
+    stats.overrunCount = static_cast<std::size_t>(
+        std::count_if(us.begin(), us.end(),
+            [&](double value) { return value > stats.deadlineUs; }));
 
     p.setActive(false);
     p.terminate();
     return stats;
+}
+
+
+bool zeroSampleParameterFlushApplies(double sr)
+{
+    constexpr int block = 64;
+    Processor p;
+    if (p.initialize(nullptr) != kResultOk)
+        return false;
+
+    ProcessSetup setup {};
+    setup.processMode = kRealtime;
+    setup.symbolicSampleSize = kSample32;
+    setup.maxSamplesPerBlock = block;
+    setup.sampleRate = sr;
+    if (p.setupProcessing(setup) != kResultOk || p.setActive(true) != kResultOk)
+        return false;
+
+    ParameterChanges changes(1);
+    int32 queueIndex = 0;
+    auto* queue = changes.addParameterData(Colderator::kBypass, queueIndex);
+    int32 pointIndex = 0;
+    queue->addPoint(0, 1.0, pointIndex);
+
+    ProcessData flush {};
+    flush.processMode = kRealtime;
+    flush.symbolicSampleSize = kSample32;
+    flush.numSamples = 0;
+    flush.inputParameterChanges = &changes;
+    if (p.process(flush) != kResultOk)
+        return false;
+
+    std::vector<float> in(block), out(block, 0.f);
+    for (int i = 0; i < block; ++i)
+        in[i] = 0.2f * static_cast<float>(
+            std::sin(2.0 * kPi * 440.0 * static_cast<double>(i) / sr));
+
+    float* inPtr[1] = {in.data()};
+    float* outPtr[1] = {out.data()};
+    AudioBusBuffers inBus {};
+    inBus.numChannels = 1;
+    inBus.channelBuffers32 = inPtr;
+    AudioBusBuffers outBus {};
+    outBus.numChannels = 1;
+    outBus.channelBuffers32 = outPtr;
+
+    ProcessData data {};
+    data.processMode = kRealtime;
+    data.symbolicSampleSize = kSample32;
+    data.numSamples = block;
+    data.numInputs = 1;
+    data.numOutputs = 1;
+    data.inputs = &inBus;
+    data.outputs = &outBus;
+
+    const bool processed = p.process(data) == kResultOk;
+    double maxDiff = 0.0;
+    if (processed)
+    {
+        for (int i = 0; i < block; ++i)
+            maxDiff = std::max(maxDiff,
+                std::fabs(static_cast<double>(out[i] - in[i])));
+    }
+
+    p.setActive(false);
+    p.terminate();
+    return processed && maxDiff < 1e-7;
+}
+
+bool outputSilenceFlagsAreCorrect(double sr)
+{
+    constexpr int block = 64;
+    Processor p;
+    if (p.initialize(nullptr) != kResultOk)
+        return false;
+
+    ProcessSetup setup {};
+    setup.processMode = kRealtime;
+    setup.symbolicSampleSize = kSample32;
+    setup.maxSamplesPerBlock = block;
+    setup.sampleRate = sr;
+    if (p.setupProcessing(setup) != kResultOk || p.setActive(true) != kResultOk)
+        return false;
+
+    std::vector<float> inL(block, 0.f), inR(block, 0.f);
+    std::vector<float> outL(block, 0.f), outR(block, 0.f);
+    float* inPtrs[2] = {inL.data(), inR.data()};
+    float* outPtrs[2] = {outL.data(), outR.data()};
+    AudioBusBuffers inBus {};
+    inBus.numChannels = 2;
+    inBus.channelBuffers32 = inPtrs;
+    inBus.silenceFlags = 0x3;
+    AudioBusBuffers outBus {};
+    outBus.numChannels = 2;
+    outBus.channelBuffers32 = outPtrs;
+    outBus.silenceFlags = 0;
+
+    ProcessData data {};
+    data.processMode = kRealtime;
+    data.symbolicSampleSize = kSample32;
+    data.numSamples = block;
+    data.numInputs = 1;
+    data.numOutputs = 1;
+    data.inputs = &inBus;
+    data.outputs = &outBus;
+
+    const bool silentOk =
+        p.process(data) == kResultOk &&
+        (outBus.silenceFlags & 0x3u) == 0x3u;
+
+    // In bypass, non-silent input must result in non-silent output flags.
+    p.setTestParameter(Colderator::kBypass, 1.f);
+    for (int i = 0; i < block; ++i)
+    {
+        inL[i] = inR[i] = 0.1f;
+        outL[i] = outR[i] = 0.f;
+    }
+    inBus.silenceFlags = 0;
+    outBus.silenceFlags = 0x3;
+    const bool bypassOk =
+        p.process(data) == kResultOk &&
+        (outBus.silenceFlags & 0x3u) == 0;
+
+    p.setActive(false);
+    p.terminate();
+    return silentOk && bypassOk;
 }
 
 
@@ -1526,17 +1657,26 @@ int main()
         require(lifecycleAndRateChangeStable(),
                 "activate/deactivate and sample-rate changes remain stable", failures);
 
+        require(zeroSampleParameterFlushApplies(48000.0),
+                "zero-sample process flush applies parameter changes", failures);
+        require(outputSilenceFlagsAreCorrect(48000.0),
+                "output silence flags match generated audio and bypass behavior", failures);
+
         {
             const auto cpu64 = measureCpu(48000.0, 64);
             const auto cpu256 = measureCpu(48000.0, 256);
             std::cout << "[INFO] CPU 48k/64 p95=" << cpu64.p95Us
                       << "us p99=" << cpu64.p99Us << "us max=" << cpu64.maxUs
-                      << "us deadline=" << cpu64.deadlineUs << "us\n";
+                      << "us deadline=" << cpu64.deadlineUs
+                      << "us overruns=" << cpu64.overrunCount << "/1200\n";
             std::cout << "[INFO] CPU 48k/256 p95=" << cpu256.p95Us
                       << "us p99=" << cpu256.p99Us << "us max=" << cpu256.maxUs
-                      << "us deadline=" << cpu256.deadlineUs << "us\n";
+                      << "us deadline=" << cpu256.deadlineUs
+                      << "us overruns=" << cpu256.overrunCount << "/1200\n";
             require(cpu64.p99Us < cpu64.deadlineUs && cpu256.p99Us < cpu256.deadlineUs,
                     "CPU p99 stays inside realtime block deadlines on CI", failures);
+            require(cpu64.overrunCount < 12 && cpu256.overrunCount < 12,
+                    "realtime deadline overruns stay below 1% on CI", failures);
         }
 
         require(nullIoIsHandled(48000.0),

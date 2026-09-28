@@ -438,6 +438,12 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
     const int32 channels = std::min<int32>(
         std::min(inBus.numChannels, outBus.numChannels), kChannels);
 
+    // VST3 requires the processor to report whether each output channel is
+    // silent. Do not simply mirror input flags because active tails may still
+    // produce output from a silent input block.
+    uint64 outputSilenceFlags = 0;
+    bool channelSilent[kChannels] {true, true};
+
     const float smooth = 1.f - std::exp(-1.f / static_cast<float>(sampleRate_ * 0.015));
     const float lowA = onePoleCoeff(sampleRate_, 520.f);
     const float deepA = onePoleCoeff(sampleRate_, 145.f);
@@ -1902,9 +1908,19 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
             if (!std::isfinite(y))
                 y = 0.f;
 
-            out[sample] = bypass_ ? x : y;
+            const float outSample = bypass_ ? x : y;
+            out[sample] = outSample;
+            if (outSample != 0.f)
+                channelSilent[ch] = false;
         }
     }
+
+    for (int32 ch = 0; ch < channels; ++ch)
+    {
+        if (channelSilent[ch])
+            outputSilenceFlags |= (static_cast<uint64>(1) << ch);
+    }
+    outBus.silenceFlags = outputSilenceFlags;
 
     return kResultOk;
 }

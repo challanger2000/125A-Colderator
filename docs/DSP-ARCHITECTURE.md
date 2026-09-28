@@ -533,3 +533,14 @@ The affected states are now expressed through `onePoleCoeff(sampleRate, hz)` usi
 This preserves the existing 48 kHz timing while making the intended temporal behaviour stable across sample rates.
 
 The same audit removed confirmed unused local variables only; no user-facing parameter or state semantics changed.
+
+
+## Host-compliance audit: silence flags, zero-sample flush and realtime overruns
+
+The host/lifecycle audit adds three professional-behaviour requirements:
+
+- Output `AudioBusBuffers::silenceFlags` are derived from the actual generated output on every processed block. This is necessary because a silent input can still produce a tail; input silence therefore cannot simply be mirrored during active processing.
+- Zero-sample `process` calls are treated as parameter-flush calls and covered by regression tests so host-delivered parameter changes are not lost when no audio samples are present.
+- Realtime QA now records deadline-overrun counts in addition to p95, p99, maximum callback time and the block deadline. The stress fixture includes both Atmosphere slots so the timed path represents a heavier actual product configuration.
+
+No parameter IDs, state format or user-facing control semantics changed.
