@@ -198,6 +198,7 @@ void Processor::resetDsp()
     textureRng_[0] = 0x1CE5A11u;
     textureRng_[1] = 0x57EE1A2u;
     iceShardEnv_.fill(0.f);
+    iceShardSamplePos_.fill(0.0);
     metalParticleEnv_.fill(0.f);
     metalAirSamplePos_.fill(0.0);
     metalChimeSamplePos_.fill(0.0);
@@ -635,12 +636,27 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
             const float iceRandom01 =
                 static_cast<float>((tr >> 8) & 0x0000FFFFu) / 65535.f;
             if (iceRandom01 < iceEventProb)
+            {
                 iceShardEnv_[ch] = 1.f;
+                if (FrozenSources::k_ice_crackle_count > 1)
+                    iceShardSamplePos_[ch] =
+                        static_cast<double>((tr >> 7) % FrozenSources::k_ice_crackle_count);
+            }
             const float iceShardDecay =
                 std::exp(-1.f / static_cast<float>(sampleRate_ * (iceDecayMs[iceModel] * 0.001f)));
             iceShardEnv_[ch] = zapDenormal(iceShardEnv_[ch] * iceShardDecay);
             const float iceShard =
                 textureWhite * iceShardEnv_[ch] * sourceScale;
+
+            const double iceSourceStep =
+                static_cast<double>(FrozenSources::kSampleRate) /
+                std::max(1.0, sampleRate_);
+            const float realIceShard = readEmbeddedSample(
+                FrozenSources::k_ice_crackle,
+                FrozenSources::k_ice_crackle_count,
+                iceShardSamplePos_[ch],
+                iceSourceStep * 1.12,
+                ch == 0 ? 0.0 : 0.08);
 
             // METAL particles: rarer, longer mechanical impacts.
             const float metalEventProb =
@@ -735,11 +751,19 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                 iceDelay[static_cast<size_t>(w)] = std::isfinite(write) ? write : 0.f;
                 iceDelayWrite_[ch] = (w + 1 >= size) ? 0 : (w + 1);
             }
-            const float iceTexture = 0.10f * x +
-                                     1.18f * iceGlassGain[iceModel] * glass +
-                                     iceSignal * (1.22f + 0.66f * iceExtreme) +
+            constexpr float iceRealShardGain[kMaterialCount] =
+                {0.62f, 0.42f, 1.08f, 0.34f, 0.76f, 1.28f};
+            const float physicalShard =
+                realIceShard * iceShardEnv_[ch] * sourceScale *
+                iceRealShardGain[iceModel];
+
+            const float iceTexture = 0.08f * x +
+                                     1.12f * iceGlassGain[iceModel] * glass +
+                                     iceSignal * (1.18f + 0.64f * iceExtreme) +
                                      iceShard * iceShardGain[iceModel] *
-                                         (0.36f + 0.58f * effectiveIce);
+                                         (0.24f + 0.44f * effectiveIce) +
+                                     physicalShard *
+                                         (0.34f + 0.56f * effectiveIce);
             const float iceWet = materialWet(effectiveIce);
             y = equalPowerMaterialBlend(y, iceTexture, iceWet);
 

@@ -96,6 +96,7 @@ private:
     // signal-gated and allocation-free on the audio thread.
     std::array<unsigned int, kChannels> textureRng_ {{0x1CE5A11u, 0x57EE1A2u}};
     std::array<float, kChannels> iceShardEnv_ {};
+    std::array<double, kChannels> iceShardSamplePos_ {};
     std::array<float, kChannels> metalParticleEnv_ {};
     std::array<double, kChannels> metalAirSamplePos_ {};
     std::array<double, kChannels> metalChimeSamplePos_ {};

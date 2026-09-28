@@ -1611,6 +1611,25 @@ int main()
                     return v;
                 }, 1e-4);
 
+                Settings iceCrystal50 {};
+                iceCrystal50.cold = 1.f;
+                iceCrystal50.ice = 0.50f;
+                iceCrystal50.iceMaterial = 0.f; // Crystal
+                const auto iceCrystal50Render =
+                    renderSine(sr, 1.5, 440.0, iceCrystal50, 128);
+
+                Settings iceVsFrost50 {};
+                iceVsFrost50.cold = 1.f;
+                iceVsFrost50.frost = 0.50f;
+                iceVsFrost50.frostMaterial = 2.f / 5.f; // Crunch
+                const auto iceVsFrost50Render =
+                    renderSine(sr, 1.5, 440.0, iceVsFrost50, 128);
+
+                require(meanAbsDiff(iceCrystal50Render, iceVsFrost50Render, skip) > 3e-3,
+                        "ICE 50% has a distinct hard-crystalline identity from FROST", failures);
+                require(maxAbs(iceCrystal50Render) < 8.0,
+                        "ICE Crystal 50% remains bounded", failures);
+
                 requireSixDistinct("METAL", [](float m) {
                     Settings v {1.f, 0.f, 0.78f, 0.f, 0.f, 0.f};
                     v.metalMaterial = m;

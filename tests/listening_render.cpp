@@ -486,6 +486,19 @@ int main(int argc, char** argv)
         writeWav(out / "Keys_Wind50.wav", render(keys, windSettings(0.50f)));
         writeWav(out / "Keys_Wind80.wav", render(keys, windSettings(0.80f)));
 
+        auto iceSettings = [](float amount, float material) {
+            Settings i {};
+            i.cold = 1.f;
+            i.ice = amount;
+            i.iceMaterial = material;
+            return i;
+        };
+
+        writeWav(out / "Keys_IceCrystal50.wav", render(keys, iceSettings(0.50f, 0.f / 5.f)));
+        writeWav(out / "Keys_IceShatter80.wav", render(keys, iceSettings(0.80f, 5.f / 5.f)));
+        writeWav(out / "Drums_IceCrack50.wav", render(drums, iceSettings(0.50f, 2.f / 5.f)));
+        writeWav(out / "Drums_IceShatter80.wav", render(drums, iceSettings(0.80f, 5.f / 5.f)));
+
         std::ofstream notes(out / "README.txt");
         notes <<
             "125A Colderator Listening Pack\n"
@@ -519,7 +532,12 @@ int main(int argc, char** argv)
             "MiniMix_Rumble50/80: source-linked cinematic rumble checks\n\n"
             "Targeted Wind renders:\n"
             "WarmPad_Wind50/80: broad real-wind layer checks\n"
-            "Keys_Wind50/80: source-linked gust movement checks\n";
+            "Keys_Wind50/80: source-linked gust movement checks\n\n"
+            "Targeted ICE renders:\n"
+            "Keys_IceCrystal50: hard crystalline material check\n"
+            "Keys_IceShatter80: extreme splintered material check\n"
+            "Drums_IceCrack50: transient-driven physical shard check\n"
+            "Drums_IceShatter80: extreme transient shard check\n";
 
         return 0;
     }

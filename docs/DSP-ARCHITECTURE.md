@@ -485,3 +485,23 @@ Current layers:
 - source gate to keep the atmosphere attached to the played material.
 
 WIND is the basic broad weather layer. STORM adds pressure, snow, roar and cinematic surge. AIR is the thin high-frequency freezing surface.
+
+
+## ICE identity pass
+
+ICE now combines synthetic crystalline structure with short real ice/crack fragments instead of relying almost entirely on resonators, comb reflections and noise shards.
+
+Purpose:
+- preserve the precise hard/glassy character of the existing ICE DSP;
+- add brief physical shard events so ICE feels like brittle material rather than only a synthetic resonator bank;
+- remain clearly distinct from FROST, which is a continuous frozen-surface coating with crackle, grains and air;
+- keep the real shard layer transient-driven and source-gated.
+
+Current layers:
+- short polarity-alternating glass reflections;
+- source-coupled crystalline resonator modes;
+- deterministic synthetic micro-shards;
+- embedded real ice/crack fragments triggered by ICE events;
+- per-material real-shard weighting: Crystal / Glass / Crack / Black Ice / Icicle / Shatter.
+
+ICE should feel like hard brittle crystal breaking or ringing around the source. FROST should feel like a rough frozen surface covering the source.
