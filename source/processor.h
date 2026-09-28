@@ -132,6 +132,8 @@ private:
 
     float shiverPhaseA_ = 0.f;
     float shiverPhaseB_ = 0.f;
+    float cinematicPhaseA_ = 0.f;
+    float cinematicPhaseB_ = 0.f;
     float metalPhaseA_ = 0.f;
     float metalPhaseB_ = 0.f;
     int resonatorUpdateCounter_ = 0;
