@@ -505,3 +505,14 @@ Current layers:
 - per-material real-shard weighting: Crystal / Glass / Crack / Black Ice / Icicle / Shatter.
 
 ICE should feel like hard brittle crystal breaking or ringing around the source. FROST should feel like a rough frozen surface covering the source.
+
+
+## Core audit: macro neutrality, automation capacity and event-rate invariance
+
+A post-identity-pass core audit found three correctness issues and defines the required behaviour:
+
+- COLD is the scene director for Atmosphere as well as the foreground material modules. With COLD at 0%, Atmosphere A/B must contribute exactly no audible layer even when their Amount controls remain above zero.
+- The processor exposes 17 automatable parameters. The realtime automation queue collector must therefore accept all 17 simultaneously; internal headroom is kept above the current public count so the last queue cannot be silently discarded.
+- Probabilistic ICE, METAL, FROST and Atmosphere events are authored against a 48 kHz reference density. Per-sample probabilities are normalized by 48000/sampleRate so event density remains approximately constant per second across supported sample rates.
+
+These are correctness constraints rather than new sound-design features.

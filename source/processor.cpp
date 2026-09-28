@@ -383,7 +383,9 @@ void Processor::applyParameter(ParamID id, float normalized)
 
 tresult PLUGIN_API Processor::process(ProcessData& data)
 {
-    constexpr int32 kMaxAutomationQueues = 16;
+    // 17 public parameters exist today. Keep headroom so simultaneous host
+    // automation cannot silently drop the last parameter queue.
+    constexpr int32 kMaxAutomationQueues = 32;
     IParamValueQueue* automationQueues[kMaxAutomationQueues] {};
     int32 automationIndices[kMaxAutomationQueues] {};
     int32 automationCounts[kMaxAutomationQueues] {};
@@ -559,6 +561,11 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
         constexpr float iceShardGain[kMaterialCount] = {1.00f, 0.55f, 1.35f, 0.40f, 0.80f, 1.65f};
         constexpr float iceGlassGain[kMaterialCount] = {1.00f, 1.35f, 0.55f, 0.72f, 1.10f, 0.62f};
 
+        // Event probabilities below are authored against 48 kHz. Convert
+        // per-sample probabilities to a stable per-second density.
+        const float eventRateScale =
+            48000.f / static_cast<float>(std::max(1.0, sampleRate_));
+
         constexpr float metalEventScale[kMaterialCount] = {1.00f, 0.45f, 1.65f, 0.65f, 1.20f, 1.85f};
         constexpr float metalDecayMs[kMaterialCount] = {26.f, 58.f, 18.f, 42.f, 24.f, 12.f};
         constexpr float metalParticleGain[kMaterialCount] = {1.00f, 0.72f, 1.30f, 0.90f, 1.15f, 1.45f};
@@ -632,7 +639,8 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
             // ICE particles: transient-biased crystal shards.
             const float iceEventProb =
                 effectiveIce * sourceActivity * iceEventScale[iceModel] *
-                (0.00035f + 0.0025f * transientExcitation);
+                (0.00035f + 0.0025f * transientExcitation) *
+                eventRateScale;
             const float iceRandom01 =
                 static_cast<float>((tr >> 8) & 0x0000FFFFu) / 65535.f;
             if (iceRandom01 < iceEventProb)
@@ -661,7 +669,8 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
             // METAL particles: rarer, longer mechanical impacts.
             const float metalEventProb =
                 effectiveMetal * sourceActivity * metalEventScale[metalModel] *
-                (0.00010f + 0.00075f * transientExcitation);
+                (0.00010f + 0.00075f * transientExcitation) *
+                eventRateScale;
             const float metalRandom01 =
                 static_cast<float>((tr >> 1) & 0x0000FFFFu) / 65535.f;
             if (metalRandom01 < metalEventProb)
@@ -679,7 +688,8 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
 
             // FROST crackles: many tiny irregular surface events.
             const float frostEventProb =
-                effectiveFrost * sourceActivity * 0.0035f * frostCrackleScale[frostModel];
+                effectiveFrost * sourceActivity * 0.0035f *
+                frostCrackleScale[frostModel] * eventRateScale;
             const float frostRandom01 =
                 static_cast<float>((tr >> 16) & 0x0000FFFFu) / 65535.f;
             if (frostRandom01 < frostEventProb)
@@ -1281,7 +1291,9 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                 const float n =
                     (static_cast<float>(ar & 0x00FFFFFFu) / 8388607.5f) - 1.f;
 
-                const float coldDrive = 0.25f + 0.75f * smCold_;
+                // COLD is the scene director: at 0% every Atmosphere slot must
+                // be audibly neutral even if its own Amount remains above zero.
+                const float coldDrive = smCold_;
                 const float activity = clamp01(2.8f * slowEnv_[ch] + 1.2f * transientNorm);
 
                 atmosphereNoiseLow_[slot][ch] = zapDenormal(
@@ -1309,7 +1321,7 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                                            (ch == 0 ? 0.f : 1.7f));
 
                 const float eventProbability =
-                    activity * amount *
+                    activity * amount * eventRateScale *
                     ((type == 4 || type == 5) ? 0.00055f :
                      (type == 7 ? 0.00010f :
                       (type == 9 ? 0.00016f : 0.00008f)));

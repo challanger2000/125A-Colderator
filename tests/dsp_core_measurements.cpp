@@ -506,6 +506,102 @@ std::vector<float> renderAutomationPattern(double sr, int block)
     return result;
 }
 
+bool allSeventeenAutomationQueuesAreApplied(double sr)
+{
+    constexpr int block = 128;
+    Processor p;
+    if (p.initialize(nullptr) != kResultOk)
+        return false;
+
+    ProcessSetup setup {};
+    setup.processMode = kRealtime;
+    setup.symbolicSampleSize = kSample32;
+    setup.maxSamplesPerBlock = block;
+    setup.sampleRate = sr;
+    if (p.setupProcessing(setup) != kResultOk)
+        return false;
+
+    p.setTestParameter(Colderator::kCold, 0.8f);
+    p.setTestParameter(Colderator::kSpace, 0.7f);
+    p.setTestParameter(Colderator::kOutput, 0.5f);
+    p.setTestParameter(Colderator::kBypass, 0.f);
+    if (p.setActive(true) != kResultOk)
+        return false;
+
+    std::vector<float> inL(block), inR(block), outL(block, 0.f), outR(block, 0.f);
+    for (int i = 0; i < block; ++i)
+    {
+        const float x = 0.2f * static_cast<float>(
+            std::sin(2.0 * kPi * 440.0 * static_cast<double>(i) / sr));
+        inL[i] = x;
+        inR[i] = x;
+    }
+
+    float* inPtrs[2] = {inL.data(), inR.data()};
+    float* outPtrs[2] = {outL.data(), outR.data()};
+    AudioBusBuffers inBus {};
+    inBus.numChannels = 2;
+    inBus.channelBuffers32 = inPtrs;
+    AudioBusBuffers outBus {};
+    outBus.numChannels = 2;
+    outBus.channelBuffers32 = outPtrs;
+
+    constexpr std::array<ParamID, 16> ids {{
+        Colderator::kCold, Colderator::kIce, Colderator::kMetal,
+        Colderator::kFrost, Colderator::kShiver, Colderator::kSpace,
+        Colderator::kOutput, Colderator::kIceMaterial, Colderator::kMetalMaterial,
+        Colderator::kFrostMaterial, Colderator::kShiverMaterial,
+        Colderator::kSpaceMaterial, Colderator::kAtmosAType,
+        Colderator::kAtmosAAmount, Colderator::kAtmosBType,
+        Colderator::kAtmosBAmount
+    }};
+    constexpr std::array<ParamValue, 16> values {{
+        0.8, 0.0, 0.0, 0.0, 0.0, 0.7, 0.5,
+        0.0, 0.0, 0.0, 0.0, 0.0,
+        0.0, 0.0, 0.0, 0.0
+    }};
+
+    ParameterChanges changes(17);
+    for (std::size_t i = 0; i < ids.size(); ++i)
+    {
+        int32 queueIndex = 0;
+        auto* queue = changes.addParameterData(ids[i], queueIndex);
+        int32 pointIndex = 0;
+        queue->addPoint(0, values[i], pointIndex);
+    }
+
+    // Deliberately add BYPASS as queue 17. The old 16-queue cap silently
+    // ignored this queue and therefore failed to output exact dry audio.
+    int32 bypassQueueIndex = 0;
+    auto* bypassQueue = changes.addParameterData(Colderator::kBypass, bypassQueueIndex);
+    int32 bypassPointIndex = 0;
+    bypassQueue->addPoint(0, 1.0, bypassPointIndex);
+
+    ProcessData data {};
+    data.processMode = kRealtime;
+    data.symbolicSampleSize = kSample32;
+    data.numSamples = block;
+    data.numInputs = 1;
+    data.numOutputs = 1;
+    data.inputs = &inBus;
+    data.outputs = &outBus;
+    data.inputParameterChanges = &changes;
+
+    const bool processed = p.process(data) == kResultOk;
+    double maxDiff = 0.0;
+    if (processed)
+    {
+        for (int i = 0; i < block; ++i)
+            maxDiff = std::max(maxDiff,
+                std::fabs(static_cast<double>(outL[i] - inL[i])));
+    }
+
+    p.setActive(false);
+    p.terminate();
+    return processed && maxDiff < 1e-7;
+}
+
+
 std::vector<float> renderSingleBlockBypassAutomation(double sr)
 {
     constexpr int block = 128;
@@ -1740,6 +1836,19 @@ int main()
                     previousAtmos = rendered;
                 }
 
+                Settings atmosColdZero {};
+                atmosColdZero.cold = 0.f;
+                atmosColdZero.atmosphereAType = 1.f / 9.f; // Storm
+                atmosColdZero.atmosphereAAmount = 1.f;
+                atmosColdZero.atmosphereBType = 9.f / 9.f; // Machine
+                atmosColdZero.atmosphereBAmount = 1.f;
+                const auto atmosColdZeroRender =
+                    renderSine(sr, 1.2, 220.0, atmosColdZero, 128);
+                const auto atmosColdZeroDry =
+                    renderSine(sr, 1.2, 220.0, {}, 128);
+                require(meanAbsDiff(atmosColdZeroDry, atmosColdZeroRender, 0) < 1e-7,
+                        "COLD 0% is neutral even with both Atmosphere slots at 100%", failures);
+
                 Settings wind50 {};
                 wind50.cold = 1.f;
                 wind50.atmosphereAType = 0.f / 9.f; // Wind
@@ -1952,6 +2061,9 @@ int main()
                 require(meanAbsDiff(droneStorm, drone, skip) > 1e-4,
                         "dual atmosphere slots combine into a new scene", failures);
             }
+
+            require(allSeventeenAutomationQueuesAreApplied(sr),
+                    "all 17 simultaneous automation queues are applied", failures);
 
             const auto automation64 = renderAutomationPattern(sr, 64);
             const auto automation257 = renderAutomationPattern(sr, 257);
