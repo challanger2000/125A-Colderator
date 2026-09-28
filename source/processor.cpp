@@ -1492,11 +1492,80 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                         break;
                     }
 
-                    case 8: // Swell
-                        layer = highDetail *
-                                atmosphereSwell_[slot][ch] *
+                    case 8: // Frozen Bloom
+                    {
+                        auto& bloom = bloomBuffer_[slot][ch];
+                        if (!bloom.empty())
+                        {
+                            const int size = static_cast<int>(bloom.size());
+                            const int w = bloomWrite_[slot][ch];
+                            const float side = ch == 0 ? 0.96f : 1.04f;
+
+                            const int d1 = std::max(1, static_cast<int>(
+                                sampleRate_ * 0.094f * side));
+                            const int d2 = std::max(1, static_cast<int>(
+                                sampleRate_ * 0.213f / side));
+                            const int d3 = std::max(1, static_cast<int>(
+                                sampleRate_ * 0.387f * side));
+
+                            auto readBloom = [&](int delay) {
+                                int index = w - delay;
+                                while (index < 0) index += size;
+                                return bloom[static_cast<size_t>(index)];
+                            };
+
+                            const float tapA = readBloom(d1);
+                            const float tapB = readBloom(d2);
+                            const float tapC = readBloom(d3);
+                            const float diffuse =
+                                0.48f * tapA -
+                                0.31f * tapB +
+                                0.27f * tapC;
+
+                            const float lowA =
+                                onePoleCoeff(sampleRate_, 640.f);
+                            bloomLowState_[slot][ch] = zapDenormal(
+                                lowA * bloomLowState_[slot][ch] +
+                                (1.f - lowA) * diffuse);
+
+                            const float coldDiffuse =
+                                diffuse -
+                                0.72f * bloomLowState_[slot][ch];
+
+                            const float bloomEnvelope =
+                                clamp01(
+                                    atmosphereSwell_[slot][ch] *
+                                    (0.45f + 0.55f * slowMotion));
+
+                            const float sourceBloom =
+                                0.52f * highDetail +
+                                0.30f * (x - midLowState_[ch]) +
+                                0.18f * y;
+
+                            const float feedback =
+                                coldDiffuse *
+                                (0.20f + 0.34f * amount);
+
+                            const float writeValue =
+                                zapDenormal(sourceBloom + feedback);
+                            bloom[static_cast<size_t>(w)] =
+                                std::isfinite(writeValue) ? writeValue : 0.f;
+                            bloomWrite_[slot][ch] =
+                                (w + 1 >= size) ? 0 : (w + 1);
+
+                            const float sideMotion =
+                                (ch == 0 ? -1.f : 1.f) *
                                 (0.35f + 0.65f * slowMotion);
+
+                            layer =
+                                (coldDiffuse *
+                                     (0.62f + 0.26f * sideMotion) +
+                                 0.22f * tapC) *
+                                bloomEnvelope *
+                                (0.30f + 0.70f * activity);
+                        }
                         break;
+                    }
 
                     case 9: // Machine
                         layer = (0.55f * atmosphereNoiseLow_[slot][ch] +
@@ -1509,7 +1578,8 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                 const float typeGain =
                     type == 1 ? 0.72f :
                     (type == 2 || type == 3 ? 0.75f :
-                     (type == 7 ? 0.68f : 0.42f));
+                     (type == 7 ? 0.68f :
+                      (type == 8 ? 0.64f : 0.42f)));
                 const float slotGain =
                     amount * coldDrive * typeGain;
                 y += layer * slotGain;
