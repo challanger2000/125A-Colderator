@@ -111,6 +111,7 @@ private:
     std::array<float, kChannels> cinematicLowState_ {};
     std::array<float, kChannels> cinematicBloomState_ {};
     std::array<float, kChannels> cinematicMotionState_ {};
+    std::array<float, kChannels> cinematicMassTailState_ {};
 
     // Two independent generative cinematic atmosphere slots.
     std::array<std::array<unsigned int, kChannels>, 2> atmosphereRng_ {{
