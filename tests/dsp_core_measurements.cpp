@@ -1732,6 +1732,31 @@ int main()
                 require(maxAbs(storm50Render) < 8.0,
                         "Frozen Storm 50% remains bounded", failures);
 
+                Settings landscape50 {};
+                landscape50.cold = 1.f;
+                landscape50.atmosphereAType = 7.f / 9.f; // Frozen Landscape
+                landscape50.atmosphereAAmount = 0.50f;
+                const auto landscape50Render =
+                    renderSine(sr, 1.8, 110.0, landscape50, 128);
+
+                require(meanAbsDiff(storm50Render, landscape50Render, skip) > 2e-3,
+                        "Frozen Landscape 50% has a distinct scene identity from Storm", failures);
+                require(maxAbs(landscape50Render) < 8.0,
+                        "Frozen Landscape 50% remains bounded", failures);
+
+                Settings landscapeSilence {};
+                landscapeSilence.cold = 1.f;
+                landscapeSilence.atmosphereAType = 7.f / 9.f;
+                landscapeSilence.atmosphereAAmount = 1.f;
+                const auto landscapeSilenceRender =
+                    renderSine(sr, 1.2, 0.0, landscapeSilence, 128);
+                double landscapeSilencePeak = 0.0;
+                for (float v : landscapeSilenceRender)
+                    landscapeSilencePeak = std::max(
+                        landscapeSilencePeak, std::fabs(static_cast<double>(v)));
+                require(landscapeSilencePeak < 1e-12,
+                        "Frozen Landscape produces no autonomous output on silence", failures);
+
                 Settings dualAtmos {};
                 dualAtmos.cold = 1.f;
                 dualAtmos.atmosphereAType = 2.f / 9.f; // Drone
