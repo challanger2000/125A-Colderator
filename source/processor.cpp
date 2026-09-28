@@ -1124,6 +1124,17 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                     (1.f - spaceWetForCinematic) *
                     (0.22f + 0.38f * cinematicDepth);
 
+                // Glacier Mass: preserve a controlled slice of the source's
+                // actual deep foundation as the scene becomes huge. Unlike
+                // the impact weight above this also works on sustained pads.
+                // It is source-bound, mono-compatible and intentionally kept
+                // below the low-mid region so "mass" does not become warmth.
+                const float glacierMass =
+                    cinematicLowState_[ch] *
+                    cinematicWeightParticipation *
+                    cinematicDepth *
+                    (0.10f + 0.22f * cinematicDepth);
+
                 auto& cinBuffer = cinematicBuffer_[ch];
                 if (!cinBuffer.empty())
                 {
@@ -1175,6 +1186,7 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                             (0.10f + 0.16f * cinematicDepth);
 
                     y += weight * cinematicDepth;
+                    y += glacierMass;
                     y += cloud * cinematicDepth;
 
                     const float cinInput =
