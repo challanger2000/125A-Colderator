@@ -395,6 +395,24 @@ int main(int argc, char** argv)
             }
         }
 
+        auto bloomSettings = [](float amount) {
+            Settings b {};
+            b.cold = 1.f;
+            b.ice = 0.45f;
+            b.frost = 0.35f;
+            b.space = 0.28f;
+            b.atmosAType = 8.f / 9.f; // Frozen Bloom
+            b.atmosAAmount = amount;
+            return b;
+        };
+
+        const auto warmPad = makeWarmPad();
+        const auto keys = makeKeys();
+        writeWav(out / "WarmPad_FrozenBloom50.wav", render(warmPad, bloomSettings(0.50f)));
+        writeWav(out / "WarmPad_FrozenBloom80.wav", render(warmPad, bloomSettings(0.80f)));
+        writeWav(out / "Keys_FrozenBloom50.wav", render(keys, bloomSettings(0.50f)));
+        writeWav(out / "Keys_FrozenBloom80.wav", render(keys, bloomSettings(0.80f)));
+
         std::ofstream notes(out / "README.txt");
         notes <<
             "125A Colderator Listening Pack\n"
@@ -410,7 +428,10 @@ int main(int argc, char** argv)
             "WarmPad: soft harmonic sustained pad\n"
             "Keys: repeated warm chord stabs\n"
             "Drums: kick/snare/hat transient test\n"
-            "MiniMix: pad + keys + drums + bass\n";
+            "MiniMix: pad + keys + drums + bass\n\n"
+            "Targeted Frozen Bloom renders:\n"
+            "WarmPad_FrozenBloom50/80: additive source-derived bloom checks\n"
+            "Keys_FrozenBloom50/80: transient/harmonic bloom checks\n";
 
         return 0;
     }
