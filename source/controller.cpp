@@ -66,7 +66,7 @@ tresult PLUGIN_API Controller::initialize(FUnknown* context)
         const TChar* names[kAtmosphereTypeCount] = {
             STR16("Wind"), STR16("Storm"), STR16("Drone"), STR16("Rumble"),
             STR16("Distant Metal"), STR16("Ice Cracks"), STR16("Air"),
-            STR16("Frozen Landscape"), STR16("Swell"), STR16("Machine")
+            STR16("Frozen Landscape"), STR16("Frozen Bloom"), STR16("Machine")
         };
         for (auto* name : names)
             p->appendString(name);
