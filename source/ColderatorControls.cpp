@@ -384,12 +384,20 @@ void FrostKnob::draw(VSTGUI::CDrawContext* c)
         0,
         kFrames - 1));
 
-    const auto source = strip_->calcFrameRect(frame);
+    const auto r = getViewSize();
+    constexpr double kMasterSize = 125.0;
+    const double sx = r.getWidth() / kMasterSize;
+    const double sy = r.getHeight() / kMasterSize;
 
-    // One approved 125 px master strip is scaled to the declared control size.
-    // This preserves exactly the same artwork for Main, Character and Utility.
-    c->setBitmapInterpolationQuality(VSTGUI::BitmapInterpolationQuality::kHigh);
-    c->fillRectWithBitmap(strip_, source, getViewSize(), 1.0f);
+    // CAnimKnob/CMultiFrameBitmap draws a frame at its native 125x125 size.
+    // Scale the drawing context exactly like VSTGUI's own bitmap-view examples
+    // so smaller Character/Utility controls show the full knob instead of a crop.
+    VSTGUI::CGraphicsTransform transform;
+    transform.scale(sx, sy);
+    transform.translate(r.left, r.top);
+    VSTGUI::CDrawContext::Transform scaled(*c, transform);
+
+    strip_->drawFrame(c, frame, {0.0, 0.0});
     setDirty(false);
 }
 
