@@ -67,6 +67,7 @@ target_link_libraries(Colderator PRIVATE sdk vstgui_support)
 smtg_target_add_plugin_resources(Colderator
   RESOURCES
     resource/colderator.uidesc
+    resource/Colderator_Frostplate_800x560.png
     resource/colderator_faceplate_100.png
     resource/colderator_faceplate_150.png
     resource/colderator_icicle_broken.png

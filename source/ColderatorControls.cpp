@@ -232,7 +232,9 @@ void FrostLogo::draw(VSTGUI::CDrawContext* c)
 }
 
 FrostFaceplate::FrostFaceplate(const VSTGUI::CRect& r)
-: VSTGUI::CView(r), faceplate_(faceplateBitmap())
+: VSTGUI::CView(r),
+  faceplate_(VSTGUI::makeOwned<VSTGUI::CBitmap>(
+      VSTGUI::CResourceDescription("Colderator_Frostplate_800x560.png")))
 {
     setMouseEnabled(false);
 }
@@ -245,27 +247,30 @@ FrostFaceplate::FrostFaceplate(const FrostFaceplate& o)
 
 void FrostFaceplate::draw(VSTGUI::CDrawContext* c)
 {
-    c->setDrawMode(VSTGUI::kAntiAliasing | VSTGUI::kNonIntegralMode);
-
-    // Intentional VSTGUI base surface for the new winter-white layout.
-    // The blue component is deliberately restrained: it should read as snow/ice white,
-    // not as a blue panel.
     const auto r = getViewSize();
+
+    if (faceplate_ && faceplate_->isLoaded())
+    {
+        const auto source = faceplate_->getSize();
+        if (source.x > 0.0 && source.y > 0.0)
+        {
+            c->setBitmapInterpolationQuality(VSTGUI::BitmapInterpolationQuality::kHigh);
+            c->fillRectWithBitmap(
+                faceplate_,
+                VSTGUI::CRect(0.0, 0.0, source.x, source.y),
+                r,
+                1.0f);
+            setDirty(false);
+            return;
+        }
+    }
+
+    // Safe fallback only if the image resource cannot be loaded.
+    c->setDrawMode(VSTGUI::kAntiAliasing | VSTGUI::kNonIntegralMode);
     gradientRound(c, r, 0.0,
                   {252, 254, 255, 255},
                   {239, 247, 251, 255},
                   {196, 216, 226, 255});
-
-    // Very light frozen sheen; enough to prevent a sterile flat-white surface.
-    c->setFrameColor({255, 255, 255, 180});
-    c->setLineWidth(1.0);
-    c->drawLine({r.left + 18.0, r.top + 86.0},
-                {r.right - 18.0, r.top + 86.0});
-
-    c->setFrameColor({210, 228, 237, 120});
-    c->drawLine({r.left + 24.0, r.bottom - 30.0},
-                {r.right - 24.0, r.bottom - 30.0});
-
     setDirty(false);
 }
 
