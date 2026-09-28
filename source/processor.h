@@ -123,6 +123,9 @@ private:
     std::array<std::array<float, kChannels>, 2> atmosphereSwell_ {};
     std::array<std::array<float, kChannels>, 2> atmosphereEventEnv_ {};
     std::array<std::array<float, kChannels>, 2> atmospherePhase_ {};
+    std::array<std::array<std::vector<float>, kChannels>, 2> bloomBuffer_ {};
+    std::array<std::array<int, kChannels>, 2> bloomWrite_ {};
+    std::array<std::array<float, kChannels>, 2> bloomLowState_ {};
     std::array<std::array<float, kChannels>, 2> stormBodyState_ {};
     std::array<std::array<float, kChannels>, 2> stormPressureState_ {};
     std::array<std::array<float, kChannels>, 2> stormSnowState_ {};
