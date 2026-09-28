@@ -334,53 +334,139 @@ void FrostKnob::draw(VSTGUI::CDrawContext* c)
 {
     c->setDrawMode(VSTGUI::kAntiAliasing | VSTGUI::kNonIntegralMode);
 
-    // Functional VSTGUI placeholder knob.
-    // It is intentionally simple because the next GUI step will replace the body
-    // with the dedicated white, strongly shadowed Colderator knob artwork.
+    // Colderator winter-white control based on the approved JKnobMan direction:
+    // ice-blue scale ring, white rotating handle, dark blue-grey pointer and
+    // a pronounced soft-looking drop shadow. Kept vector-drawn here so all
+    // declared editor zoom factors remain crisp.
     const auto r = getViewSize();
     const double d = std::min(r.getWidth(), r.getHeight());
-    const double pad = style_ == Style::Main ? 7.0 :
-                       style_ == Style::Utility ? 5.0 : 6.0;
+    const auto center = r.getCenter();
 
-    const VSTGUI::CRect bodyRect {
+    const double pad = style_ == Style::Main ? d * 0.035 :
+                       style_ == Style::Utility ? d * 0.045 : d * 0.04;
+
+    const VSTGUI::CRect outer {
         r.left + pad, r.top + pad,
         r.right - pad, r.bottom - pad
     };
-    const double shadowOffset = style_ == Style::Main ? 5.0 : 4.0;
-    const VSTGUI::CRect shadowRect {
-        bodyRect.left + shadowOffset, bodyRect.top + shadowOffset,
-        bodyRect.right + shadowOffset, bodyRect.bottom + shadowOffset
-    };
 
-    c->setFillColor({65, 91, 106, 78});
+    // Strong shadow: the main separation mechanism on the winter-white panel.
+    const double shadow = style_ == Style::Main ? d * 0.055 : d * 0.05;
+    const VSTGUI::CRect shadowRect {
+        outer.left + shadow, outer.top + shadow,
+        outer.right + shadow, outer.bottom + shadow
+    };
+    c->setFillColor({42, 58, 67, 82});
     c->drawEllipse(shadowRect, VSTGUI::kDrawFilled);
 
-    c->setFillColor({244, 249, 252, 255});
-    c->drawEllipse(bodyRect, VSTGUI::kDrawFilled);
-    c->setFrameColor({169, 198, 212, 255});
-    c->setLineWidth(style_ == Style::Main ? 2.0 : 1.5);
-    c->drawEllipse(bodyRect, VSTGUI::kDrawStroked);
+    // Fixed ice-blue scale ring (R165/G205/B225 from the approved visual pass).
+    c->setFillColor({165, 205, 225, 255});
+    c->drawEllipse(outer, VSTGUI::kDrawFilled);
 
-    const auto center = bodyRect.getCenter();
-    const double start = 0.75 * kPi;
-    const double sweep = 1.5 * kPi;
+    // Open the scale ring at the bottom, like the JKnobMan source.
+    const double gapY = center.y + d * 0.365;
+    c->setFillColor({251, 253, 254, 255});
+    c->drawRect(
+        VSTGUI::CRect(outer.left - 2.0, gapY, outer.right + 2.0, outer.bottom + 2.0),
+        VSTGUI::kDrawFilled);
+
+    // White scale marks across the 280-degree travel.
+    const double start = 130.0 * kPi / 180.0;
+    const double sweep = 280.0 * kPi / 180.0;
+    const double ringOuter = d * 0.445;
+    const double ringInner = d * 0.385;
+    c->setFrameColor({255, 255, 255, 245});
+    c->setLineWidth(std::max(1.5, d * 0.025));
+    for (int i = 0; i <= 10; ++i)
+    {
+        const double a = start + sweep * (static_cast<double>(i) / 10.0);
+        const VSTGUI::CPoint p1 {
+            center.x + std::cos(a) * ringInner,
+            center.y + std::sin(a) * ringInner
+        };
+        const VSTGUI::CPoint p2 {
+            center.x + std::cos(a) * ringOuter,
+            center.y + std::sin(a) * ringOuter
+        };
+        c->drawLine(p1, p2);
+    }
+
+    // Metallic rim and a simple directional highlight/shade pair.
+    const double ringInset = d * 0.105;
+    const VSTGUI::CRect metal {
+        r.left + ringInset, r.top + ringInset,
+        r.right - ringInset, r.bottom - ringInset
+    };
+    c->setFillColor({221, 226, 229, 255});
+    c->drawEllipse(metal, VSTGUI::kDrawFilled);
+    c->setFrameColor({102, 112, 118, 255});
+    c->setLineWidth(std::max(1.3, d * 0.018));
+    c->drawEllipse(metal, VSTGUI::kDrawStroked);
+
+    const double faceInset = d * 0.135;
+    const VSTGUI::CRect shadeFace {
+        r.left + faceInset + d * 0.035, r.top + faceInset + d * 0.025,
+        r.right - faceInset + d * 0.035, r.bottom - faceInset + d * 0.025
+    };
+    c->setFillColor({135, 139, 142, 255});
+    c->drawEllipse(shadeFace, VSTGUI::kDrawFilled);
+
+    const VSTGUI::CRect face {
+        r.left + faceInset, r.top + faceInset,
+        r.right - faceInset - d * 0.055, r.bottom - faceInset - d * 0.055
+    };
+    c->setFillColor({250, 252, 253, 255});
+    c->drawEllipse(face, VSTGUI::kDrawFilled);
+
+    // The supplied 101-frame source uses -140..+140 degrees.
     const double angle = start + sweep * getValueNormalized();
 
-    const double innerRadius = d * 0.16;
-    const double outerRadius = d * 0.31;
-    const auto p1 = VSTGUI::CPoint {
-        center.x + std::cos(angle) * innerRadius,
-        center.y + std::sin(angle) * innerRadius
-    };
-    const auto p2 = VSTGUI::CPoint {
-        center.x + std::cos(angle) * outerRadius,
-        center.y + std::sin(angle) * outerRadius
-    };
+    // Rotating white handle opposite the dark pointer.
+    const double hx = std::cos(angle);
+    const double hy = std::sin(angle);
+    const double px = -hy;
+    const double py = hx;
+    const double handleLen = d * 0.40;
+    const double handleHalfWidth = d * 0.15;
 
-    const double width = style_ == Style::Main ? 3.0 :
-                         style_ == Style::Utility ? 1.8 : 2.3;
-    c->setFrameColor({62, 126, 158, 255});
-    c->setLineWidth(width);
+    const VSTGUI::CPoint h0 {center.x - px * handleHalfWidth,
+                             center.y - py * handleHalfWidth};
+    const VSTGUI::CPoint h1 {center.x + px * handleHalfWidth,
+                             center.y + py * handleHalfWidth};
+    const VSTGUI::CPoint backCenter {center.x - hx * handleLen,
+                                     center.y - hy * handleLen};
+    const VSTGUI::CPoint h2 {backCenter.x + px * handleHalfWidth,
+                             backCenter.y + py * handleHalfWidth};
+    const VSTGUI::CPoint h3 {backCenter.x - px * handleHalfWidth,
+                             backCenter.y - py * handleHalfWidth};
+
+    auto* hp = c->createGraphicsPath();
+    if (hp)
+    {
+        hp->beginSubpath(h0);
+        hp->addLine(h1);
+        hp->addLine(h2);
+        hp->addLine(h3);
+        hp->closeSubpath();
+        c->setFillColor({252, 253, 254, 255});
+        c->drawGraphicsPath(hp, VSTGUI::CDrawContext::kPathFilled);
+        hp->forget();
+    }
+
+    // Dark blue-grey pointer: R43/G58/B67 from the approved visual pass.
+    const double pointerInner = d * 0.045;
+    const double pointerOuter = d * 0.315;
+    const VSTGUI::CPoint p1 {
+        center.x + hx * pointerInner,
+        center.y + hy * pointerInner
+    };
+    const VSTGUI::CPoint p2 {
+        center.x + hx * pointerOuter,
+        center.y + hy * pointerOuter
+    };
+    c->setFrameColor({43, 58, 67, 255});
+    c->setLineWidth(style_ == Style::Main ? d * 0.075 :
+                    style_ == Style::Utility ? d * 0.065 : d * 0.07);
     c->drawLine(p1, p2);
 
     setDirty(false);
