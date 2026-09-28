@@ -33,12 +33,23 @@ jobs:
       - name: Build plugin tests and validator
         shell: pwsh
         run: |
-          cmake --build build --config Release --target Colderator ColderatorMeasurements validator --parallel
+          cmake --build build --config Release --target Colderator ColderatorMeasurements ColderatorListeningRender validator --parallel
 
       - name: Cold Core measurements
         shell: pwsh
         run: |
           ctest --test-dir build -C Release --output-on-failure
+
+      - name: Render Listening Pack
+        shell: pwsh
+        run: |
+          $renderer = Get-ChildItem -Path build -Recurse -File -Filter "ColderatorListeningRender.exe" | Select-Object -First 1
+          if (-not $renderer) { Write-Error "ColderatorListeningRender.exe not found"; exit 1 }
+          New-Item -ItemType Directory -Force -Path listening-pack | Out-Null
+          & $renderer.FullName "listening-pack"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $wavCount = (Get-ChildItem -Path listening-pack -File -Filter "*.wav").Count
+          if ($wavCount -ne 20) { Write-Error "Expected 20 WAV files, got $wavCount"; exit 1 }
 
       - name: Locate VST3
         shell: pwsh
@@ -69,5 +80,13 @@ jobs:
         with:
           name: 125A-Colderator-v0.1.0-Core
           path: packaged/
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload Listening Pack
+        uses: actions/upload-artifact@v4
+        with:
+          name: 125A-Colderator-Listening-Pack
+          path: listening-pack/
           if-no-files-found: error
           retention-days: 7
