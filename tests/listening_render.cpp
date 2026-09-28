@@ -340,8 +340,8 @@ Settings preset(int stage)
         s.iceMaterial = 1.f / 5.f; s.metalMaterial = 4.f / 5.f;
         s.frostMaterial = 4.f / 5.f; s.shiverMaterial = 1.f / 5.f;
         s.spaceMaterial = 4.f / 5.f;
-        s.atmosAType = 1.f / 9.f; s.atmosAAmount = 0.30f; // Storm
-        s.atmosBType = 2.f / 9.f; s.atmosBAmount = 0.18f; // Drone
+        s.atmosAType = 1.f / 9.f; s.atmosAAmount = 0.24f; // Storm
+        s.atmosBType = 7.f / 9.f; s.atmosBAmount = 0.16f; // Frozen Landscape
     }
     else if (stage == 75)
     {
@@ -350,8 +350,8 @@ Settings preset(int stage)
         s.iceMaterial = 4.f / 5.f; s.metalMaterial = 4.f / 5.f;
         s.frostMaterial = 5.f / 5.f; s.shiverMaterial = 3.f / 5.f;
         s.spaceMaterial = 5.f / 5.f;
-        s.atmosAType = 1.f / 9.f; s.atmosAAmount = 0.50f;
-        s.atmosBType = 2.f / 9.f; s.atmosBAmount = 0.32f;
+        s.atmosAType = 7.f / 9.f; s.atmosAAmount = 0.46f; // Frozen Landscape
+        s.atmosBType = 2.f / 9.f; s.atmosBAmount = 0.26f; // Drone
     }
     else
     {
@@ -360,8 +360,8 @@ Settings preset(int stage)
         s.iceMaterial = 5.f / 5.f; s.metalMaterial = 4.f / 5.f;
         s.frostMaterial = 5.f / 5.f; s.shiverMaterial = 4.f / 5.f;
         s.spaceMaterial = 5.f / 5.f;
-        s.atmosAType = 1.f / 9.f; s.atmosAAmount = 0.72f;
-        s.atmosBType = 2.f / 9.f; s.atmosBAmount = 0.52f;
+        s.atmosAType = 7.f / 9.f; s.atmosAAmount = 0.68f; // Frozen Landscape
+        s.atmosBType = 1.f / 9.f; s.atmosBAmount = 0.44f; // Storm
     }
     return s;
 }
