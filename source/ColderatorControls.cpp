@@ -247,16 +247,25 @@ void FrostFaceplate::draw(VSTGUI::CDrawContext* c)
 {
     c->setDrawMode(VSTGUI::kAntiAliasing | VSTGUI::kNonIntegralMode);
 
-    if (faceplate_ && faceplate_->isLoaded())
-    {
-        faceplate_->draw(c, getViewSize());
-        setDirty(false);
-        return;
-    }
+    // Intentional VSTGUI base surface for the new winter-white layout.
+    // The blue component is deliberately restrained: it should read as snow/ice white,
+    // not as a blue panel.
+    const auto r = getViewSize();
+    gradientRound(c, r, 0.0,
+                  {252, 254, 255, 255},
+                  {239, 247, 251, 255},
+                  {196, 216, 226, 255});
 
-    // Safe fallback only if a packaged bitmap cannot be loaded.
-    c->setFillColor({238, 246, 250, 255});
-    c->drawRect(getViewSize(), VSTGUI::kDrawFilled);
+    // Very light frozen sheen; enough to prevent a sterile flat-white surface.
+    c->setFrameColor({255, 255, 255, 180});
+    c->setLineWidth(1.0);
+    c->drawLine({r.left + 18.0, r.top + 86.0},
+                {r.right - 18.0, r.top + 86.0});
+
+    c->setFrameColor({210, 228, 237, 120});
+    c->drawLine({r.left + 24.0, r.bottom - 30.0},
+                {r.right - 24.0, r.bottom - 30.0});
+
     setDirty(false);
 }
 
@@ -325,27 +334,40 @@ void FrostKnob::draw(VSTGUI::CDrawContext* c)
 {
     c->setDrawMode(VSTGUI::kAntiAliasing | VSTGUI::kNonIntegralMode);
 
+    // Functional VSTGUI placeholder knob.
+    // It is intentionally simple because the next GUI step will replace the body
+    // with the dedicated white, strongly shadowed Colderator knob artwork.
     const auto r = getViewSize();
-    if (body_ && body_->isLoaded())
-        body_->draw(c, r);
-    else
-    {
-        c->setFillColor({235, 243, 247, 255});
-        c->drawEllipse(r, VSTGUI::kDrawFilled);
-        c->setFrameColor({118, 174, 204, 255});
-        c->setLineWidth(2.0);
-        c->drawEllipse(r, VSTGUI::kDrawStroked);
-    }
-
-    // The approved knob artwork is static. Only this indicator moves.
     const double d = std::min(r.getWidth(), r.getHeight());
-    const auto center = r.getCenter();
+    const double pad = style_ == Style::Main ? 7.0 :
+                       style_ == Style::Utility ? 5.0 : 6.0;
+
+    const VSTGUI::CRect bodyRect {
+        r.left + pad, r.top + pad,
+        r.right - pad, r.bottom - pad
+    };
+    const double shadowOffset = style_ == Style::Main ? 5.0 : 4.0;
+    const VSTGUI::CRect shadowRect {
+        bodyRect.left + shadowOffset, bodyRect.top + shadowOffset,
+        bodyRect.right + shadowOffset, bodyRect.bottom + shadowOffset
+    };
+
+    c->setFillColor({65, 91, 106, 78});
+    c->drawEllipse(shadowRect, VSTGUI::kDrawFilled);
+
+    c->setFillColor({244, 249, 252, 255});
+    c->drawEllipse(bodyRect, VSTGUI::kDrawFilled);
+    c->setFrameColor({169, 198, 212, 255});
+    c->setLineWidth(style_ == Style::Main ? 2.0 : 1.5);
+    c->drawEllipse(bodyRect, VSTGUI::kDrawStroked);
+
+    const auto center = bodyRect.getCenter();
     const double start = 0.75 * kPi;
     const double sweep = 1.5 * kPi;
     const double angle = start + sweep * getValueNormalized();
 
-    const double innerRadius = d * 0.20;
-    const double outerRadius = d * 0.34;
+    const double innerRadius = d * 0.16;
+    const double outerRadius = d * 0.31;
     const auto p1 = VSTGUI::CPoint {
         center.x + std::cos(angle) * innerRadius,
         center.y + std::sin(angle) * innerRadius
@@ -355,11 +377,9 @@ void FrostKnob::draw(VSTGUI::CDrawContext* c)
         center.y + std::sin(angle) * outerRadius
     };
 
-    const double width = style_ == Style::Main ? 3.2 :
-                         style_ == Style::Utility ? 1.9 : 2.4;
-    c->setFrameColor(style_ == Style::Main
-        ? VSTGUI::CColor{31, 157, 220, 255}
-        : VSTGUI::CColor{46, 132, 181, 255});
+    const double width = style_ == Style::Main ? 3.0 :
+                         style_ == Style::Utility ? 1.8 : 2.3;
+    c->setFrameColor({62, 126, 158, 255});
     c->setLineWidth(width);
     c->drawLine(p1, p2);
 
