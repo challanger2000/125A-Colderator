@@ -1178,22 +1178,35 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                         motionA * cinematicMotionState_[ch] +
                         (1.f - motionA) * motionTarget);
 
+                    const float massTailA =
+                        onePoleCoeff(sampleRate_, 135.f);
+                    cinematicMassTailState_[ch] = zapDenormal(
+                        massTailA * cinematicMassTailState_[ch] +
+                        (1.f - massTailA) * distant);
+
+                    const float glacierRear =
+                        cinematicMassTailState_[ch] *
+                        cinematicWeightParticipation *
+                        (0.18f + 0.42f * cinematicDepth) *
+                        (0.55f + 0.45f * spaceWetForCinematic);
+
                     const float cloud =
                         distant * (0.42f + 0.24f * cinematicDepth) +
                         cinematicBloomState_[ch] *
                             (0.34f + 0.28f * cinematicDepth) +
                         feedbackTap * cinematicMotionState_[ch] *
-                            (0.10f + 0.16f * cinematicDepth);
+                            (0.10f + 0.16f * cinematicDepth) +
+                        glacierRear;
 
                     y += weight * cinematicDepth;
                     y += glacierMass * (1.f - spaceWetForCinematic);
                     y += cloud * cinematicDepth;
 
                     const float cinInput =
-                        0.48f * y +
-                        0.24f * highDetail +
-                        0.18f * cinematicLowState_[ch] +
-                        0.10f * glacierMass;
+                        0.46f * y +
+                        0.22f * highDetail +
+                        0.16f * cinematicLowState_[ch] +
+                        0.16f * glacierMass;
                     const float cinFeedback =
                         feedbackTap * (0.36f + 0.30f * cinematicDepth);
                     const float writeValue =
