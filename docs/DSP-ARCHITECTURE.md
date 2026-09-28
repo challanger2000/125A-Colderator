@@ -344,3 +344,22 @@ Design target:
 - low settings remain clearly playable and pitch-traceable;
 - around 50% SHIVER should feel like the instrument/material is physically reacting to cold;
 - SHIVER must not duplicate WIND/STORM atmosphere.
+
+
+## Frozen Landscape atmosphere
+
+Frozen Landscape replaces the earlier Ghost atmosphere.
+
+Purpose:
+- provide an actual winter scene instead of another abstract modulation texture;
+- combine real environmental material with source-derived musical body;
+- remain silent when the input source is silent.
+
+Layers:
+- embedded real wind as wide cold air;
+- embedded real industrial-air recording as distant frozen structure;
+- very sparse embedded real ice-crack events;
+- a low source-derived drone component;
+- slow left/right horizon motion.
+
+Frozen Landscape is available in both Atmosphere slots and is intentionally distinct from WIND and STORM: WIND is a weather texture, STORM is an active dramatic event, Frozen Landscape is a broad environmental scene.
