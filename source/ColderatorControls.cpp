@@ -162,29 +162,16 @@ const VSTGUI::SharedPointer<VSTGUI::CBitmap>& faceplateBitmap()
     return bitmap;
 }
 
-const VSTGUI::SharedPointer<VSTGUI::CBitmap>& stripFor(FrostKnob::Style style)
+const VSTGUI::SharedPointer<VSTGUI::CMultiFrameBitmap>& colderatorKnobStrip()
 {
-    static const BitmapSpec mainSpec {
-        "colderator_main_120.png", "colderator_main_180.png"
-    };
-    static const BitmapSpec characterSpec {
-        "colderator_character_88.png", "colderator_character_132.png"
-    };
-    static const BitmapSpec utilitySpec {
-        "colderator_utility_72.png", "colderator_utility_108.png"
-    };
-
-    static const auto mainStrip = loadBitmapPair(mainSpec);
-    static const auto characterStrip = loadBitmapPair(characterSpec);
-    static const auto utilityStrip = loadBitmapPair(utilitySpec);
-
-    switch (style)
-    {
-        case FrostKnob::Style::Main: return mainStrip;
-        case FrostKnob::Style::Utility: return utilityStrip;
-        case FrostKnob::Style::Character:
-        default: return characterStrip;
-    }
+    static const auto strip = VSTGUI::makeOwned<VSTGUI::CMultiFrameBitmap>(
+        VSTGUI::CResourceDescription("Colderator_Knob_125x125_101f.png"),
+        VSTGUI::CMultiFrameBitmapDescription {
+            {125.0, 125.0},
+            101,
+            1
+        });
+    return strip;
 }
 
 FrostLogo::FrostLogo(const VSTGUI::CRect& r) : VSTGUI::CView(r)
@@ -361,14 +348,19 @@ VSTGUI::CMouseEventResult FrostZoomButton::onMouseDown(
 
 FrostKnob::FrostKnob(const VSTGUI::CRect& r, VSTGUI::IControlListener* l,
                      int32_t tag, Style style)
-: VSTGUI::CKnobBase(r,l,tag,nullptr), style_(style), body_(stripFor(style))
+: VSTGUI::CAnimKnob(r, l, tag, colderatorKnobStrip().get()),
+  style_(style),
+  strip_(colderatorKnobStrip())
 {
+    // The JKnobMan artwork covers -140..+140 degrees.
+    setStartAngle(static_cast<float>(130.0 / 180.0 * kPi));
+    setRangeAngle(static_cast<float>(280.0 / 180.0 * kPi));
     setTransparency(true);
     setWantsFocus(true);
 }
 
 FrostKnob::FrostKnob(const FrostKnob& o)
-: VSTGUI::CKnobBase(o), style_(o.style_), body_(o.body_)
+: VSTGUI::CAnimKnob(o), style_(o.style_), strip_(o.strip_)
 {
     setTransparency(true);
     setWantsFocus(true);
@@ -376,38 +368,28 @@ FrostKnob::FrostKnob(const FrostKnob& o)
 
 void FrostKnob::draw(VSTGUI::CDrawContext* c)
 {
-    // Use the supplied JKnobMan artwork only. No rings, pointers, shadows or
-    // other knob graphics are redrawn by VSTGUI.
-    if (!body_ || !body_->isLoaded())
+    // The supplied Colderator JKnobMan filmstrip is the complete visual.
+    // VSTGUI adds no ring, pointer, scale or shadow.
+    if (!strip_ || !strip_->isLoaded())
     {
         setDirty(false);
         return;
     }
 
-    constexpr int32_t kFrames = 128;
-    const auto bitmapSize = body_->getSize();
-    if (bitmapSize.x <= 0.0 || bitmapSize.y <= 0.0)
-    {
-        setDirty(false);
-        return;
-    }
+    constexpr int32_t kFrames = 101;
+    const auto normalized =
+        std::clamp(static_cast<double>(getValueNormalized()), 0.0, 1.0);
+    const auto frame = static_cast<uint16_t>(std::clamp<int32_t>(
+        static_cast<int32_t>(std::lround(normalized * (kFrames - 1))),
+        0,
+        kFrames - 1));
 
-    const double frameWidth = bitmapSize.x;
-    const double frameHeight = bitmapSize.y / static_cast<double>(kFrames);
-    const int32_t frame = std::max<int32_t>(
-        0, std::min<int32_t>(
-            kFrames - 1,
-            static_cast<int32_t>(std::lround(getValueNormalized() * (kFrames - 1)))));
+    const auto source = strip_->calcFrameRect(frame);
 
-    const VSTGUI::CRect source {
-        0.0,
-        frameHeight * static_cast<double>(frame),
-        frameWidth,
-        frameHeight * static_cast<double>(frame + 1)
-    };
-
+    // One approved 125 px master strip is scaled to the declared control size.
+    // This preserves exactly the same artwork for Main, Character and Utility.
     c->setBitmapInterpolationQuality(VSTGUI::BitmapInterpolationQuality::kHigh);
-    c->fillRectWithBitmap(body_, source, getViewSize(), 1.0f);
+    c->fillRectWithBitmap(strip_, source, getViewSize(), 1.0f);
     setDirty(false);
 }
 

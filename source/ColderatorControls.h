@@ -54,7 +54,7 @@ private:
     bool zoomed_ {false};
 };
 
-class FrostKnob final : public VSTGUI::CKnobBase
+class FrostKnob final : public VSTGUI::CAnimKnob
 {
 public:
     enum class Style { Main, Character, Utility };
@@ -66,7 +66,7 @@ public:
     void draw(VSTGUI::CDrawContext* c) override;
 private:
     Style style_ {Style::Character};
-    VSTGUI::SharedPointer<VSTGUI::CBitmap> body_;
+    VSTGUI::SharedPointer<VSTGUI::CMultiFrameBitmap> strip_;
 };
 
 } // namespace Colderator
