@@ -225,6 +225,8 @@ void Processor::resetDsp()
     for (auto& slot : stormImpactEnv_) slot.fill(0.f);
     for (auto& slot : stormSamplePos_) slot.fill(0.0);
     for (auto& slot : crackSamplePos_) slot.fill(0.0);
+    for (auto& slot : landscapeWindSamplePos_) slot.fill(0.0);
+    for (auto& slot : landscapeMetalSamplePos_) slot.fill(0.0);
     for (int ch = 0; ch < kChannels; ++ch)
     {
         spaceBuffer_[ch].assign(static_cast<size_t>(sampleRate_ * 0.18) + 8u, 0.f);
@@ -1262,13 +1264,15 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
 
                 const float eventProbability =
                     activity * amount *
-                    ((type == 4 || type == 5) ? 0.00055f : 0.00008f);
+                    ((type == 4 || type == 5) ? 0.00055f :
+                     (type == 7 ? 0.00010f : 0.00008f));
                 const float random01 =
                     static_cast<float>((ar >> 8) & 0x0000FFFFu) / 65535.f;
                 if (random01 < eventProbability)
                 {
                     atmosphereEventEnv_[slot][ch] = 1.f;
-                    if (type == 5 && FrozenSources::k_ice_crackle_count > 1)
+                    if ((type == 5 || type == 7) &&
+                        FrozenSources::k_ice_crackle_count > 1)
                     {
                         crackSamplePos_[slot][ch] =
                             static_cast<double>((ar >> 4) % FrozenSources::k_ice_crackle_count);
@@ -1276,7 +1280,9 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                 }
 
                 const float eventDecayMs =
-                    type == 4 ? 180.f : (type == 5 ? 28.f : 90.f);
+                    type == 4 ? 180.f :
+                    (type == 5 ? 28.f :
+                     (type == 7 ? 54.f : 90.f));
                 const float eventDecay = std::exp(
                     -1.f / static_cast<float>(sampleRate_ * eventDecayMs * 0.001f));
                 atmosphereEventEnv_[slot][ch] = zapDenormal(
@@ -1421,12 +1427,58 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                                 (0.30f + 0.70f * activity);
                         break;
 
-                    case 7: // Ghost
-                        layer = (0.64f * atmosphereNoiseLow_[slot][ch] +
-                                 0.36f * highNoise) *
-                                (0.25f + 0.75f * slowMotion) *
-                                atmosphereSwell_[slot][ch];
+                    case 7: // Frozen Landscape
+                    {
+                        const double sourceStep =
+                            static_cast<double>(FrozenSources::kSampleRate) /
+                            std::max(1.0, sampleRate_);
+
+                        const float landscapeWind = readEmbeddedSample(
+                            FrozenSources::k_storm_wind,
+                            FrozenSources::k_storm_wind_count,
+                            landscapeWindSamplePos_[slot][ch],
+                            sourceStep * 0.83,
+                            ch == 0 ? 0.0 : 0.41);
+
+                        const float landscapeMetal = readEmbeddedSample(
+                            FrozenSources::k_cold_metal_air,
+                            FrozenSources::k_cold_metal_air_count,
+                            landscapeMetalSamplePos_[slot][ch],
+                            sourceStep * 0.71,
+                            ch == 0 ? 0.0 : 0.23);
+
+                        const float realCrack = readEmbeddedSample(
+                            FrozenSources::k_ice_crackle,
+                            FrozenSources::k_ice_crackle_count,
+                            crackSamplePos_[slot][ch],
+                            sourceStep * 0.94,
+                            ch == 0 ? 0.0 : 0.09);
+
+                        const float sourceDrone =
+                            (0.68f * lowState_[ch] + 0.32f * midLowState_[ch]) *
+                            (0.42f + 0.58f * atmosphereSwell_[slot][ch]);
+
+                        const float distantAir =
+                            0.72f * landscapeWind +
+                            0.28f * landscapeMetal;
+
+                        const float crackEvent =
+                            realCrack * atmosphereEventEnv_[slot][ch] *
+                            (0.35f + 0.65f * transientExcitation);
+
+                        const float horizonMotion =
+                            0.5f + 0.5f *
+                            std::sin(atmospherePhase_[slot][ch] +
+                                     (ch == 0 ? -0.55f : 0.55f));
+
+                        layer =
+                            (0.52f * distantAir *
+                                 (0.55f + 0.45f * horizonMotion) +
+                             0.30f * sourceDrone +
+                             0.18f * crackEvent) *
+                            (0.22f + 0.78f * activity);
                         break;
+                    }
 
                     case 8: // Swell
                         layer = highDetail *
@@ -1444,7 +1496,8 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
 
                 const float typeGain =
                     type == 1 ? 0.72f :
-                    (type == 2 || type == 3 ? 0.75f : 0.42f);
+                    (type == 2 || type == 3 ? 0.75f :
+                     (type == 7 ? 0.68f : 0.42f));
                 const float slotGain =
                     amount * coldDrive * typeGain;
                 y += layer * slotGain;
