@@ -898,13 +898,17 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                     (0.18f + 0.42f * effectiveShiver) *
                     (0.55f + 0.45f * std::fabs(shiverJitter_[ch]));
 
+                const float shiverExtremeDrive =
+                    1.f + 0.34f * shiverExtreme;
                 const float shiverTarget =
                     (0.10f - 0.04f * shiverExtreme) * y +
                     (0.74f + 0.18f * shiverExtreme) * shifted +
                     shiverStress *
-                        (0.26f + 0.34f * shiverExtreme) +
+                        (0.26f + 0.34f * shiverExtreme) *
+                        shiverExtremeDrive +
                     rigidity *
-                        (0.18f + 0.30f * effectiveShiver);
+                        (0.18f + 0.30f * effectiveShiver) *
+                        shiverExtremeDrive;
 
                 const float shiverDelta = shiverTarget - y;
                 const float shiverProtectA = onePoleCoeff(sampleRate_, 220.f);
