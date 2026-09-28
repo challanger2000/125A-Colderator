@@ -227,6 +227,16 @@ void Processor::resetDsp()
     for (auto& slot : crackSamplePos_) slot.fill(0.0);
     for (auto& slot : landscapeWindSamplePos_) slot.fill(0.0);
     for (auto& slot : landscapeMetalSamplePos_) slot.fill(0.0);
+    for (int slot = 0; slot < 2; ++slot)
+    {
+        for (int ch = 0; ch < kChannels; ++ch)
+        {
+            bloomBuffer_[slot][ch].assign(
+                static_cast<size_t>(sampleRate_ * 0.72) + 16u, 0.f);
+            bloomWrite_[slot][ch] = 0;
+            bloomLowState_[slot][ch] = 0.f;
+        }
+    }
     for (int ch = 0; ch < kChannels; ++ch)
     {
         spaceBuffer_[ch].assign(static_cast<size_t>(sampleRate_ * 0.18) + 8u, 0.f);
