@@ -282,3 +282,22 @@ Future measurement when nonlinear digital-cold behavior is added:
 - folded components below Nyquist;
 - compare clean / normal / extreme COLD ranges;
 - permit intentionally audible foldback only when it contributes to the designed digital-cold character and remains bounded.
+
+
+## Real-audio fixture implementation
+
+The CI regression suite now prepares and measures a fixed four-source real-program corpus at 48 kHz:
+
+- piano — CC0, sustained/transient tonal material;
+- drums — CC0, transient clusters and dense percussive spectrum;
+- synth pad — CC0 production stem, sustained broadband material;
+- voice — CC0 speech, formants and natural gaps.
+
+The original source files are downloaded only for QA and cached outside Git. The preparation stage preserves source gain and mono/stereo structure, resamples deterministically to 48 kHz, selects a deterministic excerpt when needed and writes PCM16 WAV fixtures plus provenance metadata.
+
+Current objective checks on every real fixture:
+- neutral COLD=0 / Output=0 dB path nulls against the prepared source within PCM/tolerance bounds;
+- strong representative processing remains finite and bounded;
+- representative processing produces a measurable non-trivial transformation.
+
+This supplements rather than replaces the synthetic matrix.

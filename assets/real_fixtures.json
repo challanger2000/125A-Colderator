@@ -1,0 +1,45 @@
+{
+  "target_sample_rate": 48000,
+  "fixtures": [
+    {
+      "id": "piano",
+      "file": "Emotional_piano.wav",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Emotional_piano.wav",
+      "download": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Emotional%20piano.wav",
+      "license": "CC0-1.0",
+      "author": "triangelx",
+      "role": "real piano / sustained and transient tonal material",
+      "seconds": 6.0
+    },
+    {
+      "id": "drums",
+      "file": "Funk_carioca_8_bar_loop.ogg",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Funk_carioca_8_bar_loop.ogg",
+      "download": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Funk%20carioca%208%20bar%20loop.ogg",
+      "license": "CC0-1.0",
+      "author": "Zanahary",
+      "role": "real drum-program material / transient clusters",
+      "seconds": 3.7
+    },
+    {
+      "id": "synth_pad",
+      "file": "Friendly_Evil_pad.ogg",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Stem_4_from_%22Friendly_Evil_Gangsta_Synth_Hip_Hop%22_for_remixing.ogg",
+      "download": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Stem%204%20from%20%22Friendly%20Evil%20Gangsta%20Synth%20Hip%20Hop%22%20for%20remixing.ogg",
+      "license": "CC0-1.0",
+      "author": "Mesostic",
+      "role": "real production stem / sustained broadband synth pad",
+      "seconds": 6.0
+    },
+    {
+      "id": "voice",
+      "file": "Can_I_help_you_find_something.wav",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Can_I_help_you_find_something.wav",
+      "download": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Can%20I%20help%20you%20find%20something.wav",
+      "license": "CC0-1.0",
+      "author": "Czechcamp",
+      "role": "real speech / formants and quiet natural gaps",
+      "seconds": 3.096
+    }
+  ]
+}

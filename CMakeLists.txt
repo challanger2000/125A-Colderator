@@ -63,6 +63,21 @@ target_link_libraries(ColderatorMeasurements PRIVATE sdk)
 enable_testing()
 add_test(NAME ColderatorMeasurements COMMAND ColderatorMeasurements)
 
+add_executable(ColderatorRealFixtureMeasurements
+  tests/real_fixture_measurements.cpp
+  source/processor.cpp
+)
+target_compile_definitions(ColderatorRealFixtureMeasurements PRIVATE COLDERATOR_TESTING=1)
+target_include_directories(ColderatorRealFixtureMeasurements PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/source
+  ${CMAKE_CURRENT_SOURCE_DIR}/generated
+)
+target_link_libraries(ColderatorRealFixtureMeasurements PRIVATE sdk)
+add_test(
+  NAME ColderatorRealFixtureMeasurements
+  COMMAND ColderatorRealFixtureMeasurements ${CMAKE_BINARY_DIR}/real-fixtures
+)
+
 add_executable(ColderatorListeningRender
   tests/listening_render.cpp
   source/processor.cpp

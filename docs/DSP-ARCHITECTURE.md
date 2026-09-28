@@ -544,3 +544,16 @@ The host/lifecycle audit adds three professional-behaviour requirements:
 - Realtime QA now records deadline-overrun counts in addition to p95, p99, maximum callback time and the block deadline. The stress fixture includes both Atmosphere slots so the timed path represents a heavier actual product configuration.
 
 No parameter IDs, state format or user-facing control semantics changed.
+
+
+## Real-program regression corpus
+
+The automated core QA now includes fixed real-program audio in addition to synthetic fixtures.
+
+Current corpus:
+- CC0 piano performance;
+- CC0 drum loop;
+- CC0 synth-pad production stem;
+- CC0 spoken voice.
+
+The fixture sources are not committed as binaries. CI downloads them from their documented source pages into a cache, prepares deterministic 48 kHz PCM16 excerpts without loudness normalization, and records source SHA-256 plus provenance. A dedicated CTest verifies neutral-path accuracy, finite/bounded output and a measurable transformation under a representative strong Colderator setting.
