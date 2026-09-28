@@ -386,18 +386,25 @@ void FrostKnob::draw(VSTGUI::CDrawContext* c)
 
     const auto r = getViewSize();
     constexpr double kMasterSize = 125.0;
-    const double sx = r.getWidth() / kMasterSize;
-    const double sy = r.getHeight() / kMasterSize;
 
-    // CAnimKnob/CMultiFrameBitmap draws a frame at its native 125x125 size.
-    // Scale the drawing context exactly like VSTGUI's own bitmap-view examples
-    // so smaller Character/Utility controls show the full knob instead of a crop.
-    VSTGUI::CGraphicsTransform transform;
-    transform.scale(sx, sy);
-    transform.translate(r.left, r.top);
-    VSTGUI::CDrawContext::Transform scaled(*c, transform);
+    // Do not scale the draw context for a filmstrip. That also transforms the
+    // clip region and was the cause of the rectangular/corrupted tiles seen
+    // while turning the knob. Select the required source frame explicitly and
+    // scale only that bitmap region into the control rectangle.
+    const VSTGUI::CRect sourceRect {
+        0.0,
+        static_cast<double>(frame) * kMasterSize,
+        kMasterSize,
+        static_cast<double>(frame + 1u) * kMasterSize
+    };
 
-    strip_->drawFrame(c, frame, {0.0, 0.0});
+    c->setBitmapInterpolationQuality(VSTGUI::BitmapInterpolationQuality::kHigh);
+    c->fillRectWithBitmap(
+        strip_,
+        sourceRect,
+        r,
+        1.0f);
+
     setDirty(false);
 }
 
