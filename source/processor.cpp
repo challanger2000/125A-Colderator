@@ -231,7 +231,9 @@ void Processor::resetDsp()
     for (auto& slot : machineAirSamplePos_) slot.fill(0.0);
     for (auto& slot : machineChimeSamplePos_) slot.fill(0.0);
     for (auto& slot : distantMetalSamplePos_) slot.fill(0.0);
+    for (auto& slot : airWindSamplePos_) slot.fill(0.0);
     for (auto& slot : distantMetalBodyState_) slot.fill(0.f);
+    for (auto& slot : airLowState_) slot.fill(0.f);
     for (auto& slot : machineLoadState_) slot.fill(0.f);
     for (int slot = 0; slot < 2; ++slot)
     {
@@ -1492,10 +1494,48 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                     }
 
                     case 6: // Air
-                        layer = highNoise *
-                                (0.18f + 0.82f * atmosphereSwell_[slot][ch]) *
-                                (0.30f + 0.70f * activity);
+                    {
+                        const double sourceStep =
+                            static_cast<double>(FrozenSources::kSampleRate) /
+                            std::max(1.0, sampleRate_);
+
+                        const float realWind = readEmbeddedSample(
+                            FrozenSources::k_storm_wind,
+                            FrozenSources::k_storm_wind_count,
+                            airWindSamplePos_[slot][ch],
+                            sourceStep * 1.07,
+                            ch == 0 ? 0.0 : 0.33);
+
+                        // Remove the warm body of the field recording so AIR remains
+                        // a thin, freezing surface around the source rather than WIND v2.
+                        const float lowA = onePoleCoeff(sampleRate_, 1450.f);
+                        airLowState_[slot][ch] = zapDenormal(
+                            lowA * airLowState_[slot][ch] +
+                            (1.f - lowA) * realWind);
+
+                        const float realColdAir =
+                            realWind - airLowState_[slot][ch];
+
+                        const float sourceBreath =
+                            0.64f * highDetail +
+                            0.36f * (x - midLowState_[ch]);
+
+                        const float airMotion =
+                            0.58f +
+                            0.42f * slowMotion;
+
+                        const float airGate =
+                            clamp01(activity * 2.6f);
+
+                        layer =
+                            (0.62f * realColdAir +
+                             0.24f * sourceBreath +
+                             0.14f * highNoise) *
+                            (0.24f + 0.76f * atmosphereSwell_[slot][ch]) *
+                            airMotion *
+                            airGate;
                         break;
+                    }
 
                     case 7: // Frozen Landscape
                     {

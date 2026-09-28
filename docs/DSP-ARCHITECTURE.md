@@ -424,3 +424,23 @@ Current layers:
 - slow scene motion for slight depth variation.
 
 Distant Metal should feel like isolated metal activity somewhere in the frozen environment, while Machine should feel like the listener is inside an operating cold machine room.
+
+
+## Air atmosphere identity pass
+
+Air is now a thin freezing layer around the source rather than generic synthetic hiss.
+
+Purpose:
+- create the impression of cold moving air without duplicating the broader WIND scene;
+- retain irregularity from a real field recording;
+- couple the layer to source high-frequency/transient content;
+- remain fully silent on fresh silence.
+
+Current layers:
+- embedded real wind recording with low body removed to isolate the colder air component;
+- source-derived high-detail/breath component;
+- a small deterministic high-noise component for frost-like edge;
+- slow motion from the atmosphere phase;
+- source-activity gate and swell so AIR follows the played material rather than running independently.
+
+AIR should feel thin, close and freezing. WIND remains the broader weather texture.

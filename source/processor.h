@@ -138,7 +138,9 @@ private:
     std::array<std::array<double, kChannels>, 2> machineAirSamplePos_ {};
     std::array<std::array<double, kChannels>, 2> machineChimeSamplePos_ {};
     std::array<std::array<double, kChannels>, 2> distantMetalSamplePos_ {};
+    std::array<std::array<double, kChannels>, 2> airWindSamplePos_ {};
     std::array<std::array<float, kChannels>, 2> distantMetalBodyState_ {};
+    std::array<std::array<float, kChannels>, 2> airLowState_ {};
     std::array<std::array<float, kChannels>, 2> machineLoadState_ {};
 
     float shiverPhaseA_ = 0.f;

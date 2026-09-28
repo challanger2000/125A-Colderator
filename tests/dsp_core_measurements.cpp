@@ -1738,6 +1738,31 @@ int main()
                 require(maxAbs(storm50Render) < 8.0,
                         "Frozen Storm 50% remains bounded", failures);
 
+                Settings air50 {};
+                air50.cold = 1.f;
+                air50.atmosphereAType = 6.f / 9.f; // Air
+                air50.atmosphereAAmount = 0.50f;
+                const auto air50Render =
+                    renderSine(sr, 1.5, 110.0, air50, 128);
+
+                require(meanAbsDiff(wind50Render, air50Render, skip) > 2e-3,
+                        "Air 50% has a distinct thin-cold identity from Wind", failures);
+                require(maxAbs(air50Render) < 8.0,
+                        "Air 50% remains bounded", failures);
+
+                Settings airSilence {};
+                airSilence.cold = 1.f;
+                airSilence.atmosphereAType = 6.f / 9.f;
+                airSilence.atmosphereAAmount = 1.f;
+                const auto airSilenceRender =
+                    renderSine(sr, 1.2, 0.0, airSilence, 128);
+                double airSilencePeak = 0.0;
+                for (float v : airSilenceRender)
+                    airSilencePeak = std::max(
+                        airSilencePeak, std::fabs(static_cast<double>(v)));
+                require(airSilencePeak < 1e-12,
+                        "Air produces no autonomous output on fresh silence", failures);
+
                 Settings landscape50 {};
                 landscape50.cold = 1.f;
                 landscape50.atmosphereAType = 7.f / 9.f; // Frozen Landscape

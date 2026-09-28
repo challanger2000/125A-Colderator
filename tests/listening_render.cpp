@@ -444,6 +444,20 @@ int main(int argc, char** argv)
         writeWav(out / "MiniMix_DistantMetal50.wav", render(miniMix, distantMetalSettings(0.50f)));
         writeWav(out / "MiniMix_DistantMetal80.wav", render(miniMix, distantMetalSettings(0.80f)));
 
+        auto airSettings = [](float amount) {
+            Settings a {};
+            a.cold = 1.f;
+            a.frost = 0.22f;
+            a.atmosAType = 6.f / 9.f; // Air
+            a.atmosAAmount = amount;
+            return a;
+        };
+
+        writeWav(out / "WarmPad_Air50.wav", render(warmPad, airSettings(0.50f)));
+        writeWav(out / "WarmPad_Air80.wav", render(warmPad, airSettings(0.80f)));
+        writeWav(out / "Drums_Air50.wav", render(drums, airSettings(0.50f)));
+        writeWav(out / "Drums_Air80.wav", render(drums, airSettings(0.80f)));
+
         std::ofstream notes(out / "README.txt");
         notes <<
             "125A Colderator Listening Pack\n"
@@ -468,7 +482,10 @@ int main(int argc, char** argv)
             "MiniMix_Machine50/80: source-linked cinematic machine-room checks\n\n"
             "Targeted Distant Metal renders:\n"
             "Keys_DistantMetal50/80: sparse distant-strike checks\n"
-            "MiniMix_DistantMetal50/80: cinematic distant-metal scene checks\n";
+            "MiniMix_DistantMetal50/80: cinematic distant-metal scene checks\n\n"
+            "Targeted Air renders:\n"
+            "WarmPad_Air50/80: thin frozen-air coating checks\n"
+            "Drums_Air50/80: transient-linked cold-air checks\n";
 
         return 0;
     }
