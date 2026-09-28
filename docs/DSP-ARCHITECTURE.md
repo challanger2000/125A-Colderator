@@ -465,3 +465,23 @@ Current layers:
 - source gate so no independent low-frequency bed appears from silence.
 
 Rumble should feel like the floor, chassis or distant structure is moving with the sound, not like a continuous synthesized sub-noise layer.
+
+
+## Wind atmosphere identity pass
+
+Wind now uses the embedded real wind field recording as its physical basis instead of synthetic low-passed random noise.
+
+Purpose:
+- provide a broad natural frozen-wind layer;
+- remain simpler and calmer than Frozen Storm;
+- remain fuller and broader than the thin AIR layer;
+- follow source activity so fresh silence remains silent.
+
+Current layers:
+- embedded real wind recording;
+- a damped wind-body follower for broader mass;
+- source-derived breath/high-detail component;
+- gust shaping from the existing gust and slow-motion states;
+- source gate to keep the atmosphere attached to the played material.
+
+WIND is the basic broad weather layer. STORM adds pressure, snow, roar and cinematic surge. AIR is the thin high-frequency freezing surface.

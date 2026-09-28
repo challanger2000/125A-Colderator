@@ -224,6 +224,7 @@ void Processor::resetDsp()
     for (auto& slot : stormPressureState_) slot.fill(0.f);
     for (auto& slot : stormSnowState_) slot.fill(0.f);
     for (auto& slot : stormImpactEnv_) slot.fill(0.f);
+    for (auto& slot : windSamplePos_) slot.fill(0.0);
     for (auto& slot : stormSamplePos_) slot.fill(0.0);
     for (auto& slot : crackSamplePos_) slot.fill(0.0);
     for (auto& slot : landscapeWindSamplePos_) slot.fill(0.0);
@@ -236,6 +237,7 @@ void Processor::resetDsp()
     for (auto& slot : airLowState_) slot.fill(0.f);
     for (auto& slot : rumbleBodyState_) slot.fill(0.f);
     for (auto& slot : rumbleImpactState_) slot.fill(0.f);
+    for (auto& slot : windBodyState_) slot.fill(0.f);
     for (auto& slot : machineLoadState_) slot.fill(0.f);
     for (int slot = 0; slot < 2; ++slot)
     {
@@ -1326,10 +1328,44 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                 switch (type)
                 {
                     case 0: // Wind
-                        layer = atmosphereNoiseLow_[slot][ch] *
-                                (0.22f + 0.78f * atmosphereGust_[slot][ch]) *
-                                (0.35f + 0.65f * activity);
+                    {
+                        const double sourceStep =
+                            static_cast<double>(FrozenSources::kSampleRate) /
+                            std::max(1.0, sampleRate_);
+
+                        const float realWind = readEmbeddedSample(
+                            FrozenSources::k_storm_wind,
+                            FrozenSources::k_storm_wind_count,
+                            windSamplePos_[slot][ch],
+                            sourceStep * 0.96,
+                            ch == 0 ? 0.0 : 0.27);
+
+                        const float bodyA = onePoleCoeff(sampleRate_, 760.f);
+                        windBodyState_[slot][ch] = zapDenormal(
+                            bodyA * windBodyState_[slot][ch] +
+                            (1.f - bodyA) * realWind);
+
+                        const float gustShape =
+                            0.22f +
+                            0.78f * clamp01(
+                                0.62f * atmosphereGust_[slot][ch] +
+                                0.38f * slowMotion);
+
+                        const float sourceBreath =
+                            0.52f * (x - midLowState_[ch]) +
+                            0.48f * highDetail;
+
+                        const float windGate =
+                            clamp01(activity * 2.5f);
+
+                        layer =
+                            (0.68f * realWind +
+                             0.20f * windBodyState_[slot][ch] +
+                             0.12f * sourceBreath) *
+                            gustShape *
+                            windGate;
                         break;
+                    }
 
                     case 1: // Frozen Storm
                     {

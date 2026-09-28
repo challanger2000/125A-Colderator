@@ -131,6 +131,7 @@ private:
     std::array<std::array<float, kChannels>, 2> stormPressureState_ {};
     std::array<std::array<float, kChannels>, 2> stormSnowState_ {};
     std::array<std::array<float, kChannels>, 2> stormImpactEnv_ {};
+    std::array<std::array<double, kChannels>, 2> windSamplePos_ {};
     std::array<std::array<double, kChannels>, 2> stormSamplePos_ {};
     std::array<std::array<double, kChannels>, 2> crackSamplePos_ {};
     std::array<std::array<double, kChannels>, 2> landscapeWindSamplePos_ {};
@@ -143,6 +144,7 @@ private:
     std::array<std::array<float, kChannels>, 2> airLowState_ {};
     std::array<std::array<float, kChannels>, 2> rumbleBodyState_ {};
     std::array<std::array<float, kChannels>, 2> rumbleImpactState_ {};
+    std::array<std::array<float, kChannels>, 2> windBodyState_ {};
     std::array<std::array<float, kChannels>, 2> machineLoadState_ {};
 
     float shiverPhaseA_ = 0.f;

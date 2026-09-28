@@ -1727,6 +1727,22 @@ int main()
                 wind50.atmosphereAAmount = 0.50f;
                 const auto wind50Render = renderSine(sr, 1.5, 110.0, wind50, 128);
 
+                require(maxAbs(wind50Render) < 8.0,
+                        "Wind 50% remains bounded", failures);
+
+                Settings windSilence {};
+                windSilence.cold = 1.f;
+                windSilence.atmosphereAType = 0.f / 9.f;
+                windSilence.atmosphereAAmount = 1.f;
+                const auto windSilenceRender =
+                    renderSine(sr, 1.2, 0.0, windSilence, 128);
+                double windSilencePeak = 0.0;
+                for (float v : windSilenceRender)
+                    windSilencePeak = std::max(
+                        windSilencePeak, std::fabs(static_cast<double>(v)));
+                require(windSilencePeak < 1e-12,
+                        "Wind produces no autonomous output on fresh silence", failures);
+
                 Settings storm50 {};
                 storm50.cold = 1.f;
                 storm50.atmosphereAType = 1.f / 9.f; // Frozen Storm
