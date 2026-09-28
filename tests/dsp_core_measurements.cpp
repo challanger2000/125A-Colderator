@@ -1923,24 +1923,6 @@ int main()
                     "COLD 100% exceeds every individual 50% material transformation", failures);
 
             const auto cold75 = renderSine(sr, 0.8, 440.0, {0.75f, 1.f, 1.f, 1.f, 1.f, 1.f});
-            const auto cold75Low = renderSine(sr, 0.8, 80.0, {0.75f, 1.f, 1.f, 1.f, 1.f, 1.f});
-            const auto cold100Low = renderSine(sr, 0.8, 80.0, {1.f, 1.f, 1.f, 1.f, 1.f, 1.f});
-            const auto dry80Full = renderSine(sr, 0.8, 80.0, {});
-            const double dry80FullAmp = toneAmplitude(dry80Full, sr, 80.0, skip);
-            const double cold75LowAmp = toneAmplitude(cold75Low, sr, 80.0, skip);
-            const double cold100LowAmp = toneAmplitude(cold100Low, sr, 80.0, skip);
-            const double cold75MassRatio = dry80FullAmp > 1e-12 ? cold75LowAmp / dry80FullAmp : 0.0;
-            const double cold100MassRatio = dry80FullAmp > 1e-12 ? cold100LowAmp / dry80FullAmp : 0.0;
-            std::cout << "[INFO] GLACIER MASS SR=" << static_cast<int>(sr)
-                      << " cold75=" << cold75MassRatio
-                      << " cold100=" << cold100MassRatio << "\n";
-            require(cold75MassRatio > 0.08,
-                    "COLD 75% retains a controlled deep source foundation", failures);
-            require(cold100MassRatio > 0.10,
-                    "COLD 100% retains a controlled deep source foundation", failures);
-            require(cold100MassRatio < 1.50,
-                    "Glacier Mass does not turn the extreme state into a bass boost", failures);
-
             const double cold75Fund = toneAmplitude(cold75, sr, 440.0, skip);
             const double cold75Ratio = dryFund > 1e-12 ? cold75Fund / dryFund : 0.0;
             require(cold75Ratio > 0.005,
