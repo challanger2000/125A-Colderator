@@ -1757,7 +1757,14 @@ int main()
                 const auto rumble50Render =
                     renderSine(sr, 1.5, 110.0, rumble50, 128);
 
-                require(meanAbsDiff(drone50Render, rumble50Render, skip) > 2e-3,
+                Settings rumbleDrone50 {};
+                rumbleDrone50.cold = 1.f;
+                rumbleDrone50.atmosphereAType = 2.f / 9.f; // Drone
+                rumbleDrone50.atmosphereAAmount = 0.50f;
+                const auto rumbleDrone50Render =
+                    renderSine(sr, 1.5, 110.0, rumbleDrone50, 128);
+
+                require(meanAbsDiff(rumbleDrone50Render, rumble50Render, skip) > 2e-3,
                         "Rumble 50% has a distinct structural identity from Drone", failures);
                 require(maxAbs(rumble50Render) < 8.0,
                         "Rumble 50% remains bounded", failures);
