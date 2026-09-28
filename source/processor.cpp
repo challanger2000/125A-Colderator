@@ -86,6 +86,19 @@ inline float materialWet(float v)
         return 0.72f + (v - 0.50f) * (0.16f / 0.25f); // 75% -> 88%
     return 0.88f + (v - 0.75f) * (0.12f / 0.25f);     // 100% -> 100%
 }
+
+inline float equalPowerMaterialBlend(float dry, float wet, float mix)
+{
+    mix = clamp01(mix);
+    if (mix <= 0.f)
+        return dry;
+    if (mix >= 1.f)
+        return wet;
+
+    const float dryGain = std::sqrt(1.f - mix);
+    const float wetGain = std::sqrt(mix);
+    return dry * dryGain + wet * wetGain;
+}
 }
 
 void Processor::Resonator::setBandpass(double sampleRate, float frequency, float q)
@@ -704,7 +717,7 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                                      iceShard * iceShardGain[iceModel] *
                                          (0.36f + 0.58f * effectiveIce);
             const float iceWet = materialWet(effectiveIce);
-            y = y * (1.f - iceWet) + iceTexture * iceWet;
+            y = equalPowerMaterialBlend(y, iceTexture, iceWet);
 
             // METAL = steel / pipes / sheet / machinery / rust.
             // Real industrial air and metallic events provide material realism;
@@ -757,7 +770,7 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                 metalMass * (0.16f + 0.26f * effectiveMetal);
 
             const float metalWet = materialWet(effectiveMetal);
-            y = y * (1.f - metalWet) + metalTexture * metalWet;
+            y = equalPowerMaterialBlend(y, metalTexture, metalWet);
 
             // FROST: deterministic, signal-dependent high-frequency texture.
             // No input energy means no frost output, even though the RNG state advances.
@@ -848,7 +861,7 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
             const float frostTexture =
                 0.12f * x + frostEffectBody * frostExtremeBoost;
             const float frostWet = materialWet(effectiveFrost);
-            y = y * (1.f - frostWet) + frostTexture * frostWet;
+            y = equalPowerMaterialBlend(y, frostTexture, frostWet);
 
             // SHIVER = wind / cold tremor / irregular micro-Doppler.
             // Use a moving short delay plus stepped deterministic jitter so
@@ -1070,7 +1083,7 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                     mainWet +
                     farWet * (0.72f + 0.38f * effectiveSpace);
                 const float spaceWet = materialWet(effectiveSpace);
-                y = y * (1.f - spaceWet) + roomWet * spaceWet;
+                y = equalPowerMaterialBlend(y, roomWet, spaceWet);
 
                 const float writeValue = zapDenormal(
                     spaceInput + icyFeedback * std::min(0.86f, feedback));
