@@ -166,6 +166,8 @@ VSTGUI::CView* Controller::createCustomView(
         return new FrostFaceplate(r);
     if (std::strcmp(name, "BrandLogo") == 0)
         return new FrostLogo(r);
+    if (std::strcmp(name, "Icicle") == 0)
+        return new FrostIcicle(r);
 
     auto knob = [&](const char* n, ParamID id,
                     FrostKnob::Style style=FrostKnob::Style::Character) -> VSTGUI::CView* {

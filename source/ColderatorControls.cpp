@@ -3,6 +3,7 @@
 #include "vstgui/lib/cdrawcontext.h"
 #include "vstgui/lib/cgradient.h"
 #include "vstgui/lib/cgraphicspath.h"
+#include "vstgui/lib/cgraphicstransform.h"
 #include <algorithm>
 #include <cctype>
 #include <cmath>
@@ -257,6 +258,52 @@ void FrostFaceplate::draw(VSTGUI::CDrawContext* c)
     // Safe fallback only if a packaged bitmap cannot be loaded.
     c->setFillColor({238, 246, 250, 255});
     c->drawRect(getViewSize(), VSTGUI::kDrawFilled);
+    setDirty(false);
+}
+
+FrostIcicle::FrostIcicle(const VSTGUI::CRect& r)
+: VSTGUI::CView(r),
+  bitmap_(VSTGUI::makeOwned<VSTGUI::CBitmap>(
+      VSTGUI::CResourceDescription("colderator_icicle_broken.png")))
+{
+    setMouseEnabled(false);
+}
+
+FrostIcicle::FrostIcicle(const FrostIcicle& o)
+: VSTGUI::CView(o), bitmap_(o.bitmap_)
+{
+    setMouseEnabled(false);
+}
+
+void FrostIcicle::draw(VSTGUI::CDrawContext* c)
+{
+    if (!bitmap_ || !bitmap_->isLoaded())
+    {
+        setDirty(false);
+        return;
+    }
+
+    const auto r = getViewSize();
+    const auto source = bitmap_->getSize();
+    if (source.x <= 0.0 || source.y <= 0.0)
+    {
+        setDirty(false);
+        return;
+    }
+
+    const double scale = std::min(r.getWidth() / source.x, r.getHeight() / source.y);
+    const double w = source.x * scale;
+    const double h = source.y * scale;
+    const double x = r.left + (r.getWidth() - w) * 0.5;
+    const double y = r.top + (r.getHeight() - h) * 0.5;
+
+    const VSTGUI::CGraphicsTransform transform {
+        scale, 0.0, 0.0, scale, x, y
+    };
+    c->pushTransform(transform);
+    bitmap_->draw(c, VSTGUI::CRect(0.0, 0.0, source.x, source.y));
+    c->popTransform();
+
     setDirty(false);
 }
 

@@ -96,6 +96,9 @@
           transparent="true" text-alignment="center"/>
     <view class="CView" custom-view-name="Output" origin="636, 401" size="88, 88"/>
 
+    <!-- Foreground decoration: intentionally last, non-interactive, and slightly clipped by the lower edge. -->
+    <view class="CView" custom-view-name="Icicle" origin="640, 482" size="135, 90" mouse-enabled="false"/>
+
   </template>
 
   <control-tags>

@@ -25,6 +25,17 @@ private:
     VSTGUI::SharedPointer<VSTGUI::CBitmap> faceplate_;
 };
 
+class FrostIcicle final : public VSTGUI::CView
+{
+public:
+    explicit FrostIcicle(const VSTGUI::CRect& r);
+    FrostIcicle(const FrostIcicle& o);
+    VSTGUI::CBaseObject* newCopy() const override { return new FrostIcicle(*this); }
+    void draw(VSTGUI::CDrawContext* c) override;
+private:
+    VSTGUI::SharedPointer<VSTGUI::CBitmap> bitmap_;
+};
+
 class FrostKnob final : public VSTGUI::CKnobBase
 {
 public:
