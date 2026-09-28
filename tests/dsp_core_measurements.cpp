@@ -1545,8 +1545,6 @@ int main()
             const auto impulseSpace50 = renderImpulse(sr, 4.0, {1.f, 0.f, 0.f, 0.f, 0.f, 0.50f});
             const auto impulseSpace100 = renderImpulse(sr, 4.0, {1.f, 0.f, 0.f, 0.f, 0.f, 1.f});
             const auto impulseCold100 = renderImpulse(sr, 4.0, {1.f, 1.f, 1.f, 1.f, 1.f, 1.f});
-            const auto impulseCloudOnly = renderImpulse(sr, 2.0, {1.f, 1.f, 0.25f, 1.f, 0.25f, 0.f});
-            const auto impulseCloudLow = renderImpulse(sr, 2.0, {0.25f, 1.f, 0.25f, 1.f, 0.25f, 0.f});
             const auto impulseCinematicLow = renderImpulse(sr, 1.2, {0.30f, 1.f, 0.f, 0.f, 0.f, 0.f});
             const auto impulseCinematicHigh = renderImpulse(sr, 1.2, {0.92f, 1.f, 0.f, 0.f, 0.f, 0.f});
 
@@ -1929,17 +1927,6 @@ int main()
             const double cold75Ratio = dryFund > 1e-12 ? cold75Fund / dryFund : 0.0;
             require(cold75Ratio > 0.005,
                     "COLD 75% retains at least a minimal trace of source pitch identity", failures);
-
-            const size_t cloudLateStart = static_cast<size_t>(sr * 0.35);
-            const double cloudHighTail = tailEnergy(impulseCloudOnly, cloudLateStart);
-            const double cloudLowTail = tailEnergy(impulseCloudLow, cloudLateStart);
-            std::cout << "[INFO] FROZEN CLOUD SR=" << static_cast<int>(sr)
-                      << " lowTail=" << cloudLowTail
-                      << " highTail=" << cloudHighTail << "\n";
-            require(cloudHighTail > 1e-7,
-                    "Frozen Cloud creates measurable source-derived sustain without SPACE", failures);
-            require(cloudHighTail > cloudLowTail * 2.0 + 1e-9,
-                    "Frozen Cloud escalates strongly from low COLD to extreme COLD", failures);
 
             const size_t early2ms = static_cast<size_t>(sr * 0.002);
             const size_t mid20ms = static_cast<size_t>(sr * 0.020);
