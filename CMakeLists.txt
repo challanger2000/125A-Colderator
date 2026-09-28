@@ -71,12 +71,12 @@ smtg_target_add_plugin_resources(Colderator
     resource/colderator_faceplate_100.png
     resource/colderator_faceplate_150.png
     resource/colderator_icicle_broken.png
-    resource/colderator_knob_main_100.png
-    resource/colderator_knob_main_150.png
-    resource/colderator_knob_character_100.png
-    resource/colderator_knob_character_150.png
-    resource/colderator_knob_utility_100.png
-    resource/colderator_knob_utility_150.png
+    resource/colderator_main_120.png
+    resource/colderator_main_180.png
+    resource/colderator_character_88.png
+    resource/colderator_character_132.png
+    resource/colderator_utility_72.png
+    resource/colderator_utility_108.png
 )
 smtg_target_configure_version_file(Colderator)
 

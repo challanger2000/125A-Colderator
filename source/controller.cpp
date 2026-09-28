@@ -168,6 +168,8 @@ VSTGUI::CView* Controller::createCustomView(
         return new FrostLogo(r);
     if (std::strcmp(name, "Icicle") == 0)
         return new FrostIcicle(r);
+    if (std::strcmp(name, "Zoom") == 0)
+        return new FrostZoomButton(r, editor);
 
     auto knob = [&](const char* n, ParamID id,
                     FrostKnob::Style style=FrostKnob::Style::Character) -> VSTGUI::CView* {

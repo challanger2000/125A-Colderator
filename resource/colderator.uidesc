@@ -31,11 +31,13 @@
 
     <view class="CView" custom-view-name="BrandLogo" origin="24, 16" size="138, 54" mouse-enabled="false"/>
     <view back-color="Bg" class="CTextLabel" font="~ NormalFontVeryBig" font-color="Text"
-          frame-width="0" origin="190, 16" size="572, 30" title="COLDERATOR"
-          transparent="true" text-alignment="right"/>
+          frame-width="0" origin="200, 16" size="400, 30" title="COLDERATOR"
+          transparent="true" text-alignment="center"/>
     <view back-color="Bg" class="CTextLabel" font="~ NormalFontSmall" font-color="Muted"
-          frame-width="0" origin="190, 47" size="572, 18" title="The Frozen Machine"
-          transparent="true" text-alignment="right"/>
+          frame-width="0" origin="200, 47" size="400, 18" title="The Frozen Machine"
+          transparent="true" text-alignment="center"/>
+
+    <view class="CView" custom-view-name="Zoom" origin="586, 70" size="90, 24"/>
 
     <view class="CTextButton" control-tag="Bypass" origin="684, 70" size="78, 24"
           title="BYPASS" font="~ NormalFontSmall" text-color="ButtonText"
