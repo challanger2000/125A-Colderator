@@ -2,14 +2,14 @@
 <vstgui-ui-description version="1">
   <colors>
     <color name="Bg" rgba="#F4F9FCFF"/>
-    <color name="Panel" rgba="#FBFDFEFF"/>
-    <color name="PanelEdge" rgba="#C9DDE7FF"/>
+    <color name="Panel" rgba="#F8FCFE66"/>
+    <color name="PanelEdge" rgba="#B8D4E3CC"/>
     <color name="Text" rgba="#193746FF"/>
     <color name="Muted" rgba="#6B8290FF"/>
     <color name="PanelTitle" rgba="#4B7890FF"/>
-    <color name="Display" rgba="#FFFFFFFF"/>
+    <color name="Display" rgba="#FFFFFFE8"/>
     <color name="DisplayText" rgba="#193746FF"/>
-    <color name="DisplayFrame" rgba="#BDD4E0FF"/>
+    <color name="DisplayFrame" rgba="#AACBDBE6"/>
     <color name="ButtonText" rgba="#244453FF"/>
     <color name="ButtonTextOn" rgba="#173A4CFF"/>
   </colors>
@@ -48,7 +48,7 @@
     <!-- Winter-white main control field. -->
     <view back-color="Panel" class="CTextLabel" frame-color="PanelEdge" frame-width="1"
           origin="20, 98" round-rect-radius="14" size="760, 218" style-round-rect="true"
-          title="" transparent="false"/>
+          title="" transparent="false" opacity="0.42"/>
 
     <view back-color="Panel" class="CTextLabel" font="~ NormalFontSmall" font-color="Text"
           frame-width="0" origin="43, 108" size="84, 18" title="COLD"
@@ -104,7 +104,7 @@
     <!-- Lower functional field: two atmosphere slots plus output. -->
     <view back-color="Panel" class="CTextLabel" frame-color="PanelEdge" frame-width="1"
           origin="20, 346" round-rect-radius="14" size="760, 166" style-round-rect="true"
-          title="" transparent="false"/>
+          title="" transparent="false" opacity="0.38"/>
 
     <view back-color="Panel" class="CTextLabel" font="~ NormalFontSmall" font-color="PanelTitle"
           frame-width="0" origin="40, 362" size="232, 20" title="ATMOSPHERE A"
@@ -130,7 +130,7 @@
     <view class="CView" custom-view-name="Output" origin="636, 390" size="88, 88"/>
 
     <!-- Existing ice decoration kept separate and non-interactive. -->
-    <view class="CView" custom-view-name="Icicle" origin="640, 482" size="135, 90" mouse-enabled="false"/>
+    <view class="CView" custom-view-name="Icicle" origin="492, 458" size="286, 118" mouse-enabled="false"/>
   </template>
 
   <control-tags>
