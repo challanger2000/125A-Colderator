@@ -63,6 +63,18 @@ target_link_libraries(ColderatorMeasurements PRIVATE sdk)
 enable_testing()
 add_test(NAME ColderatorMeasurements COMMAND ColderatorMeasurements)
 
+add_executable(ColderatorListeningRender
+  tests/listening_render.cpp
+  source/processor.cpp
+)
+
+target_compile_definitions(ColderatorListeningRender PRIVATE COLDERATOR_TESTING=1)
+target_include_directories(ColderatorListeningRender PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/source
+  ${CMAKE_CURRENT_SOURCE_DIR}/generated
+)
+target_link_libraries(ColderatorListeningRender PRIVATE sdk)
+
 if(SMTG_WIN AND MSVC)
   set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT Colderator)
 endif()
