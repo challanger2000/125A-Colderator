@@ -237,6 +237,9 @@ void Processor::resetDsp()
         shiverDelayWrite_[ch] = 0;
         cinematicBuffer_[ch].assign(static_cast<size_t>(sampleRate_ * 1.35) + 16u, 0.f);
         cinematicWrite_[ch] = 0;
+        frozenCloudBuffer_[ch].assign(static_cast<size_t>(sampleRate_ * 0.22) + 16u, 0.f);
+        frozenCloudWrite_[ch] = 0;
+        frozenCloudReadPos_[ch] = ch == 0 ? 0.0 : 0.37 * static_cast<double>(frozenCloudBuffer_[ch].size());
         shiverJitter_[ch] = 0.f;
         shiverJitterTarget_[ch] = 0.f;
         shiverJitterCounter_[ch] = 0;
@@ -966,6 +969,79 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                 const float shiverWet = materialWet(effectiveShiver);
                 y += protectedDelta * shiverWet;
                 shiverDelayWrite_[ch] = (w + 1 >= size) ? 0 : (w + 1);
+            }
+
+            // FROZEN CLOUD
+            // A source-derived memory layer: as COLD rises, the source is
+            // retained longer and replayed more slowly. Low settings remain
+            // essentially direct/playable; upper settings can turn sustain
+            // into a broad frozen body before SPACE wraps around it.
+            const float cloudParticipation = std::max(
+                {0.72f * effectiveIce,
+                 0.36f * effectiveMetal,
+                 effectiveFrost,
+                 0.28f * effectiveShiver});
+            const float cloudDepth =
+                std::pow(clamp01((smCold_ - 0.30f) / 0.70f), 1.18f) *
+                cloudParticipation;
+
+            auto& frozenCloud = frozenCloudBuffer_[ch];
+            if (!frozenCloud.empty())
+            {
+                const int cloudSize = static_cast<int>(frozenCloud.size());
+                const int cw = frozenCloudWrite_[ch];
+
+                // Recirculating memory: high COLD replaces only a small part
+                // of each stored sample on every buffer cycle.
+                const float memory = 0.18f + 0.79f * cloudDepth;
+                const float previous = frozenCloud[static_cast<size_t>(cw)];
+                const float cloudInput =
+                    0.78f * y +
+                    0.22f * highDetail;
+                const float writeSample =
+                    zapDenormal(previous * memory + cloudInput * (1.f - memory));
+                frozenCloud[static_cast<size_t>(cw)] =
+                    std::isfinite(writeSample) ? writeSample : 0.f;
+                frozenCloudWrite_[ch] = (cw + 1 >= cloudSize) ? 0 : (cw + 1);
+
+                auto readCloud = [&](double pos) {
+                    while (pos >= static_cast<double>(cloudSize))
+                        pos -= static_cast<double>(cloudSize);
+                    while (pos < 0.0)
+                        pos += static_cast<double>(cloudSize);
+                    const int i0 = static_cast<int>(pos);
+                    const int i1 = (i0 + 1 >= cloudSize) ? 0 : i0 + 1;
+                    const float frac = static_cast<float>(pos - static_cast<double>(i0));
+                    return frozenCloud[static_cast<size_t>(i0)] * (1.f - frac) +
+                           frozenCloud[static_cast<size_t>(i1)] * frac;
+                };
+
+                double rp = frozenCloudReadPos_[ch];
+                while (rp >= static_cast<double>(cloudSize))
+                    rp -= static_cast<double>(cloudSize);
+
+                const double phase = rp / static_cast<double>(cloudSize);
+                const float windowA =
+                    0.5f - 0.5f * std::cos(2.f * kPi * static_cast<float>(phase));
+                const float windowB = 1.f - windowA;
+
+                const float a = readCloud(rp);
+                const float b = readCloud(
+                    rp + 0.5 * static_cast<double>(cloudSize));
+
+                const float frozenBody =
+                    a * windowA + b * windowB;
+
+                const double sideRate = ch == 0 ? 0.992 : 1.008;
+                const double readRate =
+                    (1.0 - 0.58 * static_cast<double>(cloudDepth)) * sideRate;
+                frozenCloudReadPos_[ch] = rp + std::max(0.38, readRate);
+
+                const float cloudWet =
+                    clamp01(cloudDepth * (0.10f + 0.56f * cloudDepth));
+
+                if (cloudWet > 1.0e-5f)
+                    y = equalPowerMaterialBlend(y, frozenBody, cloudWet);
             }
 
             // SPACE: sparse early reflections feed a deliberately cold,
