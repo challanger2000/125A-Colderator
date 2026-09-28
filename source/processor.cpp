@@ -238,6 +238,8 @@ void Processor::resetDsp()
     }
     shiverPhaseA_ = 0.f;
     shiverPhaseB_ = 0.f;
+    cinematicPhaseA_ = 0.f;
+    cinematicPhaseB_ = 0.f;
     metalPhaseA_ = 0.f;
     metalPhaseB_ = 0.f;
     resonatorUpdateCounter_ = 0;
@@ -453,14 +455,21 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
         shiverPhaseB_ +=
             2.f * kPi * 7.9f * (0.83f + 0.31f * currentShiverRate) /
             static_cast<float>(sampleRate_);
+        cinematicPhaseA_ +=
+            2.f * kPi * 0.21f / static_cast<float>(sampleRate_);
+        cinematicPhaseB_ +=
+            2.f * kPi * 0.31f / static_cast<float>(sampleRate_);
         metalPhaseA_ += 2.f * kPi * 1133.f / static_cast<float>(sampleRate_);
         metalPhaseB_ += 2.f * kPi * 1777.f / static_cast<float>(sampleRate_);
         if (shiverPhaseA_ >= 2.f * kPi) shiverPhaseA_ -= 2.f * kPi;
         if (shiverPhaseB_ >= 2.f * kPi) shiverPhaseB_ -= 2.f * kPi;
+        if (cinematicPhaseA_ >= 2.f * kPi) cinematicPhaseA_ -= 2.f * kPi;
+        if (cinematicPhaseB_ >= 2.f * kPi) cinematicPhaseB_ -= 2.f * kPi;
         if (metalPhaseA_ >= 2.f * kPi) metalPhaseA_ -= 2.f * kPi;
         if (metalPhaseB_ >= 2.f * kPi) metalPhaseB_ -= 2.f * kPi;
-        const float shiverMod = 0.62f * std::sin(shiverPhaseA_) +
-                                0.38f * std::sin(shiverPhaseB_);
+        const float cinematicMod =
+            0.62f * std::sin(cinematicPhaseA_) +
+            0.38f * std::sin(cinematicPhaseB_);
         const float metalCarrier = 0.58f * std::sin(metalPhaseA_) +
                                    0.42f * std::sin(metalPhaseB_);
 
@@ -1140,7 +1149,7 @@ tresult PLUGIN_API Processor::process(ProcessData& data)
                     const float motionA = onePoleCoeff(sampleRate_, 0.55f);
                     const float motionTarget =
                         (ch == 0 ? 1.f : -1.f) *
-                        (0.65f * shiverMod + 0.35f * windGust_[ch]);
+                        (0.65f * cinematicMod + 0.35f * windGust_[ch]);
                     cinematicMotionState_[ch] = zapDenormal(
                         motionA * cinematicMotionState_[ch] +
                         (1.f - motionA) * motionTarget);
