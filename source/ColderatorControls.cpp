@@ -328,18 +328,18 @@ void FrostFaceplate::draw(VSTGUI::CDrawContext* c)
         line(x, 110, x, 284, {179, 207, 222, 115}, 1.0);
 
     // Exact five material controls; COLD intentionally has no material selector.
-    for (double x : {179.0, 299.0, 419.0, 539.0, 659.0})
-        selectorWell(x, 337, 92, 25);
+    for (double x : {177.0, 297.0, 417.0, 537.0, 657.0})
+        selectorWell(x, 336, 96, 27);
 
     // Bottom field: Atmosphere A, Atmosphere B and master output.
     line(280, 410, 280, 528, {179, 207, 222, 130}, 1.0);
     line(560, 410, 560, 528, {179, 207, 222, 130}, 1.0);
 
-    selectorWell(32, 437, 132, 31);
-    well(225, 456, 36);
-    selectorWell(312, 437, 132, 31);
-    well(505, 456, 36);
-    well(664, 455, 44);
+    selectorWell(36, 439, 134, 30);
+    well(228, 457, 36);
+    selectorWell(316, 439, 134, 30);
+    well(508, 457, 36);
+    well(664, 459, 44);
 
     // Minimal physical fasteners only at the chassis corners.
     for (const auto& p : std::array<VSTGUI::CPoint, 4> {{

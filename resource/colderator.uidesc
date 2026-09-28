@@ -5,9 +5,9 @@
     <color name="Text" rgba="#173646FF"/>
     <color name="Muted" rgba="#6E8795FF"/>
     <color name="PanelTitle" rgba="#3F7896FF"/>
-    <color name="Display" rgba="#F8FCFEF2"/>
+    <color name="Display" rgba="#FBFDFEFF"/>
     <color name="DisplayText" rgba="#173646FF"/>
-    <color name="DisplayFrame" rgba="#A5CFE5FF"/>
+    <color name="DisplayFrame" rgba="#9CC9E0FF"/>
   </colors>
 
   <template background-color="Bg" class="CViewContainer" maxSize="800, 560" minSize="800, 560"
@@ -54,47 +54,47 @@
 
     <view back-color="Display" class="COptionMenu" control-tag="IceMaterial"
           font="~ NormalFontSmall" font-color="DisplayText" frame-color="DisplayFrame"
-          frame-width="1" origin="179, 337" round-rect-radius="7" size="92, 25"
+          frame-width="1" origin="177, 336" round-rect-radius="8" size="96, 27"
           style-round-rect="true" transparent="true"/>
     <view back-color="Display" class="COptionMenu" control-tag="MetalMaterial"
           font="~ NormalFontSmall" font-color="DisplayText" frame-color="DisplayFrame"
-          frame-width="1" origin="299, 337" round-rect-radius="7" size="92, 25"
+          frame-width="1" origin="297, 336" round-rect-radius="8" size="96, 27"
           style-round-rect="true" transparent="true"/>
     <view back-color="Display" class="COptionMenu" control-tag="FrostMaterial"
           font="~ NormalFontSmall" font-color="DisplayText" frame-color="DisplayFrame"
-          frame-width="1" origin="419, 337" round-rect-radius="7" size="92, 25"
+          frame-width="1" origin="417, 336" round-rect-radius="8" size="96, 27"
           style-round-rect="true" transparent="true"/>
     <view back-color="Display" class="COptionMenu" control-tag="ShiverMaterial"
           font="~ NormalFontSmall" font-color="DisplayText" frame-color="DisplayFrame"
-          frame-width="1" origin="539, 337" round-rect-radius="7" size="92, 25"
+          frame-width="1" origin="537, 336" round-rect-radius="8" size="96, 27"
           style-round-rect="true" transparent="true"/>
     <view back-color="Display" class="COptionMenu" control-tag="SpaceMaterial"
           font="~ NormalFontSmall" font-color="DisplayText" frame-color="DisplayFrame"
-          frame-width="1" origin="659, 337" round-rect-radius="7" size="92, 25"
+          frame-width="1" origin="657, 336" round-rect-radius="8" size="96, 27"
           style-round-rect="true" transparent="true"/>
 
     <view back-color="Bg" class="CTextLabel" font="~ NormalFontSmall" font-color="PanelTitle"
-          frame-width="0" origin="32, 407" size="232, 18" title="ATMOSPHERE A"
+          frame-width="0" origin="34, 405" size="224, 18" title="ATMOSPHERE A"
           transparent="true" text-alignment="center"/>
     <view back-color="Display" class="COptionMenu" control-tag="AtmosAType"
           font="~ NormalFontSmall" font-color="DisplayText" frame-color="DisplayFrame"
-          frame-width="1" origin="32, 437" round-rect-radius="7" size="132, 31"
+          frame-width="1" origin="36, 439" round-rect-radius="8" size="134, 30"
           style-round-rect="true" transparent="true"/>
-    <view class="CView" custom-view-name="AtmosAAmount" origin="189, 420" size="72, 72"/>
+    <view class="CView" custom-view-name="AtmosAAmount" origin="192, 421" size="72, 72"/>
 
     <view back-color="Bg" class="CTextLabel" font="~ NormalFontSmall" font-color="PanelTitle"
-          frame-width="0" origin="312, 407" size="232, 18" title="ATMOSPHERE B"
+          frame-width="0" origin="314, 405" size="224, 18" title="ATMOSPHERE B"
           transparent="true" text-alignment="center"/>
     <view back-color="Display" class="COptionMenu" control-tag="AtmosBType"
           font="~ NormalFontSmall" font-color="DisplayText" frame-color="DisplayFrame"
-          frame-width="1" origin="312, 437" round-rect-radius="7" size="132, 31"
+          frame-width="1" origin="316, 439" round-rect-radius="8" size="134, 30"
           style-round-rect="true" transparent="true"/>
-    <view class="CView" custom-view-name="AtmosBAmount" origin="469, 420" size="72, 72"/>
+    <view class="CView" custom-view-name="AtmosBAmount" origin="472, 421" size="72, 72"/>
 
     <view back-color="Bg" class="CTextLabel" font="~ NormalFontSmall" font-color="Text"
-          frame-width="0" origin="620, 407" size="88, 18" title="OUTPUT"
+          frame-width="0" origin="620, 405" size="88, 18" title="OUTPUT"
           transparent="true" text-alignment="center"/>
-    <view class="CView" custom-view-name="Output" origin="620, 411" size="88, 88"/>
+    <view class="CView" custom-view-name="Output" origin="620, 415" size="88, 88"/>
 
   </template>
 
