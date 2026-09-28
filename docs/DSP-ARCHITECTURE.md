@@ -363,3 +363,22 @@ Layers:
 - slow left/right horizon motion.
 
 Frozen Landscape is available in both Atmosphere slots and is intentionally distinct from WIND and STORM: WIND is a weather texture, STORM is an active dramatic event, Frozen Landscape is a broad environmental scene.
+
+
+## Frozen Bloom atmosphere
+
+Frozen Bloom replaces the earlier generic Swell atmosphere.
+
+Purpose:
+- enlarge sustained source material without replacing or thinning the live source;
+- create a slow, cold bloom behind pads/keys and other tonal material;
+- remain fully source-derived and silent on fresh silence.
+
+Mechanism:
+- three delayed source-derived taps with channel-skewed timings;
+- subtractive low-band filtering to keep the bloom cold rather than warm;
+- slow source-activity envelope using the existing atmosphere swell state;
+- restrained feedback for a lingering bloom tail;
+- additive mix behind the original signal rather than a crossfade.
+
+Frozen Bloom is intended as a complementary large-scale texture, not a substitute for SPACE or STORM.
