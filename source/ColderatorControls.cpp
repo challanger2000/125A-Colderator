@@ -333,11 +333,11 @@ void FrostZoomButton::draw(VSTGUI::CDrawContext* c)
 {
     const auto r = getViewSize();
     fillRound(c, r, 8.0,
-              {248, 252, 254, 230},
-              {157, 194, 212, 255},
+              {18, 38, 51, 238},
+              {142, 181, 201, 255},
               1.0);
-    c->setFont(VSTGUI::kNormalFontSmall);
-    c->setFontColor({36, 68, 83, 255});
+    c->setFont(VSTGUI::kNormalFontSmaller);
+    c->setFontColor({234, 247, 255, 255});
     c->drawString(zoomed_ ? "ZOOM 150%" : "ZOOM 100%", r,
                   VSTGUI::kCenterText, true);
     setDirty(false);

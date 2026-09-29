@@ -25,12 +25,15 @@
             mouse-enabled="true" name="view" opacity="1" origin="0, 0" size="800, 560" transparent="false">
     <view class="CView" custom-view-name="Faceplate" origin="0, 0" size="800, 560" mouse-enabled="false"/>
 
-    <!-- Authoritative 125A master logo, intentionally not baked into the generated faceplate. -->
+    <!-- Dark recessed plaque gives the authoritative 125A master logo enough contrast. -->
+    <view back-color="#0A1722D9" class="CTextLabel" frame-color="DisplayFrame" frame-width="1"
+          origin="24, 14" round-rect-radius="10" size="145, 58" style-round-rect="true"
+          title="" transparent="false"/>
     <view class="CView" custom-view-name="BrandLogo" origin="35, 20" size="120, 46" mouse-enabled="false"/>
 
-    <!-- Live editor controls remain separate from the static faceplate. -->
-    <view class="CView" custom-view-name="Zoom" origin="650, 24" size="62, 22"/>
-    <view class="CTextButton" control-tag="Bypass" origin="718, 24" size="62, 22"
+    <!-- ZOOM and BYPASS deliberately share one visual language and dimensions. -->
+    <view class="CView" custom-view-name="Zoom" origin="626, 24" size="78, 22"/>
+    <view class="CTextButton" control-tag="Bypass" origin="708, 24" size="78, 22"
           title="BYPASS" font="~ NormalFontSmaller" text-color="ButtonText"
           text-color-highlighted="ButtonTextOn" frame-color="DisplayFrame"
           frame-color-highlighted="DisplayFrame" frame-width="1" round-radius="8"
@@ -66,19 +69,22 @@
           frame-width="1" origin="686, 258" round-rect-radius="5" size="70, 22"
           style-round-rect="true" transparent="false"/>
 
-    <view class="CView" custom-view-name="AtmosAAmount" origin="74, 389" size="72, 72"/>
+    <view class="CView" custom-view-name="AtmosAAmount" origin="66, 381" size="88, 88"/>
     <view back-color="Display" class="COptionMenu" control-tag="AtmosAType"
           font="~ NormalFontSmall" font-color="DisplayText" frame-color="DisplayFrame"
           frame-width="1" origin="173, 416" round-rect-radius="6" size="135, 26"
           style-round-rect="true" transparent="false"/>
 
-    <view class="CView" custom-view-name="AtmosBAmount" origin="385, 389" size="72, 72"/>
+    <view class="CView" custom-view-name="AtmosBAmount" origin="377, 381" size="88, 88"/>
     <view back-color="Display" class="COptionMenu" control-tag="AtmosBType"
           font="~ NormalFontSmall" font-color="DisplayText" frame-color="DisplayFrame"
           frame-width="1" origin="481, 416" round-rect-radius="6" size="135, 26"
           style-round-rect="true" transparent="false"/>
 
     <view class="CView" custom-view-name="Output" origin="666, 379" size="88, 88"/>
+
+    <!-- Existing broken icicle artwork placed as a restrained foreground detail. -->
+    <view class="CView" custom-view-name="Icicle" origin="250, 488" size="300, 100" mouse-enabled="false"/>
   </template>
 
   <control-tags>

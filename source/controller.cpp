@@ -183,8 +183,8 @@ VSTGUI::CView* Controller::createCustomView(
     if (auto* v = knob("Shiver", kShiver)) return v;
     if (auto* v = knob("Space",  kSpace)) return v;
     if (auto* v = knob("Output", kOutput)) return v;
-    if (auto* v = knob("AtmosAAmount", kAtmosAAmount, FrostKnob::Style::Utility)) return v;
-    if (auto* v = knob("AtmosBAmount", kAtmosBAmount, FrostKnob::Style::Utility)) return v;
+    if (auto* v = knob("AtmosAAmount", kAtmosAAmount, FrostKnob::Style::Character)) return v;
+    if (auto* v = knob("AtmosBAmount", kAtmosBAmount, FrostKnob::Style::Character)) return v;
 
     return nullptr;
 }
