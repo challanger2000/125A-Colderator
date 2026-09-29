@@ -84,7 +84,7 @@
     <view class="CView" custom-view-name="Output" origin="666, 379" size="88, 88"/>
 
     <!-- Existing broken icicle artwork placed as a restrained foreground detail. -->
-    <view class="CView" custom-view-name="Icicle" origin="250, 488" size="300, 100" mouse-enabled="false"/>
+    <view class="CView" custom-view-name="Icicle" origin="260, 468" size="280, 84" mouse-enabled="false"/>
   </template>
 
   <control-tags>
