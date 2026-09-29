@@ -277,6 +277,16 @@ FrostIcicle::FrostIcicle(const VSTGUI::CRect& r)
       VSTGUI::CResourceDescription("colderator_icicle_broken.png")))
 {
     setMouseEnabled(false);
+    setTransparency(true);
+
+    // The packaged artwork is 2172x724 (exactly ~3:1). Present it to VSTGUI
+    // at the 300x100 logical size used by this overlay, then draw it exactly
+    // like the proven bitmap overlays in other 125A plug-ins.
+    if (bitmap_ && bitmap_->isLoaded())
+    {
+        if (auto platform = bitmap_->getPlatformBitmap())
+            platform->setScaleFactor(2172.0 / 300.0);
+    }
 }
 
 FrostIcicle::FrostIcicle(const FrostIcicle& o)
@@ -293,32 +303,8 @@ void FrostIcicle::draw(VSTGUI::CDrawContext* c)
         return;
     }
 
-    const auto view = getViewSize();
-    const auto source = bitmap_->getSize();
-    if (source.x <= 0.0 || source.y <= 0.0)
-    {
-        setDirty(false);
-        return;
-    }
-
-    // Draw in the custom view's local coordinate system. Using view.left/top
-    // here offsets the image a second time and can move it outside the view's
-    // clip region when the view itself is not positioned at 0,0.
-    const double viewWidth = view.getWidth();
-    const double viewHeight = view.getHeight();
-    const double scale = std::min(viewWidth / source.x, viewHeight / source.y);
-    const double w = source.x * scale;
-    const double h = source.y * scale;
-    const double x = (viewWidth - w) * 0.5;
-    const double y = (viewHeight - h) * 0.5;
-
     c->setBitmapInterpolationQuality(VSTGUI::BitmapInterpolationQuality::kHigh);
-    c->fillRectWithBitmap(
-        bitmap_,
-        VSTGUI::CRect(0.0, 0.0, source.x, source.y),
-        VSTGUI::CRect(x, y, x + w, y + h),
-        1.0f);
-
+    bitmap_->draw(c, getViewSize(), VSTGUI::CPoint(0.0, 0.0), 1.0f);
     setDirty(false);
 }
 
