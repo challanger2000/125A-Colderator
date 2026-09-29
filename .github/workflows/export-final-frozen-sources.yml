@@ -1,0 +1,32 @@
+name: Export Colderator Final Frozen Sources
+
+on:
+  push:
+    branches:
+      - v0.1.0
+
+jobs:
+  export:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore Frozen Sources Cache
+        uses: actions/cache@v4
+        with:
+          path: build/frozen-source-cache
+          key: colderator-frozen-sources-${{ hashFiles('assets/frozen_sources.json') }}
+
+      - name: Regenerate embedded frozen source header from cache
+        shell: pwsh
+        run: |
+          python -m pip install --disable-pip-version-check --quiet numpy soundfile av
+          python tools/prepare_frozen_sources.py
+
+      - name: Upload generated frozen source header
+        uses: actions/upload-artifact@v4
+        with:
+          name: Colderator-Final-Frozen-Sources
+          path: generated/frozen_sources.h
+          if-no-files-found: error
+          retention-days: 1
