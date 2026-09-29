@@ -293,7 +293,7 @@ void FrostIcicle::draw(VSTGUI::CDrawContext* c)
         return;
     }
 
-    const auto r = getViewSize();
+    const auto view = getViewSize();
     const auto source = bitmap_->getSize();
     if (source.x <= 0.0 || source.y <= 0.0)
     {
@@ -301,11 +301,16 @@ void FrostIcicle::draw(VSTGUI::CDrawContext* c)
         return;
     }
 
-    const double scale = std::min(r.getWidth() / source.x, r.getHeight() / source.y);
+    // Draw in the custom view's local coordinate system. Using view.left/top
+    // here offsets the image a second time and can move it outside the view's
+    // clip region when the view itself is not positioned at 0,0.
+    const double viewWidth = view.getWidth();
+    const double viewHeight = view.getHeight();
+    const double scale = std::min(viewWidth / source.x, viewHeight / source.y);
     const double w = source.x * scale;
     const double h = source.y * scale;
-    const double x = r.left + (r.getWidth() - w) * 0.5;
-    const double y = r.top + (r.getHeight() - h) * 0.5;
+    const double x = (viewWidth - w) * 0.5;
+    const double y = (viewHeight - h) * 0.5;
 
     c->setBitmapInterpolationQuality(VSTGUI::BitmapInterpolationQuality::kHigh);
     c->fillRectWithBitmap(
