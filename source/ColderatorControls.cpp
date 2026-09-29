@@ -167,18 +167,9 @@ const VSTGUI::SharedPointer<VSTGUI::CMultiFrameBitmap>& colderatorKnobStrip(Fros
             1
         });
 
-    static const auto utilityStrip = VSTGUI::makeOwned<VSTGUI::CMultiFrameBitmap>(
-        VSTGUI::CResourceDescription("Colderator_Knob_72x72_101f.png"),
-        VSTGUI::CMultiFrameBitmapDescription {
-            {72.0, 72.0},
-            101,
-            1
-        });
-
     switch (style)
     {
         case FrostKnob::Style::Main:      return mainStrip;
-        case FrostKnob::Style::Utility:   return utilityStrip;
         case FrostKnob::Style::Character: return characterStrip;
     }
     return characterStrip;
@@ -268,43 +259,6 @@ void FrostFaceplate::draw(VSTGUI::CDrawContext* c)
                   {252, 254, 255, 255},
                   {239, 247, 251, 255},
                   {196, 216, 226, 255});
-    setDirty(false);
-}
-
-FrostIcicle::FrostIcicle(const VSTGUI::CRect& r)
-: VSTGUI::CView(r),
-  bitmap_(VSTGUI::makeOwned<VSTGUI::CBitmap>(
-      VSTGUI::CResourceDescription("colderator_icicle_broken.png")))
-{
-    setMouseEnabled(false);
-    setTransparency(true);
-
-    // The packaged artwork is 2172x724 (exactly ~3:1). Present it to VSTGUI
-    // at the 300x100 logical size used by this overlay, then draw it exactly
-    // like the proven bitmap overlays in other 125A plug-ins.
-    if (bitmap_ && bitmap_->isLoaded())
-    {
-        if (auto platform = bitmap_->getPlatformBitmap())
-            platform->setScaleFactor(2172.0 / 300.0);
-    }
-}
-
-FrostIcicle::FrostIcicle(const FrostIcicle& o)
-: VSTGUI::CView(o), bitmap_(o.bitmap_)
-{
-    setMouseEnabled(false);
-}
-
-void FrostIcicle::draw(VSTGUI::CDrawContext* c)
-{
-    if (!bitmap_ || !bitmap_->isLoaded())
-    {
-        setDirty(false);
-        return;
-    }
-
-    c->setBitmapInterpolationQuality(VSTGUI::BitmapInterpolationQuality::kHigh);
-    bitmap_->draw(c, getViewSize(), VSTGUI::CPoint(0.0, 0.0), 1.0f);
     setDirty(false);
 }
 

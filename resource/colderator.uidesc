@@ -82,9 +82,6 @@
           style-round-rect="true" transparent="false"/>
 
     <view class="CView" custom-view-name="Output" origin="666, 379" size="88, 88"/>
-
-    <!-- Existing broken icicle artwork placed as a restrained foreground detail. -->
-    <view class="CView" custom-view-name="Icicle" origin="250, 455" size="300, 100" mouse-enabled="false" transparent="true"/>
   </template>
 
   <control-tags>
