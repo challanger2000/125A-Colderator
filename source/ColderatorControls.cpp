@@ -131,37 +131,6 @@ void gradientRound(VSTGUI::CDrawContext* c, const VSTGUI::CRect& r, double radiu
 }
 }
 
-struct BitmapSpec
-{
-    const char* oneX;
-    const char* one5X;
-};
-
-VSTGUI::SharedPointer<VSTGUI::CBitmap> loadBitmapPair(const BitmapSpec& spec)
-{
-    auto bitmap = VSTGUI::makeOwned<VSTGUI::CBitmap>(
-        VSTGUI::CResourceDescription(spec.oneX));
-    if (!bitmap || !bitmap->isLoaded())
-        return {};
-
-    VSTGUI::CBitmap hiDpi {VSTGUI::CResourceDescription(spec.one5X)};
-    if (auto platform = hiDpi.getPlatformBitmap())
-    {
-        platform->setScaleFactor(1.5);
-        bitmap->addBitmap(platform);
-    }
-    return bitmap;
-}
-
-const VSTGUI::SharedPointer<VSTGUI::CBitmap>& faceplateBitmap()
-{
-    static const BitmapSpec spec {
-        "colderator_faceplate_100.png", "colderator_faceplate_150.png"
-    };
-    static const auto bitmap = loadBitmapPair(spec);
-    return bitmap;
-}
-
 const VSTGUI::SharedPointer<VSTGUI::CMultiFrameBitmap>& colderatorKnobStrip(FrostKnob::Style style)
 {
     static const auto mainStrip = VSTGUI::makeOwned<VSTGUI::CMultiFrameBitmap>(

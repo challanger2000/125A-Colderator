@@ -68,8 +68,6 @@ smtg_target_add_plugin_resources(Colderator
   RESOURCES
     resource/colderator.uidesc
     resource/Colderator_Frostplate_800x560.png
-    resource/colderator_faceplate_100.png
-    resource/colderator_faceplate_150.png
     resource/colderator_icicle_broken.png
     resource/Colderator_Knob_120x120_101f.png
     resource/Colderator_Knob_88x88_101f.png
