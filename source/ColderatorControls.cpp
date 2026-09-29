@@ -162,16 +162,39 @@ const VSTGUI::SharedPointer<VSTGUI::CBitmap>& faceplateBitmap()
     return bitmap;
 }
 
-const VSTGUI::SharedPointer<VSTGUI::CMultiFrameBitmap>& colderatorKnobStrip()
+const VSTGUI::SharedPointer<VSTGUI::CMultiFrameBitmap>& colderatorKnobStrip(FrostKnob::Style style)
 {
-    static const auto strip = VSTGUI::makeOwned<VSTGUI::CMultiFrameBitmap>(
-        VSTGUI::CResourceDescription("Colderator_Knob_125x125_101f.png"),
+    static const auto mainStrip = VSTGUI::makeOwned<VSTGUI::CMultiFrameBitmap>(
+        VSTGUI::CResourceDescription("Colderator_Knob_120x120_101f.png"),
         VSTGUI::CMultiFrameBitmapDescription {
-            {125.0, 125.0},
+            {120.0, 120.0},
             101,
             1
         });
-    return strip;
+
+    static const auto characterStrip = VSTGUI::makeOwned<VSTGUI::CMultiFrameBitmap>(
+        VSTGUI::CResourceDescription("Colderator_Knob_88x88_101f.png"),
+        VSTGUI::CMultiFrameBitmapDescription {
+            {88.0, 88.0},
+            101,
+            1
+        });
+
+    static const auto utilityStrip = VSTGUI::makeOwned<VSTGUI::CMultiFrameBitmap>(
+        VSTGUI::CResourceDescription("Colderator_Knob_72x72_101f.png"),
+        VSTGUI::CMultiFrameBitmapDescription {
+            {72.0, 72.0},
+            101,
+            1
+        });
+
+    switch (style)
+    {
+        case FrostKnob::Style::Main:      return mainStrip;
+        case FrostKnob::Style::Utility:   return utilityStrip;
+        case FrostKnob::Style::Character: return characterStrip;
+    }
+    return characterStrip;
 }
 
 FrostLogo::FrostLogo(const VSTGUI::CRect& r) : VSTGUI::CView(r)
@@ -348,9 +371,9 @@ VSTGUI::CMouseEventResult FrostZoomButton::onMouseDown(
 
 FrostKnob::FrostKnob(const VSTGUI::CRect& r, VSTGUI::IControlListener* l,
                      int32_t tag, Style style)
-: VSTGUI::CAnimKnob(r, l, tag, colderatorKnobStrip().get()),
+: VSTGUI::CAnimKnob(r, l, tag, colderatorKnobStrip(style).get()),
   style_(style),
-  strip_(colderatorKnobStrip())
+  strip_(colderatorKnobStrip(style))
 {
     // The JKnobMan artwork covers -140..+140 degrees.
     setStartAngle(static_cast<float>(130.0 / 180.0 * kPi));
@@ -366,46 +389,5 @@ FrostKnob::FrostKnob(const FrostKnob& o)
     setWantsFocus(true);
 }
 
-void FrostKnob::draw(VSTGUI::CDrawContext* c)
-{
-    // The supplied Colderator JKnobMan filmstrip is the complete visual.
-    // VSTGUI adds no ring, pointer, scale or shadow.
-    if (!strip_ || !strip_->isLoaded())
-    {
-        setDirty(false);
-        return;
-    }
-
-    constexpr int32_t kFrames = 101;
-    const auto normalized =
-        std::clamp(static_cast<double>(getValueNormalized()), 0.0, 1.0);
-    const auto frame = static_cast<uint16_t>(std::clamp<int32_t>(
-        static_cast<int32_t>(std::lround(normalized * (kFrames - 1))),
-        0,
-        kFrames - 1));
-
-    const auto r = getViewSize();
-    constexpr double kMasterSize = 125.0;
-
-    // Do not scale the draw context for a filmstrip. That also transforms the
-    // clip region and was the cause of the rectangular/corrupted tiles seen
-    // while turning the knob. Select the required source frame explicitly and
-    // scale only that bitmap region into the control rectangle.
-    const VSTGUI::CRect sourceRect {
-        0.0,
-        static_cast<double>(frame) * kMasterSize,
-        kMasterSize,
-        static_cast<double>(frame + 1u) * kMasterSize
-    };
-
-    c->setBitmapInterpolationQuality(VSTGUI::BitmapInterpolationQuality::kHigh);
-    c->fillRectWithBitmap(
-        strip_,
-        sourceRect,
-        r,
-        1.0f);
-
-    setDirty(false);
-}
 
 } // namespace Colderator

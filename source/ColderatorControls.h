@@ -63,7 +63,6 @@ public:
               Style style=Style::Character);
     FrostKnob(const FrostKnob& o);
     VSTGUI::CBaseObject* newCopy() const override { return new FrostKnob(*this); }
-    void draw(VSTGUI::CDrawContext* c) override;
 private:
     Style style_ {Style::Character};
     VSTGUI::SharedPointer<VSTGUI::CMultiFrameBitmap> strip_;
