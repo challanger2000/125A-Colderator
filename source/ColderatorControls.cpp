@@ -131,6 +131,24 @@ void gradientRound(VSTGUI::CDrawContext* c, const VSTGUI::CRect& r, double radiu
 }
 }
 
+VSTGUI::SharedPointer<VSTGUI::CBitmap> loadFaceplateBitmap()
+{
+    auto bitmap = VSTGUI::makeOwned<VSTGUI::CBitmap>(
+        VSTGUI::CResourceDescription("Colderator_Faceplate_800x560.png"));
+    if (!bitmap || !bitmap->isLoaded())
+        return {};
+
+    VSTGUI::CBitmap hiDpi {
+        VSTGUI::CResourceDescription("Colderator_Faceplate_1200x840.png")
+    };
+    if (auto platform = hiDpi.getPlatformBitmap())
+    {
+        platform->setScaleFactor(1.5);
+        bitmap->addBitmap(platform);
+    }
+    return bitmap;
+}
+
 const VSTGUI::SharedPointer<VSTGUI::CMultiFrameBitmap>& colderatorKnobStrip(FrostKnob::Style style)
 {
     static const auto mainStrip = VSTGUI::makeOwned<VSTGUI::CMultiFrameBitmap>(
@@ -213,8 +231,7 @@ void FrostLogo::draw(VSTGUI::CDrawContext* c)
 
 FrostFaceplate::FrostFaceplate(const VSTGUI::CRect& r)
 : VSTGUI::CView(r),
-  faceplate_(VSTGUI::makeOwned<VSTGUI::CBitmap>(
-      VSTGUI::CResourceDescription("Colderator_Frostplate_800x560.png")))
+  faceplate_(loadFaceplateBitmap())
 {
     setMouseEnabled(false);
 }

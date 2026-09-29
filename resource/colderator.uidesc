@@ -1,136 +1,84 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <vstgui-ui-description version="1">
   <colors>
-    <color name="Bg" rgba="#F4F9FCFF"/>
-    <color name="Panel" rgba="#F8FCFE66"/>
-    <color name="PanelEdge" rgba="#B8D4E3CC"/>
-    <color name="Text" rgba="#193746FF"/>
-    <color name="Muted" rgba="#6B8290FF"/>
-    <color name="PanelTitle" rgba="#4B7890FF"/>
-    <color name="Display" rgba="#FFFFFFE8"/>
-    <color name="DisplayText" rgba="#193746FF"/>
-    <color name="DisplayFrame" rgba="#AACBDBE6"/>
-    <color name="ButtonText" rgba="#244453FF"/>
-    <color name="ButtonTextOn" rgba="#173A4CFF"/>
+    <color name="Text" rgba="#EAF7FFFF"/>
+    <color name="Muted" rgba="#B8D5E5FF"/>
+    <color name="Display" rgba="#152B3BE8"/>
+    <color name="DisplayText" rgba="#EEF9FFFF"/>
+    <color name="DisplayFrame" rgba="#8EB5C9FF"/>
+    <color name="ButtonText" rgba="#EAF7FFFF"/>
+    <color name="ButtonTextOn" rgba="#FFFFFFFF"/>
   </colors>
 
   <gradients>
     <gradient name="BypassOff">
-      <color-stop rgba="#FFFFFFFF" start="0"/>
-      <color-stop rgba="#EEF6FAFF" start="1"/>
+      <color-stop rgba="#263E4DDD" start="0"/>
+      <color-stop rgba="#122633EE" start="1"/>
     </gradient>
     <gradient name="BypassOn">
-      <color-stop rgba="#E6F4FBFF" start="0"/>
-      <color-stop rgba="#CFE8F5FF" start="1"/>
+      <color-stop rgba="#DDF6FFFF" start="0"/>
+      <color-stop rgba="#73CAEFFF" start="1"/>
     </gradient>
   </gradients>
 
-  <template background-color="Bg" class="CViewContainer" maxSize="800, 560" minSize="800, 560"
+  <template background-color="#07131BFF" class="CViewContainer" maxSize="800, 560" minSize="800, 560"
             mouse-enabled="true" name="view" opacity="1" origin="0, 0" size="800, 560" transparent="false">
     <view class="CView" custom-view-name="Faceplate" origin="0, 0" size="800, 560" mouse-enabled="false"/>
 
-    <view class="CView" custom-view-name="BrandLogo" origin="24, 16" size="138, 54" mouse-enabled="false"/>
-    <view back-color="Bg" class="CTextLabel" font="~ NormalFontVeryBig" font-color="Text"
-          frame-width="0" origin="200, 16" size="400, 30" title="COLDERATOR"
-          transparent="true" text-alignment="center"/>
-    <view back-color="Bg" class="CTextLabel" font="~ NormalFontSmall" font-color="Muted"
-          frame-width="0" origin="200, 47" size="400, 18" title="The Frozen Machine"
-          transparent="true" text-alignment="center"/>
+    <!-- Authoritative 125A master logo, intentionally not baked into the generated faceplate. -->
+    <view class="CView" custom-view-name="BrandLogo" origin="35, 20" size="120, 46" mouse-enabled="false"/>
 
-    <view class="CView" custom-view-name="Zoom" origin="586, 70" size="90, 24"/>
-
-    <view class="CTextButton" control-tag="Bypass" origin="684, 70" size="78, 24"
-          title="BYPASS" font="~ NormalFontSmall" text-color="ButtonText"
+    <!-- Live editor controls remain separate from the static faceplate. -->
+    <view class="CView" custom-view-name="Zoom" origin="650, 24" size="62, 22"/>
+    <view class="CTextButton" control-tag="Bypass" origin="718, 24" size="62, 22"
+          title="BYPASS" font="~ NormalFontSmaller" text-color="ButtonText"
           text-color-highlighted="ButtonTextOn" frame-color="DisplayFrame"
-          frame-color-highlighted="DisplayFrame" frame-width="1" round-radius="10"
+          frame-color-highlighted="DisplayFrame" frame-width="1" round-radius="8"
           kick-style="false" gradient="BypassOff" gradient-highlighted="BypassOn"/>
 
-    <!-- Winter-white main control field. -->
-    <view back-color="Panel" class="CTextLabel" frame-color="PanelEdge" frame-width="1"
-          origin="20, 98" round-rect-radius="14" size="760, 218" style-round-rect="true"
-          title="" transparent="false" opacity="0.42"/>
+    <!-- Knobs aligned to measured optical centers of the faceplate recesses. -->
+    <view class="CView" custom-view-name="Cold" origin="52, 146" size="120, 120"/>
+    <view class="CView" custom-view-name="Ice" origin="210, 147" size="88, 88"/>
+    <view class="CView" custom-view-name="Metal" origin="326, 150" size="88, 88"/>
+    <view class="CView" custom-view-name="Frost" origin="443, 150" size="88, 88"/>
+    <view class="CView" custom-view-name="Shiver" origin="560, 146" size="88, 88"/>
+    <view class="CView" custom-view-name="Space" origin="675, 147" size="88, 88"/>
 
-    <view back-color="Panel" class="CTextLabel" font="~ NormalFontSmall" font-color="Text"
-          frame-width="0" origin="43, 108" size="84, 18" title="COLD"
-          transparent="true" text-alignment="center"/>
-    <view class="CView" custom-view-name="Cold" origin="25, 128" size="120, 120"/>
-
-    <view back-color="Panel" class="CTextLabel" font="~ NormalFontSmall" font-color="Text"
-          frame-width="0" origin="183, 112" size="84, 18" title="ICE"
-          transparent="true" text-alignment="center"/>
-    <view class="CView" custom-view-name="Ice" origin="181, 138" size="88, 88"/>
-
-    <view back-color="Panel" class="CTextLabel" font="~ NormalFontSmall" font-color="Text"
-          frame-width="0" origin="303, 112" size="84, 18" title="METAL"
-          transparent="true" text-alignment="center"/>
-    <view class="CView" custom-view-name="Metal" origin="301, 138" size="88, 88"/>
-
-    <view back-color="Panel" class="CTextLabel" font="~ NormalFontSmall" font-color="Text"
-          frame-width="0" origin="423, 112" size="84, 18" title="FROST"
-          transparent="true" text-alignment="center"/>
-    <view class="CView" custom-view-name="Frost" origin="421, 138" size="88, 88"/>
-
-    <view back-color="Panel" class="CTextLabel" font="~ NormalFontSmall" font-color="Text"
-          frame-width="0" origin="543, 112" size="84, 18" title="SHIVER"
-          transparent="true" text-alignment="center"/>
-    <view class="CView" custom-view-name="Shiver" origin="541, 138" size="88, 88"/>
-
-    <view back-color="Panel" class="CTextLabel" font="~ NormalFontSmall" font-color="Text"
-          frame-width="0" origin="663, 112" size="84, 18" title="SPACE"
-          transparent="true" text-alignment="center"/>
-    <view class="CView" custom-view-name="Space" origin="661, 138" size="88, 88"/>
-
+    <!-- Material selectors fitted to the engraved faceplate slots. -->
     <view back-color="Display" class="COptionMenu" control-tag="IceMaterial"
-          font="~ NormalFontSmall" font-color="DisplayText" frame-color="DisplayFrame"
-          frame-width="1" origin="177, 272" round-rect-radius="8" size="96, 28"
+          font="~ NormalFontSmaller" font-color="DisplayText" frame-color="DisplayFrame"
+          frame-width="1" origin="220, 258" round-rect-radius="5" size="70, 22"
           style-round-rect="true" transparent="false"/>
     <view back-color="Display" class="COptionMenu" control-tag="MetalMaterial"
-          font="~ NormalFontSmall" font-color="DisplayText" frame-color="DisplayFrame"
-          frame-width="1" origin="297, 272" round-rect-radius="8" size="96, 28"
+          font="~ NormalFontSmaller" font-color="DisplayText" frame-color="DisplayFrame"
+          frame-width="1" origin="335, 258" round-rect-radius="5" size="70, 22"
           style-round-rect="true" transparent="false"/>
     <view back-color="Display" class="COptionMenu" control-tag="FrostMaterial"
-          font="~ NormalFontSmall" font-color="DisplayText" frame-color="DisplayFrame"
-          frame-width="1" origin="417, 272" round-rect-radius="8" size="96, 28"
+          font="~ NormalFontSmaller" font-color="DisplayText" frame-color="DisplayFrame"
+          frame-width="1" origin="452, 258" round-rect-radius="5" size="70, 22"
           style-round-rect="true" transparent="false"/>
     <view back-color="Display" class="COptionMenu" control-tag="ShiverMaterial"
-          font="~ NormalFontSmall" font-color="DisplayText" frame-color="DisplayFrame"
-          frame-width="1" origin="537, 272" round-rect-radius="8" size="96, 28"
+          font="~ NormalFontSmaller" font-color="DisplayText" frame-color="DisplayFrame"
+          frame-width="1" origin="569, 258" round-rect-radius="5" size="70, 22"
           style-round-rect="true" transparent="false"/>
     <view back-color="Display" class="COptionMenu" control-tag="SpaceMaterial"
-          font="~ NormalFontSmall" font-color="DisplayText" frame-color="DisplayFrame"
-          frame-width="1" origin="657, 272" round-rect-radius="8" size="96, 28"
+          font="~ NormalFontSmaller" font-color="DisplayText" frame-color="DisplayFrame"
+          frame-width="1" origin="686, 258" round-rect-radius="5" size="70, 22"
           style-round-rect="true" transparent="false"/>
 
-    <!-- Lower functional field: two atmosphere slots plus output. -->
-    <view back-color="Panel" class="CTextLabel" frame-color="PanelEdge" frame-width="1"
-          origin="20, 346" round-rect-radius="14" size="760, 166" style-round-rect="true"
-          title="" transparent="false" opacity="0.38"/>
-
-    <view back-color="Panel" class="CTextLabel" font="~ NormalFontSmall" font-color="PanelTitle"
-          frame-width="0" origin="40, 362" size="232, 20" title="ATMOSPHERE A"
-          transparent="true" text-alignment="center"/>
-    <view class="CView" custom-view-name="AtmosAAmount" origin="42, 394" size="72, 72"/>
+    <view class="CView" custom-view-name="AtmosAAmount" origin="74, 389" size="72, 72"/>
     <view back-color="Display" class="COptionMenu" control-tag="AtmosAType"
           font="~ NormalFontSmall" font-color="DisplayText" frame-color="DisplayFrame"
-          frame-width="1" origin="132, 416" round-rect-radius="8" size="138, 30"
+          frame-width="1" origin="173, 416" round-rect-radius="6" size="135, 26"
           style-round-rect="true" transparent="false"/>
 
-    <view back-color="Panel" class="CTextLabel" font="~ NormalFontSmall" font-color="PanelTitle"
-          frame-width="0" origin="322, 362" size="232, 20" title="ATMOSPHERE B"
-          transparent="true" text-alignment="center"/>
-    <view class="CView" custom-view-name="AtmosBAmount" origin="324, 394" size="72, 72"/>
+    <view class="CView" custom-view-name="AtmosBAmount" origin="385, 389" size="72, 72"/>
     <view back-color="Display" class="COptionMenu" control-tag="AtmosBType"
           font="~ NormalFontSmall" font-color="DisplayText" frame-color="DisplayFrame"
-          frame-width="1" origin="414, 416" round-rect-radius="8" size="138, 30"
+          frame-width="1" origin="481, 416" round-rect-radius="6" size="135, 26"
           style-round-rect="true" transparent="false"/>
 
-    <view back-color="Panel" class="CTextLabel" font="~ NormalFontSmall" font-color="Text"
-          frame-width="0" origin="628, 362" size="104, 20" title="OUTPUT"
-          transparent="true" text-alignment="center"/>
-    <view class="CView" custom-view-name="Output" origin="636, 390" size="88, 88"/>
-
-    <!-- Existing ice decoration kept separate and non-interactive. -->
-    <view class="CView" custom-view-name="Icicle" origin="492, 458" size="286, 118" mouse-enabled="false"/>
+    <view class="CView" custom-view-name="Output" origin="666, 379" size="88, 88"/>
   </template>
 
   <control-tags>
